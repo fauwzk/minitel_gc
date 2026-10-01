@@ -176,6 +176,21 @@ local function execute_line(line)
         if sec then minitel.sleep(sec) else return "SYNTAX ERROR" end
         return "OK"
         
+    elseif cmd == "RANDOM" then
+        local quotes = {
+            "3615 ULLA EST FERME DEPUIS 2012.",
+            "ALL YOUR BASE ARE BELONG TO US.",
+            "ERREUR SYSTEME : TROP DE CAFEINE.",
+            "LE MINITEL NE MOURRA JAMAIS !",
+            "TAPEZ 3615 PERE NOEL.",
+            "CONNEXION AU SERVEUR GIBSON... ECHOUEE.",
+            "HELLO, WORLD! (DEPUIS LES ANNEES 80)",
+            "RASPBERRY PI DETECTE... ASSIMILATION EN COURS."
+        }
+        io.write(quotes[math.random(#quotes)] .. "\r\n")
+        io.flush()
+        return "OK"
+        
     elseif cmd == "END" then return "END"
     elseif cmd == "REM" then return "OK"
     end
@@ -238,7 +253,7 @@ local function run_program()
 end
 
 -- =====================================================================
--- ECRAN D'AIDE (AVEC DEFILEMENT/SCROLL)
+-- ECRAN D'AIDE COMPLET (SCROLLABLE)
 -- =====================================================================
 local function show_help()
     io.write("\x1b[r") 
@@ -260,42 +275,47 @@ local function show_help()
         " PRINT \"X\"  : Affiche du texte",
         " INPUT X    : Demande une valeur",
         " LET X EQ 5 : Assigner (ou X = 5)",
-        " IF..THEN   : Condition",
+        " IF..THEN   : Condition (Ex: IF X EQ 5 THEN GOTO 10)",
         " GOTO X     : Saute a la ligne X",
         " PAUSE X    : Pause de X secondes",
+        " REM        : Commentaire (Ligne ignoree par le systeme)",
+        " RANDOM     : Affiche une phrase aleatoire (Easter Egg)",
         "",
-        "\x1b[1m FONCTIONS MINITEL \x1b[0m",
+        "\x1b[1m FONCTIONS MINITEL & MATHEMATIQUES \x1b[0m",
         " CLS        : Efface l'ecran entier",
         " BEEP       : Joue le son du Minitel",
         " INVERT     : Texte en video inverse",
         " NORMAL     : Retour au texte normal",
         " LOCATE X,Y : Place le curseur en X, Y (ex: LOCATE X PLUS 1, Y)",
-        " MKEY()     : Lecture clavier en direct",
+        " MKEY()     : Lecture clavier (Fleches: 200-203. Envoi: 13)",
+        " RND(X)     : Genere un nombre aleatoire entre 1 et X",
+        "",
+        "\x1b[1m SYNTAXE & OPERATEURS (MOTS-CLES OU SYMBOLES) \x1b[0m",
+        " Maths   : PLUS (+), MINUS (-), MUL (*), DIV (/)",
+        " Logique : EQ (=), NEQ (<>), LT (<), GT (>), LE (<=), GE (>=)",
+        " Booleen : AND, OR, NOT",
         "",
         "\x1b[1m ASTUCES D'ECRITURE \x1b[0m",
-        " Vous pouvez utiliser les mots cles EQ, NEQ, LT, GT, LE, GE",
-        " ou bien PLUS, MINUS, MUL, DIV a la place des symboles !",
-        " C'est beaucoup plus simple a taper sur un Minitel.",
-        " La touche RETOUR arrete toujours un programme en cours."
+        " Privilegiez les mots cles (PLUS, EQ, LT...) aux symboles",
+        " pour vous simplifier la frappe sur le clavier du Minitel !",
+        " -> La touche RETOUR arrete toujours un programme en cours."
     }
     
     local offset = 1
-    local max_visible = 20 -- Nombre de lignes affichables entre la bannière haut et bas
+    local max_visible = 20
     local max_offset = math.max(1, #help_lines - max_visible + 1)
     
     local function draw_help_screen()
         io.write("\x1b[1;1H\x1b[7m MICRO-BASIC : MANUEL               [FLECHES] DEFILER  [RETOUR] QUITTER \x1b[K\x1b[0m\r\n")
         
-        -- Dessin des lignes visibles selon le scroll
         for i = 1, max_visible do
             local line_idx = offset + i - 1
-            io.write("\x1b[" .. (i + 2) .. ";1H\x1b[K") -- On efface proprement la ligne
+            io.write("\x1b[" .. (i + 2) .. ";1H\x1b[K")
             if help_lines[line_idx] then
                 io.write(" " .. help_lines[line_idx])
             end
         end
         
-        -- Calcul du pourcentage de scroll (100% si on est en bas)
         local scroll_pct = math.floor(((offset - 1) / (max_offset - 1)) * 100)
         if max_offset == 1 then scroll_pct = 100 end
         
@@ -330,7 +350,7 @@ end
 local function update_ui()
     io.write("\x1b7")
     
-    io.write("\x1b[1;1H\x1b[7m MICRO-BASIC TELETEL V1.7               [EXIT] OU [RETOUR] POUR QUITTER \x1b[K\x1b[0m")
+    io.write("\x1b[1;1H\x1b[7m MICRO-BASIC TELETEL V1.9               [EXIT] OU [RETOUR] POUR QUITTER \x1b[K\x1b[0m")
     
     local count = 0
     for _ in pairs(program) do count = count + 1 end
