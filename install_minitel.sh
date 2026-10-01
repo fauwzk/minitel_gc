@@ -32,13 +32,8 @@ minitel ALL=(ALL) NOPASSWD: /usr/sbin/reboot, /usr/sbin/poweroff
 EOF
 chmod 0440 /etc/sudoers.d/010_minitel
 
-echo "> 4. CLONAGE DU DEPOT GITHUB (fauwzk/minitel_gc)..."
-rm -rf /tmp/minitel_temp
-sudo -u minitel git clone https://github.com/fauwzk/minitel_gc.git /tmp/minitel_temp
-sudo -u minitel cp -rn /tmp/minitel_temp/* /home/minitel/ 2>/dev/null
-rm -rf /tmp/minitel_temp
-sudo -u minitel mkdir -p /home/minitel/jeux
-sudo -u minitel mkdir -p /home/minitel/utils/prog_basic
+echo "> 4. CLONAGE DU DEPOT GITHUB..."
+sudo -u minitel git clone https://github.com/fauwzk/minitel_gc.git /home/minitel/minitel_gc
 
 echo "> 5. CONFIGURATION DE L'AUTOLOGIN SYSTEMD (ttyUSB0)..."
 mkdir -p /etc/systemd/system/serial-getty@ttyUSB0.service.d/
@@ -53,15 +48,10 @@ systemctl enable serial-getty@ttyUSB0.service
 echo "> 6. CONFIGURATION DU BASH_PROFILE ET DU SON..."
 cat <<'EOF' > /home/minitel/.bash_profile
 if [ "$(tty)" = "/dev/ttyUSB0" ]; then
-    cd /home/minitel
+    # ON ENTRE DANS LE NOUVEAU DOSSIER ICI :
+    cd /home/minitel/minitel_gc
     
-    # -------------------------------------------------------------
-    # CORRECTIF AUDIO RASPBERRY PI : 
-    # Force Sox à utiliser ALSA pour éviter les crashs liés à 
-    # PipeWire/PulseAudio lors d'une connexion via le port Série.
-    # -------------------------------------------------------------
     export AUDIODRIVER=alsa
-    
     exec lua5.3 master.lua
 fi
 EOF

@@ -17,29 +17,44 @@ local function replace_word_op(expr, word, op)
     return string.gsub(expr, "%f[%a]" .. word .. "%f[%A]", op)
 end
 
+-- =====================================================================
+-- EVALUATEUR MATHEMATIQUE INTEGRE (CORRIGE)
+-- =====================================================================
 local function eval_expr(expr)
-    local e = expr
+    local e = string.upper(expr)
 
-    e = replace_word_op(e, "EQ", "==")
-    e = replace_word_op(e, "NEQ", "~=")
-    e = replace_word_op(e, "LT", "<")
-    e = replace_word_op(e, "GT", ">")
-    e = replace_word_op(e, "LE", "<=")
-    e = replace_word_op(e, "GE", ">=")
-    e = replace_word_op(e, "PLUS", "+")
-    e = replace_word_op(e, "MINUS", "-")
-    e = replace_word_op(e, "MUL", "*")
-    e = replace_word_op(e, "DIV", "/")
-
-    e = string.gsub(e, "=", "==")
-    e = string.gsub(e, "<==", "<=")
-    e = string.gsub(e, ">==", ">=")
+    -- 1. Sécurisation des signes classiques
     e = string.gsub(e, "<>", "~=")
+    e = string.gsub(e, "<=", "<=")
+    e = string.gsub(e, ">=", ">=")
+    e = string.gsub(e, "=", "==")
+    e = string.gsub(e, "====", "==") -- évite les bugs si on a tapé ==
 
+    -- 2. Le coeur du réacteur : on traduit tous les mots en une seule passe !
     e = string.gsub(e, "%a+", function(w)
-        if w == "RND" or w == "MKEY" or w == "AND" or w == "OR" or w == "NOT" then
+        -- Opérateurs mathématiques
+        if w == "EQ" then return "==" end
+        if w == "NEQ" then return "~=" end
+        if w == "LT" then return "<" end
+        if w == "GT" then return ">" end
+        if w == "LE" then return "<=" end
+        if w == "GE" then return ">=" end
+        if w == "PLUS" then return "+" end
+        if w == "MINUS" then return "-" end
+        if w == "MUL" then return "*" end
+        if w == "DIV" then return "/" end
+        
+        -- Opérateurs logiques Lua (doivent être en minuscules)
+        if w == "AND" or w == "OR" or w == "NOT" then
             return string.lower(w)
         end
+        
+        -- Fonctions internes
+        if w == "RND" or w == "MKEY" then
+            return string.lower(w)
+        end
+        
+        -- Si ce n'est rien de tout ça, c'est une variable utilisateur !
         return tostring(vars[w] or 0)
     end)
 
@@ -49,27 +64,13 @@ local function eval_expr(expr)
         end,
         mkey = function()
             local k = minitel.get_key()
-            if not k then
-                return 0
-            end
-            if k == "UP" then
-                return 200
-            end
-            if k == "DOWN" then
-                return 201
-            end
-            if k == "LEFT" then
-                return 202
-            end
-            if k == "RIGHT" then
-                return 203
-            end
-            if k == "ENVOI" or k == "\r" or k == "\n" then
-                return 13
-            end
-            if k == "RETOUR" or k == "ESC" then
-                return 27
-            end
+            if not k then return 0 end
+            if k == "UP" then return 200 end
+            if k == "DOWN" then return 201 end
+            if k == "LEFT" then return 202 end
+            if k == "RIGHT" then return 203 end
+            if k == "ENVOI" or k == "\r" or k == "\n" then return 13 end
+            if k == "RETOUR" or k == "ESC" then return 27 end
             return string.byte(k) or 0
         end
     }
