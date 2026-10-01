@@ -2,13 +2,13 @@ local minitel = require("minitel")
 minitel.init()
 
 -- =====================================================================
--- GESTION DU DICTIONNAIRE (MULTI-TAILLES, FAMILIAL)
+-- DICTIONNAIRE DE SECOURS (SI HORS-LIGNE AU TOUT PREMIER DEMARRAGE)
 -- =====================================================================
 local fallback_words = {
     -- 3 lettres
-    "AMI", "BOL", "BUS", "COU", "DOS", "EAU", "FEU", "GAZ", "JEU", "LAC", "LIT", "MER", "NEZ", "OEU", "POT", "RUE", "SAC", "THE", "VOL", "ZOO",
+    "AMI", "BOL", "BUS", "COU", "DOS", "EAU", "FEU", "GAZ", "JEU", "LAC", "LIT", "MER", "NEZ", "POT", "RUE", "SAC", "THE", "VOL", "ZOO",
     -- 4 lettres
-    "BLEU", "BOIS", "CAFE", "CHAT", "EST", "JEUX", "JOUR", "LION", "LOUP", "LUNE", "NORD", "NUIT", "OURS", "PAIN", "PAYS", "PONT", "PORT", "ROSE", "SUD", "VELO", "VENT", "VERT",
+    "BLEU", "BOIS", "CAFE", "CHAT", "JOUR", "LION", "LOUP", "LUNE", "NORD", "NUIT", "OURS", "PAIN", "PAYS", "PONT", "PORT", "ROSE", "SUD", "VELO", "VENT", "VERT",
     -- 5 lettres
     "ARBRE", "AVION", "BALLE", "BOITE", "CHIEN", "COEUR", "ECOLE", "FLEUR", "GLACE", "LAPIN", "LIVRE", "PLUIE", "POMME", "TABLE", "TRAIN", "VILLE",
     -- 6 lettres
@@ -18,32 +18,47 @@ local fallback_words = {
 local word_list = {}
 local word_length = 5
 
+-- =====================================================================
+-- CHARGEMENT ET MISE A JOUR AUTOMATIQUE DU DICTIONNAIRE
+-- =====================================================================
 local function load_dictionary()
-    -- 1. Tentative de mise à jour réseau si internet est disponible
-    local success = os.execute("ping -c 1 -W 1 github.com > /dev/null 2>&1")
-    if success then
-        io.write("\x1b[12;20H\x1b[7m RECHERCHE DU DICTIONNAIRE EN LIGNE... \x1b[0m")
+    -- Vérification rapide de la connexion réseau
+    local has_network = os.execute("ping -c 1 -W 1 github.com > /dev/null 2>&1")
+    
+    if has_network then
+        io.write("\x1b[12;18H\x1b[7m TELECHARGEMENT DU DICTIONNAIRE EN LIGNE... \x1b[0m")
         io.flush()
+
+        -- Nouvelle URL stable (Taknok/French-Wordlist) sans accents
+        local cmd = "curl -s -m 8 https://raw.githubusercontent.com/Taknok/French-Wordlist/master/francais.txt 2>/dev/null | " ..
+                    "iconv -f utf-8 -t ascii//TRANSLIT 2>/dev/null | " ..
+                    "tr -d '\\r' | " ..
+                    "tr '[:lower:]' '[:upper:]' | " ..
+                    "awk 'length($0) >= 3 && length($0) <= 6 && /^[A-Z]+$/' > jeux/dico_temp.txt"
         
-        -- URL de votre dépôt (à créer/adapter si vous voulez un dico externe)
-        local url = "https://raw.githubusercontent.com/fauwzk/minitel_gc/main/dico_fr.txt"
-        os.execute("curl -s -f -o jeux/dico_temp.txt " .. url)
-        
-        -- Si le téléchargement a fonctionné, on écrase l'ancien
+        os.execute(cmd)
+
+        -- Contrôle que le fichier généré n'est pas vide avant de remplacer l'existant
         local check = io.open("jeux/dico_temp.txt", "r")
         if check then
+            local first_line = check:read("*l")
             check:close()
-            os.rename("jeux/dico_temp.txt", "jeux/dico_minitel.txt")
+            if first_line and #first_line >= 3 then
+                os.execute("mv jeux/dico_temp.txt jeux/dico_minitel.txt")
+            else
+                os.remove("jeux/dico_temp.txt")
+            end
         end
     end
 
-    -- 2. Chargement depuis le fichier local
+    -- Chargement de la base locale
     local f = io.open("jeux/dico_minitel.txt", "r")
     if f then
+        word_list = {}
         for line in f:lines() do
-            local word = string.match(string.upper(line), "%a+")
+            local word = string.match(line, "^[A-Z]+$")
             if word then
-                local len = string.len(word)
+                local len = #word
                 if len >= 3 and len <= 6 then
                     table.insert(word_list, word)
                 end
@@ -52,11 +67,11 @@ local function load_dictionary()
         f:close()
     end
 
-    -- 3. Sécurité : création du fichier avec les mots de base s'il est vide/inexistant
+    -- Si aucun fichier n'était présent et pas de réseau, écriture du dictionnaire de secours
     if #word_list == 0 then
-        io.write("\x1b[12;20H\x1b[7m GENERATION DU DICTIONNAIRE LOCAL... \x1b[0m")
+        io.write("\x1b[12;20H\x1b[7m GENERATION DU DICTIONNAIRE DE SECOURS... \x1b[0m")
         io.flush()
-        
+
         word_list = fallback_words
         local out = io.open("jeux/dico_minitel.txt", "w")
         if out then
@@ -70,7 +85,7 @@ local function load_dictionary()
 end
 
 -- =====================================================================
--- VARIABLES DU JEU
+-- VARIABLES ET ETAT DU JEU
 -- =====================================================================
 local state = "TITLE"
 local target_word = ""
@@ -109,6 +124,7 @@ local function evaluate_guess(guess)
         }
     end
 
+    -- Étape 1 : Lettres bien placées
     for i = 1, word_length do
         if result[i].char == string.sub(target_word, i, i) then
             result[i].status = "EXACT"
@@ -117,6 +133,7 @@ local function evaluate_guess(guess)
         end
     end
 
+    -- Étape 2 : Lettres mal placées ou absentes
     for i = 1, word_length do
         if result[i].status ~= "EXACT" then
             local c = result[i].char
@@ -167,9 +184,8 @@ local function draw_title(full)
 end
 
 local function update_grid()
-    -- Calcul pour centrer la grille automatiquement selon la longueur du mot
     local start_x = math.floor((80 - (word_length * 6)) / 2)
-    
+
     for i = 1, max_attempts do
         local line_y = 6 + (i * 2)
         io.write("\x1b[" .. line_y .. ";" .. start_x .. "H\x1b[K")
@@ -191,9 +207,7 @@ local function update_grid()
         elseif i == #guesses + 1 and state == "PLAYING" then
             for j = 1, word_length do
                 local c = string.sub(current_input, j, j)
-                if c == "" then
-                    c = "."
-                end
+                if c == "" then c = "." end
                 io.write("  " .. c .. "   ")
             end
         else
@@ -235,7 +249,6 @@ end
 local function draw_game_screen()
     io.write("\x1b[2J\x1b[H")
     io.write("\x1b[2;11H==========================================================\r\n")
-    -- L'interface affiche le nombre de lettres requis dynamiquement
     io.write("\x1b[3;11H| \x1b[7m BRUTE-FORCE ACTIF \x1b[0m            FORMAT: " .. word_length .. " LETTRES |\r\n")
     io.write("\x1b[4;11H==========================================================\r\n")
 
@@ -256,9 +269,7 @@ while true do
     local key = minitel.get_key()
 
     if key == "RETOUR" or key == "ESC" then
-        if state == "TITLE" then
-            break
-        end
+        if state == "TITLE" then break end
         state = "TITLE"
         draw_title(true)
 
