@@ -2,26 +2,29 @@ local minitel = require("minitel")
 minitel.init()
 
 io.write("\x1b[2J\x1b[H")
-io.write("\x1b[12;15H\x1b[7m MISE A JOUR DU MAGIS CLUB EN COURS... \x1b[0m\r\n")
+io.write("\x1b[2;15H\x1b[7m MISE A JOUR DU MAGIS CLUB EN COURS... \x1b[0m\r\n\r\n")
 io.flush()
 
--- 1. On autorise Git à travailler ici (règle l'erreur de sécurité "safe.directory")
-os.execute("git config --global --add safe.directory /home/minitel/minitel_gc >/dev/null 2>&1")
+-- On utilise '*' pour le safe.directory, ça marchera aussi bien sur le Pi que sur le PC portable
+os.execute("git config --global --add safe.directory '*'")
 
--- 2. On annule toutes les modifications locales sur les fichiers suivis par Git
--- (Cela évite que le pull soit bloqué par un conflit)
-os.execute("git reset --hard HEAD >/dev/null 2>&1")
+-- On laisse Git écrire ses messages à l'écran
+io.write("\x1b[1m--- LOGS DE SYNCHRONISATION ---\x1b[0m\r\n")
+os.execute("git reset --hard HEAD")
+os.execute("git pull")
+io.write("\x1b[1m-------------------------------\x1b[0m\r\n\r\n")
 
--- 3. On tire uniquement les nouveaux fichiers depuis GitHub
--- On redirige la sortie pour que l'écran du Minitel reste propre
-os.execute("git pull >/dev/null 2>&1")
-
-io.write("\x1b[14;22H\x1b[1m MISE A JOUR TERMINEE ! \x1b[0m\r\n")
-io.write("\x1b[16;15H REDEMARRAGE DU SYSTEME DANS 3 SECONDES... \r\n")
+io.write("\x1b[7m Lisez l'erreur ci-dessus, puis appuyez sur ENVOI \x1b[0m\r\n")
 io.flush()
 
-minitel.sleep(3)
+-- Le script se met en pause infinie tant que vous n'appuyez pas sur ENVOI
+while true do
+    local k = minitel.get_key()
+    if k == "ENVOI" or k == "\r" or k == "\n" then break end
+    minitel.sleep(0.05)
+end
+
 minitel.cleanup()
-
--- Redémarrage du service (fonctionne sur le Pi, fera juste une erreur silencieuse sur le PC)
+os.execute("stty -F /dev/ttyUSB0 sane")
+os.execute("killall -9 lua5.3 2>/dev/null")
 os.execute("sudo systemctl restart serial-getty@ttyUSB0.service 2>/dev/null")
