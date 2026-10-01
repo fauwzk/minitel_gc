@@ -11,7 +11,7 @@ local current_filename = nil
 local is_modified = false
 
 -- =====================================================================
--- EVALUATEUR MATHEMATIQUE INTEGRE (ROBUSTE)
+-- EVALUATEUR MATHEMATIQUE INTEGRE
 -- =====================================================================
 local function eval_expr(expr)
     local e = string.upper(expr)
@@ -67,7 +67,7 @@ local function eval_expr(expr)
 end
 
 -- =====================================================================
--- LECTURE DU CLAVIER (Gère maintenant l'annulation)
+-- LECTURE DU CLAVIER
 -- =====================================================================
 local function input_string(prompt)
     io.write(prompt)
@@ -81,7 +81,6 @@ local function input_string(prompt)
                 io.flush()
                 return string.upper(str)
             elseif k == "RETOUR" or k == "ESC" then
-                -- On intercepte le retour pour forcer un Break !
                 return "ABORT"
             elseif k == "CORRECTION" or k == "ANNULATION" or k == "\x08" or k == "\x7f" then
                 if #str > 0 then
@@ -101,29 +100,28 @@ local function input_string(prompt)
 end
 
 -- =====================================================================
--- MISE A JOUR DE L'INTERFACE (Remontée pour être utilisée par CLS)
+-- MISE A JOUR DE L'INTERFACE (Barres fixées EN HAUT)
 -- =====================================================================
 local function update_ui()
-    io.write("\x1b7\x1b[s") -- Sauvegarde du curseur (Mix VT100 et ANSI pour sécurité)
+    io.write("\x1b7\x1b[s") -- Sauvegarde du curseur
     
-    -- FORCE la zone de défilement de la ligne 2 à 23 à chaque rafraichissement
-    io.write("\x1b[2;23r") 
+    -- Le terminal scrolle uniquement entre les lignes 3 et 24
+    io.write("\x1b[3;24r") 
     
-    io.write("\x1b[1;1H\x1b[7m MICRO-BASIC TELETEL V1.9               [EXIT] OU [RETOUR] POUR QUITTER \x1b[K\x1b[0m")
+    io.write("\x1b[1;1H\x1b[7m MICRO-BASIC TELETEL V2.0               [EXIT] OU [RETOUR] POUR QUITTER \x1b[K\x1b[0m")
 
     local count = 0
     for _ in pairs(program) do count = count + 1 end
     local fname = current_filename or "SANS NOM"
     local mod_star = is_modified and "*" or ""
-
     local status_text = string.format(" LIGNES : %03d | FICHIER : %s%s | TAPEZ 'HELP' ", count, fname, mod_star)
     
-    -- COUPE le texte à 78 caractères pour empêcher le terminal de forcer un "Entrée" invisible
     status_text = string.sub(status_text, 1, 78)
     
-    io.write("\x1b[24;1H\x1b[7m" .. status_text .. "\x1b[K\x1b[0m")
+    -- La barre de statut est fixée sur la ligne 2 !
+    io.write("\x1b[2;1H\x1b[7m" .. status_text .. "\x1b[K\x1b[0m")
 
-    io.write("\x1b8\x1b[u") -- Restauration du curseur
+    io.write("\x1b8\x1b[u") -- Restauration du curseur (dans la zone de travail)
     io.flush()
 end
 
@@ -133,7 +131,6 @@ end
 local function execute_line(line)
     local outside_quotes = string.gsub(line, '([^"]*)', function(s) return string.upper(s) end)
     line = string.match(outside_quotes, "^%s*(.-)%s*$")
-    
     if line == "" then return "OK" end
 
     local cmd, rest = string.match(line, "^(%a+)%s*(.*)$")
@@ -155,8 +152,7 @@ local function execute_line(line)
     elseif cmd == "LET" then
         local v, val = string.match(rest, "^(%a+)%s*=%s*(.*)$")
         if not v then v, val = string.match(rest, "^(%a+)%s+EQ%s+(.*)$") end
-        if v then vars[v] = eval_expr(val)
-        else return "SYNTAX ERROR" end
+        if v then vars[v] = eval_expr(val) else return "SYNTAX ERROR" end
         return "OK"
 
     elseif cmd == "INPUT" then
@@ -170,21 +166,52 @@ local function execute_line(line)
 
     elseif cmd == "GOTO" then
         local target = tonumber(eval_expr(rest))
-        if target then return "GOTO", target
-        else return "SYNTAX ERROR" end
+        if target then return "GOTO", target else return "SYNTAX ERROR" end
 
+    -- NOUVEAU : IF THEN ELSE
     elseif cmd == "IF" then
-        local cond, then_cmd = string.match(rest, "^(.-)%s+THEN%s+(.*)$")
+        -- Cherche d'abord avec un ELSE
+        local cond, then_cmd, else_cmd = string.match(rest, "^(.-)%s+THEN%s+(.-)%s+ELSE%s+(.*)$")
+        if not cond then
+            -- S'il n'y a pas de ELSE, on fait un IF classique
+            cond, then_cmd = string.match(rest, "^(.-)%s+THEN%s+(.*)$")
+        end
         if cond and then_cmd then
             local cond_val = eval_expr(cond)
-            if cond_val ~= 0 then return execute_line(then_cmd) end
+            if cond_val ~= 0 then 
+                return execute_line(then_cmd)
+            elseif else_cmd then
+                return execute_line(else_cmd)
+            end
         else return "SYNTAX ERROR" end
         return "OK"
 
+    -- NOUVEAU : BOUCLES FOR
+    elseif cmd == "FOR" then
+        local v, start_expr, end_expr = string.match(rest, "^(%a+)%s*=%s*(.-)%s+TO%s+(.*)$")
+        if not v then v, start_expr, end_expr = string.match(rest, "^(%a+)%s+EQ%s+(.-)%s+TO%s+(.*)$") end
+        if v and start_expr and end_expr then
+            vars[v] = eval_expr(start_expr)
+            local limit = eval_expr(end_expr)
+            return "FOR", {var = v, limit = limit}
+        else return "SYNTAX ERROR" end
+
+    elseif cmd == "NEXT" then
+        local v = string.match(rest, "^(%a+)$")
+        if v then return "NEXT", v else return "SYNTAX ERROR" end
+
+    -- NOUVEAU : BOUCLES WHILE
+    elseif cmd == "WHILE" then
+        local cond_val = eval_expr(rest)
+        return "WHILE", cond_val ~= 0
+
+    elseif cmd == "WEND" then
+        return "WEND"
+
     elseif cmd == "CLS" then
-        io.write("\x1b[2J") -- Efface tout
-        update_ui()         -- Redessine l'interface immédiatement !
-        io.write("\x1b[2;1H") -- Replace le curseur au début de la zone propre
+        io.write("\x1b[2J") 
+        update_ui()         
+        io.write("\x1b[3;1H") -- On place le curseur ligne 3, sous les barres de statut
         io.flush()
         return "OK"
 
@@ -198,26 +225,17 @@ local function execute_line(line)
             local x = math.floor(eval_expr(str_x))
             local y = math.floor(eval_expr(str_y))
             x = math.max(1, math.min(80, x))
-            y = math.max(1, math.min(23, y)) -- MAX 23 pour protéger la barre du bas !
+            y = math.max(3, math.min(24, y)) -- Protection ABSOLUE des lignes 1 et 2
             io.write("\x1b[" .. y .. ";" .. x .. "H")
             io.flush()
         else return "SYNTAX ERROR" end
         return "OK"
 
-    elseif cmd == "INVERT" then
-        io.write("\x1b[7m")
-        io.flush()
-        return "OK"
-
-    elseif cmd == "NORMAL" then
-        io.write("\x1b[0m")
-        io.flush()
-        return "OK"
-
+    elseif cmd == "INVERT" then io.write("\x1b[7m"); io.flush(); return "OK"
+    elseif cmd == "NORMAL" then io.write("\x1b[0m"); io.flush(); return "OK"
     elseif cmd == "PAUSE" then
         local sec = tonumber(eval_expr(rest))
         if sec then
-            -- Permet d'interrompre une pause avec RETOUR
             for i=1, math.floor(sec*10) do
                 local k = minitel.get_key()
                 if k == "RETOUR" or k == "ESC" then return "BREAK" end
@@ -225,28 +243,21 @@ local function execute_line(line)
             end
         else return "SYNTAX ERROR" end
         return "OK"
-
     elseif cmd == "RANDOM" then
         local quotes = {"3615 ULLA EST FERME.", "ERREUR SYSTEME : CAFEINE.", "TAPEZ 3615 PERE NOEL."}
-        io.write(quotes[math.random(#quotes)] .. "\r\n")
-        io.flush()
-        return "OK"
-
+        io.write(quotes[math.random(#quotes)] .. "\r\n"); io.flush(); return "OK"
     elseif cmd == "END" then return "END"
     elseif cmd == "REM" then return "OK" end
 
     local v, val = string.match(line, "^(%a+)%s*=%s*(.*)$")
     if not v then v, val = string.match(line, "^(%a+)%s+EQ%s+(.*)$") end
+    if v then vars[v] = eval_expr(val); return "OK" end
 
-    if v then
-        vars[v] = eval_expr(val)
-        return "OK"
-    end
     return "SYNTAX ERROR"
 end
 
 -- =====================================================================
--- BOUCLE D'EXECUTION GLOBALE (RUN)
+-- BOUCLE D'EXECUTION GLOBALE (RUN) + GESTION DES BOUCLES
 -- =====================================================================
 local function run_program()
     local sorted_lines = {}
@@ -254,10 +265,11 @@ local function run_program()
     table.sort(sorted_lines)
 
     local pc = 1
+    local loop_stack = {} -- Mémorise les FOR et WHILE en cours
+
     while pc <= #sorted_lines do
         local k = minitel.get_key()
         if k == "RETOUR" or k == "ESC" then
-            -- \x1b[K force le nettoyage de la ligne courante avant d'écrire
             io.write("\r\n\x1b[K\x1b[7m BREAK IN " .. sorted_lines[pc] .. " \x1b[0m\r\n")
             io.flush()
             break
@@ -281,17 +293,69 @@ local function run_program()
         elseif stat == "GOTO" then
             local found = false
             for i, v in ipairs(sorted_lines) do
-                if v == arg then
-                    pc = i
-                    found = true
-                    break
-                end
+                if v == arg then pc = i; found = true; break end
             end
             if not found then
                 io.write("\r\n\x1b[K UNDEFINED LINE " .. arg .. " IN " .. line_num .. "\r\n")
                 io.flush()
                 break
             end
+        
+        -- Moteur de boucle FOR
+        elseif stat == "FOR" then
+            table.insert(loop_stack, {type="FOR", var=arg.var, limit=arg.limit, start_pc=pc})
+            pc = pc + 1
+            
+        elseif stat == "NEXT" then
+            local top = loop_stack[#loop_stack]
+            if top and top.type == "FOR" and top.var == arg then
+                vars[top.var] = vars[top.var] + 1
+                if vars[top.var] <= top.limit then
+                    pc = top.start_pc + 1
+                else
+                    table.remove(loop_stack)
+                    pc = pc + 1
+                end
+            else
+                io.write("\r\n\x1b[K NEXT WITHOUT FOR IN " .. line_num .. "\r\n")
+                break
+            end
+            
+        -- Moteur de boucle WHILE
+        elseif stat == "WHILE" then
+            local cond_true = arg
+            if cond_true then
+                table.insert(loop_stack, {type="WHILE", start_pc=pc})
+                pc = pc + 1
+            else
+                -- Si condition fausse, on saute au prochain WEND
+                local nest = 1
+                local wend_pc = pc + 1
+                local found = false
+                while wend_pc <= #sorted_lines do
+                    local wline = program[sorted_lines[wend_pc]]
+                    wline = string.match(string.upper(wline), "^%s*(.-)%s*$")
+                    if string.match(wline, "^WHILE") then nest = nest + 1 end
+                    if string.match(wline, "^WEND") then 
+                        nest = nest - 1
+                        if nest == 0 then found = true; break end
+                    end
+                    wend_pc = wend_pc + 1
+                end
+                if found then pc = wend_pc + 1
+                else io.write("\r\n\x1b[K WHILE WITHOUT WEND IN " .. line_num .. "\r\n"); break end
+            end
+            
+        elseif stat == "WEND" then
+            local top = loop_stack[#loop_stack]
+            if top and top.type == "WHILE" then
+                pc = top.start_pc
+                table.remove(loop_stack)
+            else
+                io.write("\r\n\x1b[K WEND WITHOUT WHILE IN " .. line_num .. "\r\n")
+                break
+            end
+
         else
             pc = pc + 1
         end
@@ -300,7 +364,7 @@ local function run_program()
 end
 
 -- =====================================================================
--- ECRAN D'AIDE COMPLET (SCROLLABLE)
+-- ECRAN D'AIDE
 -- =====================================================================
 local function show_help()
     io.write("\x1b[r\x1b[2J\x1b[H")
@@ -309,24 +373,22 @@ local function show_help()
         "\x1b[1m COMMANDES SYSTEME \x1b[0m", 
         " RUN        : Execute le code en memoire",
         " LIST       : Affiche tout le code", 
-        " NEW        : Efface la memoire",
         " DIR        : Liste les fichiers locaux", 
-        " SAVE / LOAD: Ex: SAVE \"NOM\" (sans .bas)",
-        " EXIT       : Quitter l'interpreteur", "",
+        " SAVE / LOAD: Ex: SAVE \"NOM\" (sans .bas)", "",
         "\x1b[1m INSTRUCTIONS DU LANGAGE \x1b[0m", 
         " PRINT \"X\"  : Affiche du texte",
         " INPUT X    : Demande une valeur", 
-        " LET X EQ 5 : Assigner (ou X = 5)",
-        " IF..THEN   : Condition (Ex: IF X EQ 5 THEN GOTO 10)", 
+        " LET X = 5  : Assigner (ou X = 5)",
+        " IF..THEN   : IF X=5 THEN GOTO 10 ELSE GOTO 20", 
+        " FOR..NEXT  : FOR I=1 TO 5 (puis) NEXT I",
+        " WHILE..WEND: WHILE X < 10 (puis) WEND",
         " GOTO X     : Saute a la ligne X",
         " PAUSE X    : Pause de X secondes", 
         " REM        : Commentaire (Ignore)", "",
         "\x1b[1m FONCTIONS MINITEL \x1b[0m", 
         " CLS        : Efface l'ecran",
-        " BEEP       : Joue le son du Minitel", 
-        " INVERT / NORMAL : Video inverse/normale",
-        " LOCATE X,Y : Place le curseur (Max Y=23)",
-        " MKEY()     : Lecture clavier (Fleches: 200-203. Envoi: 13)",
+        " LOCATE X,Y : Place le curseur (Max Y=24)",
+        " MKEY()     : Lecture clavier (Fleches 200, Entree 13)",
         " RND(X)     : Genere un nombre aleatoire entre 1 et X"
     }
 
@@ -341,9 +403,7 @@ local function show_help()
             io.write("\x1b[" .. (i + 2) .. ";1H\x1b[K")
             if help_lines[line_idx] then io.write(" " .. help_lines[line_idx]) end
         end
-        local scroll_pct = math.floor(((offset - 1) / (max_offset - 1)) * 100)
-        if max_offset == 1 then scroll_pct = 100 end
-        io.write("\x1b[24;1H\x1b[7m APPUYEZ SUR [RETOUR] POUR FERMER                        SCROLL: " .. string.format("%3d", scroll_pct) .. "% \x1b[K\x1b[0m")
+        io.write("\x1b[24;1H\x1b[7m APPUYEZ SUR [RETOUR] POUR FERMER \x1b[K\x1b[0m")
         io.flush()
     end
 
@@ -366,67 +426,35 @@ end
 -- =====================================================================
 local function shell()
     io.write("\x1b[2J\x1b[H")
-    io.write("\x1b[2;23r")
-    io.write("\x1b[2;1H")
+    
+    -- On définit la zone scrollable dès le lancement !
+    io.write("\x1b[3;24r")
+    io.write("\x1b[3;1H")
 
     io.write("\x1b[7m INITIALISATION DU SYSTEME \x1b[0m\r\nREADY.\r\n")
     io.flush()
 
     while true do
         update_ui()
-        
-        -- Le \x1b[K nettoie la ligne avant d'écrire le prompt
         local line = input_string("\x1b[K> ")
 
-        if line == "ABORT" then
-            io.write("\r\n")
-            -- On annule proprement
-        elseif line == "" then
-            -- Ne rien faire
+        if line == "ABORT" then io.write("\r\n")
+        elseif line == "" then -- Rien
         elseif line == "HELP" then
             show_help()
-            io.write("\x1b[2J\x1b[2;23r\x1b[2;1HREADY.\r\n")
+            io.write("\x1b[2J\x1b[3;24r\x1b[3;1HREADY.\r\n")
             io.flush()
-        elseif line == "EXIT" or line == "QUIT" then
-            break
-
+        elseif line == "EXIT" or line == "QUIT" then break
         elseif string.match(line, "^LIST") then
-            local param = string.match(line, "^LIST%s*(.*)$")
-            local start_l, end_l
-
-            if param ~= "" then
-                local n1, n2 = string.match(param, "^(%d+)%s*[-]%s*(%d+)$")
-                if n1 and n2 then start_l, end_l = tonumber(n1), tonumber(n2)
-                else
-                    local n1_start = string.match(param, "^(%d+)%s*[-]$")
-                    if n1_start then start_l = tonumber(n1_start)
-                    else
-                        local n1_only = string.match(param, "^(%d+)$")
-                        if n1_only then start_l, end_l = tonumber(n1_only), tonumber(n1_only) end
-                    end
-                end
-            end
-
             local sorted_lines = {}
             for k in pairs(program) do table.insert(sorted_lines, k) end
             table.sort(sorted_lines)
-
-            local found = false
             for _, l in ipairs(sorted_lines) do
-                local show = true
-                if start_l and l < start_l then show = false end
-                if end_l and l > end_l then show = false end
-
-                if show then
-                    io.write(string.format("\x1b[1m%d\x1b[0m %s\r\n", l, program[l]))
-                    found = true
-                end
+                io.write(string.format("\x1b[1m%d\x1b[0m %s\r\n", l, program[l]))
             end
-            if not found and param ~= "" then io.write("LINE NOT FOUND\r\n") end
             io.flush()
-
         elseif line == "RUN" then
-            io.write("\x1b[2;23r") -- Sécurité supplémentaire avant exécution
+            io.write("\x1b[3;24r")
             run_program()
             io.write("\x1b[KREADY.\r\n")
             io.flush()
@@ -440,80 +468,50 @@ local function shell()
         elseif line == "DIR" then
             local f = io.popen("ls -1 utils/prog_basic/*.bas 2>/dev/null")
             if f then
-                local count = 0
-                for file in f:lines() do
-                    local display_name = string.gsub(file, "utils/prog_basic/", "")
-                    io.write(display_name .. "\r\n")
-                    count = count + 1
-                end
+                for file in f:lines() do io.write(string.gsub(file, "utils/prog_basic/", "") .. "\r\n") end
                 f:close()
-                if count == 0 then io.write("NO FILES FOUND\r\n") end
             end
             io.write("READY.\r\n")
             io.flush()
-
         elseif string.match(line, '^SAVE%s+"(.-)"') then
             local filename = string.match(line, '^SAVE%s+"(.-)"')
-            if filename then
-                local f = io.open("utils/prog_basic/" .. filename .. ".bas", "w")
-                if f then
-                    local sorted_lines = {}
-                    for k in pairs(program) do table.insert(sorted_lines, k) end
-                    table.sort(sorted_lines)
-                    for _, l in ipairs(sorted_lines) do f:write(l .. " " .. program[l] .. "\n") end
-                    f:close()
-                    current_filename = filename
-                    is_modified = false
-                    io.write("SAVED " .. filename .. "\r\n")
-                else io.write("FILE ERROR\r\n") end
+            local f = io.open("utils/prog_basic/" .. filename .. ".bas", "w")
+            if f then
+                local sl = {}
+                for k in pairs(program) do table.insert(sl, k) end
+                table.sort(sl)
+                for _, l in ipairs(sl) do f:write(l .. " " .. program[l] .. "\n") end
+                f:close()
+                current_filename = filename
+                is_modified = false
+                io.write("SAVED " .. filename .. "\r\n")
             end
-            io.write("READY.\r\n")
             io.flush()
-
         elseif string.match(line, '^LOAD%s+"(.-)"') then
             local filename = string.match(line, '^LOAD%s+"(.-)"')
-            if filename then
-                local f = io.open("utils/prog_basic/" .. filename .. ".bas", "r")
-                if f then
-                    program = {}
-                    vars = {}
-                    for fline in f:lines() do
-                        local lnum, rest = string.match(fline, "^(%d+)%s*(.*)$")
-                        if lnum then program[tonumber(lnum)] = rest end
-                    end
-                    f:close()
-                    current_filename = filename
-                    is_modified = false
-                    io.write("LOADED " .. filename .. "\r\n")
-                else io.write("FILE NOT FOUND\r\n") end
+            local f = io.open("utils/prog_basic/" .. filename .. ".bas", "r")
+            if f then
+                program = {}
+                vars = {}
+                for fline in f:lines() do
+                    local lnum, rest = string.match(fline, "^(%d+)%s*(.*)$")
+                    if lnum then program[tonumber(lnum)] = rest end
+                end
+                f:close()
+                current_filename = filename
+                is_modified = false
+                io.write("LOADED " .. filename .. "\r\n")
             end
-            io.write("READY.\r\n")
             io.flush()
-
         else
             local lnum, rest = string.match(line, "^(%d+)%s*(.*)$")
             if lnum then
                 lnum = tonumber(lnum)
-                if rest == "" then
-                    if program[lnum] ~= nil then
-                        program[lnum] = nil
-                        is_modified = true
-                    end
-                else
-                    if program[lnum] ~= rest then
-                        program[lnum] = rest
-                        is_modified = true
-                    end
-                end
+                if rest == "" then program[lnum] = nil; is_modified = true
+                else program[lnum] = rest; is_modified = true end
             else
                 local stat, _ = execute_line(line)
-                if stat == "SYNTAX ERROR" then
-                    io.write("SYNTAX ERROR\r\n")
-                    io.flush()
-                elseif stat == "GOTO" then
-                    io.write("CANNOT GOTO IN IMMEDIATE MODE\r\n")
-                    io.flush()
-                end
+                if stat == "SYNTAX ERROR" then io.write("SYNTAX ERROR\r\n"); io.flush() end
             end
         end
     end
