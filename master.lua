@@ -36,14 +36,11 @@ build_options()
 local cursor = 1
 
 -- =====================================================================
--- HORLOGE
+-- HORLOGE (Format HH:MM calé sur le cadre d'origine)
 -- =====================================================================
 local function update_clock()
-    local datetime = os.date("%H:%M:%S") -- Ajout des secondes pour voir le rafraîchissement
-    
-    -- \x1b7 sauvegarde la position actuelle du curseur de sélection
-    -- \x1b8 le remet exactement là où vous étiez en train de naviguer
-    io.write("\x1b7\x1b[5;52H\x1b[1m[ " .. datetime .. " ]\x1b[0m\x1b8")
+    local datetime = os.date("%H:%M")
+    io.write("\x1b[5;55H\x1b[1m[ " .. datetime .. " ]\x1b[0m")
     io.flush()
 end
 
@@ -153,7 +150,7 @@ else
 end
 
 local last_boot_draw = 0
-local last_clock_update = 0
+local last_clock_update = os.time()
 local last_net_update = os.time()
 local last_input_time = os.time()
 local INACTIVITY_TIMEOUT = 60
@@ -192,8 +189,8 @@ while true do
             io.write("\x1b[2J\x1b[H") 
             io.flush()
         else
-            -- 1. VERIFICATION DE L'HEURE (Toutes les 1 seconde)
-            if now - last_clock_update >= 1 then
+            -- 1. VERIFICATION DE L'HEURE (Toutes les 30 secondes pour rafraîchir discrètement)
+            if now - last_clock_update >= 30 then
                 update_clock()
                 last_clock_update = now
             end
@@ -203,7 +200,6 @@ while true do
                 local old_status = is_connected
                 is_connected = check_internet()
                 
-                -- Si l'état du réseau a changé, on reconstruit le menu à la volée !
                 if is_connected ~= old_status then
                     build_options()
                     if cursor > #options then cursor = #options end
@@ -237,7 +233,6 @@ while true do
                         os.execute(selected.cmd)
                         minitel.init()
                         
-                        -- Forcer le rafraîchissement au retour du module
                         last_clock_update = 0 
                         last_net_update = 0 
                         last_input_time = os.time()
