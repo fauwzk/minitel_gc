@@ -207,6 +207,13 @@ local function execute_line(line)
 
     elseif cmd == "WEND" then
         return "WEND"
+    
+    elseif cmd == "CLEAR" then
+        program = {}
+        vars = {}
+        current_filename = nil
+        is_modified = false
+        return "OK"
 
     elseif cmd == "CLS" then
         io.write("\x1b[2J") 
@@ -374,6 +381,7 @@ local function show_help()
         " RUN        : Execute le code en memoire",
         " LIST       : Affiche tout le code", 
         " DIR        : Liste les fichiers locaux", 
+        " CLEAR      : Efface le code en memoire",
         " SAVE / LOAD: Ex: SAVE \"NOM\" (sans .bas)", "",
         "\x1b[1m INSTRUCTIONS DU LANGAGE \x1b[0m", 
         " PRINT \"X\"  : Affiche du texte",
