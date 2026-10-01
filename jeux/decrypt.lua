@@ -4,21 +4,16 @@ minitel.init()
 -- =====================================================================
 -- GESTION DU DICTIONNAIRE (FRANCAIS CLASSIQUE)
 -- =====================================================================
-local word_list = {
-    "AIGLE", "ARBRE", "AVION", "BALLE", "BLANC", "BOITE", "BOUES", "BRAVO", 
-    "BRUIT", "CABLE", "CACHE", "CARRE", "CHIEN", "CHOSE", "CLAIR", "COEUR", 
-    "CORDE", "CORPS", "DANSE", "DOIGT", "DOUCE", "DROIT", "ECOLE", "ECRAN", 
-    "ENFER", "ENVIE", "ESSAI", "FAIRE", "FEMME", "FLEUR", "FORCE", "FROID", 
-    "FRUIT", "FUMEE", "FUSIL", "GLACE", "GORGE", "GRAIN", "GRAND", "GRAVE", 
-    "HABIT", "HERBE", "HEURE", "HOMME", "HOTEL", "HUILE", "IMAGE", "JOUER", 
-    "JOURS", "LAPIN", "LARGE", "LEGER", "LIGNE", "LIVRE", "LOURD", "MATIN", 
-    "MIEUX", "MONDE", "MONTE", "MOYEN", "NEIGE", "NOIRE", "NUAGE", "OMBRE", 
-    "ONCLE", "ORDRE", "OURSE", "PAGES", "PARLE", "PARMI", "PATTE", "PEINE", 
-    "PETIT", "PIECE", "PLACE", "PLEIN", "PLUIE", "PLUME", "POIDS", "POINT", 
-    "POMME", "PORTE", "POULE", "ROUGE", "ROUTE", "SABLE", "SALLE", "SAUVE", 
-    "SCENE", "SOUPE", "TABLE", "TEMPS", "TERRE", "TRACE", "TRAIN", "TROIS", 
-    "VILLE", "VIVRE", "VOILE", "ZEBRE"
-}
+local word_list = {"AIGLE", "ARBRE", "AVION", "BALLE", "BLANC", "BOITE", "BOUES", "BRAVO", "BRUIT", "CABLE", "CACHE",
+                   "CARRE", "CHIEN", "CHOSE", "CLAIR", "COEUR", "CORDE", "CORPS", "DANSE", "DOIGT", "DOUCE", "DROIT",
+                   "ECOLE", "ECRAN", "ENFER", "ENVIE", "ESSAI", "FAIRE", "FEMME", "FLEUR", "FORCE", "FROID", "FRUIT",
+                   "FUMEE", "FUSIL", "GLACE", "GORGE", "GRAIN", "GRAND", "GRAVE", "HABIT", "HERBE", "HEURE", "HOMME",
+                   "HOTEL", "HUILE", "IMAGE", "JOUER", "JOURS", "LAPIN", "LARGE", "LEGER", "LIGNE", "LIVRE", "LOURD",
+                   "MATIN", "MIEUX", "MONDE", "MONTE", "MOYEN", "NEIGE", "NOIRE", "NUAGE", "OMBRE", "ONCLE", "ORDRE",
+                   "OURSE", "PAGES", "PARLE", "PARMI", "PATTE", "PEINE", "PETIT", "PIECE", "PLACE", "PLEIN", "PLUIE",
+                   "PLUME", "POIDS", "POINT", "POMME", "PORTE", "POULE", "ROUGE", "ROUTE", "SABLE", "SALLE", "SAUVE",
+                   "SCENE", "SOUPE", "TABLE", "TEMPS", "TERRE", "TRACE", "TRAIN", "TROIS", "VILLE", "VIVRE", "VOILE",
+                   "ZEBRE"}
 
 local function load_dictionary()
     local f = io.open("dico_minitel.txt", "r")
@@ -34,13 +29,15 @@ local function load_dictionary()
     else
         io.write("\x1b[12;20H\x1b[7m GENERATION DU DICTIONNAIRE LOCAL... \x1b[0m")
         io.flush()
-        
+
         local out = io.open("dico_minitel.txt", "w")
         if out then
-            for _, w in ipairs(word_list) do out:write(w .. "\n") end
+            for _, w in ipairs(word_list) do
+                out:write(w .. "\n")
+            end
             out:close()
         end
-        
+
         minitel.sleep(1.5)
     end
 end
@@ -48,12 +45,12 @@ end
 -- =====================================================================
 -- VARIABLES DU JEU
 -- =====================================================================
-local state = "TITLE" 
+local state = "TITLE"
 local target_word = ""
-local guesses = {} 
+local guesses = {}
 local current_input = ""
 local max_attempts = 6
-local keyboard_status = {} 
+local keyboard_status = {}
 local msg_board = ""
 
 local function reset_game()
@@ -62,7 +59,7 @@ local function reset_game()
     guesses = {}
     current_input = ""
     keyboard_status = {}
-    
+
     for i = 65, 90 do
         keyboard_status[string.char(i)] = "UNKNOWN"
     end
@@ -74,13 +71,16 @@ end
 local function evaluate_guess(guess)
     local result = {}
     local target_counts = {}
-    
+
     for i = 1, 5 do
         local char = string.sub(target_word, i, i)
         target_counts[char] = (target_counts[char] or 0) + 1
-        result[i] = { char = string.sub(guess, i, i), status = "ABSENT" }
+        result[i] = {
+            char = string.sub(guess, i, i),
+            status = "ABSENT"
+        }
     end
-    
+
     for i = 1, 5 do
         if result[i].char == string.sub(target_word, i, i) then
             result[i].status = "EXACT"
@@ -88,7 +88,7 @@ local function evaluate_guess(guess)
             keyboard_status[result[i].char] = "EXACT"
         end
     end
-    
+
     for i = 1, 5 do
         if result[i].status ~= "EXACT" then
             local c = result[i].char
@@ -105,9 +105,9 @@ local function evaluate_guess(guess)
             end
         end
     end
-    
+
     table.insert(guesses, result)
-    
+
     if guess == target_word then
         state = "VICTORY"
         msg_board = "ACCES AUTORISE. MOT DE PASSE VALIDE."
@@ -132,7 +132,7 @@ local function draw_title(full)
         io.write("\x1b[8;11H==========================================================\r\n")
         io.write("\x1b[12;23H PIRATAGE DE SERVEUR (PROTOCOLE MOTUS) \r\n")
     end
-    
+
     io.write("\x1b[16;1H\x1b[K\x1b[16;25H\x1b[7m [ ENVOI ] LANCER L'INTRUSION \x1b[0m\r\n")
     io.write("\x1b[18;1H\x1b[K\x1b[18;30H   [ RETOUR ] QUITTER   \r\n")
     io.flush()
@@ -142,9 +142,9 @@ local function update_grid()
     for i = 1, max_attempts do
         local line_y = 6 + (i * 2)
         io.write("\x1b[" .. line_y .. ";25H\x1b[K")
-        
+
         local guess_row = guesses[i]
-        
+
         if guess_row then
             for j = 1, 5 do
                 local block = ""
@@ -160,7 +160,9 @@ local function update_grid()
         elseif i == #guesses + 1 and state == "PLAYING" then
             for j = 1, 5 do
                 local c = string.sub(current_input, j, j)
-                if c == "" then c = "." end
+                if c == "" then
+                    c = "."
+                end
                 io.write("  " .. c .. "   ")
             end
         else
@@ -171,10 +173,10 @@ local function update_grid()
 end
 
 local function update_keyboard()
-    local row1 = {"A","Z","E","R","T","Y","U","I","O","P"}
-    local row2 = {"Q","S","D","F","G","H","J","K","L","M"}
-    local row3 = {"W","X","C","V","B","N"}
-    
+    local row1 = {"A", "Z", "E", "R", "T", "Y", "U", "I", "O", "P"}
+    local row2 = {"Q", "S", "D", "F", "G", "H", "J", "K", "L", "M"}
+    local row3 = {"W", "X", "C", "V", "B", "N"}
+
     local function draw_row(y, x_start, chars)
         io.write("\x1b[" .. y .. ";" .. x_start .. "H\x1b[K")
         for _, c in ipairs(chars) do
@@ -184,13 +186,13 @@ local function update_keyboard()
             elseif st == "PRESENT" then
                 io.write("(" .. c .. ")")
             elseif st == "ABSENT" then
-                io.write("   ") 
+                io.write("   ")
             else
                 io.write(" " .. c .. " ")
             end
         end
     end
-    
+
     draw_row(20, 25, row1)
     draw_row(21, 25, row2)
     draw_row(22, 31, row3)
@@ -202,9 +204,9 @@ local function draw_game_screen()
     io.write("\x1b[2;11H==========================================================\r\n")
     io.write("\x1b[3;11H| \x1b[7m BRUTE-FORCE ACTIF \x1b[0m            FORMAT: 5 LETTRES |\r\n")
     io.write("\x1b[4;11H==========================================================\r\n")
-    
+
     io.write("\x1b[24;1H\x1b[K\x1b[7m MESSAGE: \x1b[0m " .. msg_board)
-    
+
     update_grid()
     update_keyboard()
 end
@@ -218,12 +220,14 @@ draw_title(true)
 
 while true do
     local key = minitel.get_key()
-    
-    if key == "RETOUR" or key == "ESC" then 
-        if state == "TITLE" then break end
+
+    if key == "RETOUR" or key == "ESC" then
+        if state == "TITLE" then
+            break
+        end
         state = "TITLE"
         draw_title(true)
-        
+
     elseif state == "TITLE" then
         if key == " " or key == "\n" or key == "\r" or key == "ENVOI" then
             state = "PLAYING"
@@ -231,7 +235,7 @@ while true do
             reset_game()
             draw_game_screen()
         end
-        
+
     elseif state == "PLAYING" then
         if key and string.match(key, "%a") and string.len(key) == 1 then
             if string.len(current_input) < 5 then
@@ -248,7 +252,7 @@ while true do
             if string.len(current_input) == 5 then
                 evaluate_guess(current_input)
                 current_input = ""
-                
+
                 io.write("\x1b[24;1H\x1b[K\x1b[7m MESSAGE: \x1b[0m " .. msg_board)
                 update_grid()
                 update_keyboard()
@@ -257,7 +261,7 @@ while true do
                 io.flush()
             end
         end
-        
+
     elseif state == "GAMEOVER" or state == "VICTORY" then
         if key == " " or key == "\n" or key == "\r" or key == "ENVOI" then
             state = "PLAYING"

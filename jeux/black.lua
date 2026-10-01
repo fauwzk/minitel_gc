@@ -40,7 +40,7 @@ load_config()
 -- =====================================================================
 local bankroll = config.START_BANKROLL
 local current_bet = config.MIN_BET
-local state = "TITLE" 
+local state = "TITLE"
 local msg_board = "BIENVENUE AU CASINO 3615."
 
 local deck = {}
@@ -55,10 +55,10 @@ local settings_cursor = 1
 -- =====================================================================
 local function draw_title(full_redraw)
     if full_redraw then
-        io.write("\x1b[2J\x1b[H") 
+        io.write("\x1b[2J\x1b[H")
         io.flush()
-        minitel.sleep(0.08) 
-        
+        minitel.sleep(0.08)
+
         io.write("\x1b[4;11H==========================================================\r\n")
         io.write("\x1b[5;11H|                                                        |\r\n")
         io.write("\x1b[6;11H|             \x1b[1m3 6 1 5   B L A C K J A C K\x1b[0m                |\r\n")
@@ -66,15 +66,15 @@ local function draw_title(full_redraw)
         io.write("\x1b[8;11H==========================================================\r\n")
         io.write("\x1b[12;23H FAITES SAUTER LA BANQUE (EN ASCII) \r\n")
     end
-    
+
     local b_jouer = (title_cursor == 1) and "\x1b[7m [ ENTRER SUR LE TAPIS ] \x1b[0m" or "   ENTRER SUR LE TAPIS   "
-    local b_param = (title_cursor == 2) and "\x1b[7m [ REGLES DU CASINO ] \x1b[0m"    or "   REGLES DU CASINO   "
-    local b_quit  = (title_cursor == 3) and "\x1b[7m [ QUITTER ] \x1b[0m"             or "   QUITTER   "
-    
+    local b_param = (title_cursor == 2) and "\x1b[7m [ REGLES DU CASINO ] \x1b[0m" or "   REGLES DU CASINO   "
+    local b_quit = (title_cursor == 3) and "\x1b[7m [ QUITTER ] \x1b[0m" or "   QUITTER   "
+
     io.write("\x1b[16;1H\x1b[K\x1b[16;28H" .. b_jouer .. "\r\n")
     io.write("\x1b[18;1H\x1b[K\x1b[18;30H" .. b_param .. "\r\n")
     io.write("\x1b[20;1H\x1b[K\x1b[20;34H" .. b_quit .. "\r\n")
-    
+
     io.write("\x1b[23;14H ZQSD / FLECHES : NAVIGUER  |  ESPACE / ENTREE : VALIDER \r\n")
     io.flush()
 end
@@ -86,15 +86,25 @@ local function draw_settings()
 
     io.write("\x1b[4;25H\x1b[7m REGLES DU CASINO \x1b[0m\r\n\n")
 
-    local opts = {
-        {name="FONDS DE DEPART ($)", key="START_BANKROLL", format="%d"},
-        {name="MISE MINIMALE ($)", key="MIN_BET", format="%d"},
-        {name="NOMBRE DE JEUX (DECKS)", key="DECKS", format="%d"},
-        {name="RETOUR (SAUVEGARDER)", key=nil}
-    }
+    local opts = {{
+        name = "FONDS DE DEPART ($)",
+        key = "START_BANKROLL",
+        format = "%d"
+    }, {
+        name = "MISE MINIMALE ($)",
+        key = "MIN_BET",
+        format = "%d"
+    }, {
+        name = "NOMBRE DE JEUX (DECKS)",
+        key = "DECKS",
+        format = "%d"
+    }, {
+        name = "RETOUR (SAUVEGARDER)",
+        key = nil
+    }}
 
     for i, o in ipairs(opts) do
-        local line = string.format("\x1b[%d;15H", 7 + (i*2))
+        local line = string.format("\x1b[%d;15H", 7 + (i * 2))
         if i == settings_cursor then
             line = line .. "\x1b[7m> " .. o.name
         else
@@ -133,14 +143,16 @@ end
 local function build_deck()
     deck = {}
     local suits = {"COE", "PIQ", "TRE", "CAR"}
-    local ranks = {
-        {"2",2}, {"3",3}, {"4",4}, {"5",5}, {"6",6}, {"7",7}, {"8",8}, {"9",9}, {"10",10},
-        {"V",10}, {"D",10}, {"R",10}, {"A",11}
-    }
+    local ranks = {{"2", 2}, {"3", 3}, {"4", 4}, {"5", 5}, {"6", 6}, {"7", 7}, {"8", 8}, {"9", 9}, {"10", 10},
+                   {"V", 10}, {"D", 10}, {"R", 10}, {"A", 11}}
     for d = 1, config.DECKS do
         for _, s in ipairs(suits) do
             for _, r in ipairs(ranks) do
-                table.insert(deck, {suit = s, face = r[1], val = r[2]})
+                table.insert(deck, {
+                    suit = s,
+                    face = r[1],
+                    val = r[2]
+                })
             end
         end
     end
@@ -151,7 +163,9 @@ local function build_deck()
 end
 
 local function draw_a_card()
-    if #deck == 0 then build_deck() end
+    if #deck == 0 then
+        build_deck()
+    end
     return table.remove(deck)
 end
 
@@ -160,7 +174,9 @@ local function get_score(hand)
     local aces = 0
     for _, c in ipairs(hand) do
         total = total + c.val
-        if c.face == "A" then aces = aces + 1 end
+        if c.face == "A" then
+            aces = aces + 1
+        end
     end
     while total > 21 and aces > 0 do
         total = total - 10
@@ -177,7 +193,8 @@ end
 -- MOTEUR D'AFFICHAGE DIFFERENTIEL DU TAPIS
 -- =====================================================================
 local function update_hud_top()
-    io.write("\x1b[1;1H\x1b[7m  3615 BLACKJACK   |   CREDITS : " .. bankroll .. " $   |   MISE : " .. current_bet .. " $  \x1b[K\x1b[0m")
+    io.write("\x1b[1;1H\x1b[7m  3615 BLACKJACK   |   CREDITS : " .. bankroll .. " $   |   MISE : " .. current_bet ..
+                 " $  \x1b[K\x1b[0m")
     io.flush()
 end
 
@@ -203,14 +220,16 @@ local function update_scores(hidden_dealer)
     local d_score = 0
     if hidden_dealer and #dealer_hand >= 1 then
         d_score = dealer_hand[1].val
-        if dealer_hand[1].face == "A" then d_score = 11 end
+        if dealer_hand[1].face == "A" then
+            d_score = 11
+        end
     else
         d_score = get_score(dealer_hand)
     end
-    
+
     local display_d_score = hidden_dealer and (d_score .. " + ?") or d_score
     io.write("\x1b[3;5H\x1b[K CROUPIER [ SCORE : " .. display_d_score .. " ]")
-    
+
     local p_score = get_score(player_hand)
     io.write("\x1b[13;5H\x1b[K JOUEUR   [ SCORE : " .. p_score .. " ]")
     io.flush()
@@ -218,31 +237,31 @@ end
 
 local function draw_single_card(x, y, card, hidden)
     if hidden then
-        io.write("\x1b["..y..";"..x.."H.-------.")
-        io.write("\x1b["..(y+1)..";"..x.."H|*******|")
-        io.write("\x1b["..(y+2)..";"..x.."H|*MINI-*|")
-        io.write("\x1b["..(y+3)..";"..x.."H|*-TEL *|")
-        io.write("\x1b["..(y+4)..";"..x.."H|*******|")
-        io.write("\x1b["..(y+5)..";"..x.."H'-------'")
+        io.write("\x1b[" .. y .. ";" .. x .. "H.-------.")
+        io.write("\x1b[" .. (y + 1) .. ";" .. x .. "H|*******|")
+        io.write("\x1b[" .. (y + 2) .. ";" .. x .. "H|*MINI-*|")
+        io.write("\x1b[" .. (y + 3) .. ";" .. x .. "H|*-TEL *|")
+        io.write("\x1b[" .. (y + 4) .. ";" .. x .. "H|*******|")
+        io.write("\x1b[" .. (y + 5) .. ";" .. x .. "H'-------'")
     else
         local f = tostring(card.face)
         local s = card.suit
         local space1 = (string.len(f) == 2) and "   " or "    "
         local space2 = (string.len(f) == 2) and "   " or "    "
-        
-        io.write("\x1b["..y..";"..x.."H.-------.")
-        io.write("\x1b["..(y+1)..";"..x.."H| " .. f .. space1 .. "|")
-        io.write("\x1b["..(y+2)..";"..x.."H|  " .. s .. "  |")
-        io.write("\x1b["..(y+3)..";"..x.."H|       |")
-        io.write("\x1b["..(y+4)..";"..x.."H|" .. space2 .. f .. " |")
-        io.write("\x1b["..(y+5)..";"..x.."H'-------'")
+
+        io.write("\x1b[" .. y .. ";" .. x .. "H.-------.")
+        io.write("\x1b[" .. (y + 1) .. ";" .. x .. "H| " .. f .. space1 .. "|")
+        io.write("\x1b[" .. (y + 2) .. ";" .. x .. "H|  " .. s .. "  |")
+        io.write("\x1b[" .. (y + 3) .. ";" .. x .. "H|       |")
+        io.write("\x1b[" .. (y + 4) .. ";" .. x .. "H|" .. space2 .. f .. " |")
+        io.write("\x1b[" .. (y + 5) .. ";" .. x .. "H'-------'")
     end
     io.flush()
 end
 
 local function clear_play_area()
-    for i=3, 21 do
-        io.write("\x1b["..i..";1H\x1b[K")
+    for i = 3, 21 do
+        io.write("\x1b[" .. i .. ";1H\x1b[K")
     end
     io.flush()
 end
@@ -256,7 +275,7 @@ local function init_betting()
     update_hud_top()
     update_msg_bar()
     update_action_bar()
-    
+
     io.write("\x1b[10;25H\x1b[7m PLACEZ VOS MISES \x1b[0m")
     io.write("\x1b[12;25H\x1b[K MISE ACTUELLE : " .. current_bet .. " $")
     io.flush()
@@ -268,11 +287,11 @@ local function resolve_game()
     local d_score = get_score(dealer_hand)
     local p_bj = check_blackjack(player_hand)
     local d_bj = check_blackjack(dealer_hand)
-    
+
     draw_single_card(15, 5, dealer_hand[2], false)
     update_scores(false)
     minitel.sleep(0.5)
-    
+
     if p_score > 21 then
         msg_board = "VOUS AVEZ SAUTE (>21) ! VOUS PERDEZ " .. current_bet .. " $."
         bankroll = bankroll - current_bet
@@ -301,14 +320,18 @@ local function resolve_game()
     else
         msg_board = "EGALITE (PUSH). VOTRE MISE EST RECUPEREE."
     end
-    
+
     if bankroll <= 0 then
         bankroll = config.START_BANKROLL
         msg_board = msg_board .. " LE CASINO VOUS OFFRE " .. config.START_BANKROLL .. " $."
     end
-    if current_bet > bankroll then current_bet = bankroll end
-    if current_bet < config.MIN_BET then current_bet = config.MIN_BET end
-    
+    if current_bet > bankroll then
+        current_bet = bankroll
+    end
+    if current_bet < config.MIN_BET then
+        current_bet = config.MIN_BET
+    end
+
     update_hud_top()
     update_msg_bar()
     update_action_bar()
@@ -317,23 +340,23 @@ end
 local function dealer_play()
     state = "DEALER_TURN"
     update_action_bar()
-    
+
     draw_single_card(15, 5, dealer_hand[2], false)
     update_scores(false)
     minitel.sleep(1.0)
-    
+
     while get_score(dealer_hand) < 17 do
         msg_board = "LE CROUPIER TIRE UNE CARTE..."
         update_msg_bar()
         minitel.sleep(0.8)
-        
+
         table.insert(dealer_hand, draw_a_card())
-        draw_single_card(5 + (#dealer_hand-1)*10, 5, dealer_hand[#dealer_hand], false)
+        draw_single_card(5 + (#dealer_hand - 1) * 10, 5, dealer_hand[#dealer_hand], false)
         update_scores(false)
         minitel.play_sound("hit")
         minitel.sleep(1.0)
     end
-    
+
     resolve_game()
 end
 
@@ -345,10 +368,12 @@ draw_title(true)
 
 while true do
     local key = minitel.get_key()
-    
+
     -- RETOUR GLOBAL AU MENU
     if (key == "p" or key == "P" or key == "RETOUR" or key == "ESC") and state ~= "TITLE" then
-        if state == "SETTINGS" then save_config() end
+        if state == "SETTINGS" then
+            save_config()
+        end
         state = "TITLE"
         title_cursor = 1
         draw_title(true)
@@ -356,11 +381,15 @@ while true do
         if state == "TITLE" then
             if key == "z" or key == "Z" or key == "UP" then
                 title_cursor = title_cursor - 1
-                if title_cursor < 1 then title_cursor = 3 end
+                if title_cursor < 1 then
+                    title_cursor = 3
+                end
                 draw_title(false)
             elseif key == "s" or key == "S" or key == "DOWN" then
                 title_cursor = title_cursor + 1
-                if title_cursor > 3 then title_cursor = 1 end
+                if title_cursor > 3 then
+                    title_cursor = 1
+                end
                 draw_title(false)
             elseif key == " " or key == "\n" or key == "\r" or key == "ENVOI" then
                 minitel.play_sound("hit")
@@ -369,13 +398,14 @@ while true do
                     bankroll = config.START_BANKROLL
                     current_bet = config.MIN_BET
                     build_deck()
-                    
+
                     io.write("\x1b[2J\x1b[H")
-                    io.write("\x1b[22;1H================================================================================")
+                    io.write(
+                        "\x1b[22;1H================================================================================")
                     io.flush()
                     minitel.sleep(0.08)
                     init_betting()
-                    
+
                 elseif title_cursor == 2 then
                     state = "SETTINGS"
                     settings_cursor = 1
@@ -385,15 +415,19 @@ while true do
                 end
             end
             minitel.sleep(0.05)
-            
+
         elseif state == "SETTINGS" then
             if key == "z" or key == "Z" or key == "UP" then
                 settings_cursor = settings_cursor - 1
-                if settings_cursor < 1 then settings_cursor = 4 end
+                if settings_cursor < 1 then
+                    settings_cursor = 4
+                end
                 draw_settings()
             elseif key == "s" or key == "S" or key == "DOWN" then
                 settings_cursor = settings_cursor + 1
-                if settings_cursor > 4 then settings_cursor = 1 end
+                if settings_cursor > 4 then
+                    settings_cursor = 1
+                end
                 draw_settings()
             elseif key == "q" or key == "Q" or key == "LEFT" then
                 modify_setting(-1)
@@ -410,45 +444,60 @@ while true do
                 end
             end
             minitel.sleep(0.05)
-            
+
         elseif state == "BETTING" then
             if key == "z" or key == "Z" or key == "UP" then
                 current_bet = current_bet + 10
-                if current_bet > bankroll then current_bet = bankroll end
+                if current_bet > bankroll then
+                    current_bet = bankroll
+                end
                 update_hud_top()
-                io.write("\x1b[12;25H\x1b[K MISE ACTUELLE : " .. current_bet .. " $") io.flush()
+                io.write("\x1b[12;25H\x1b[K MISE ACTUELLE : " .. current_bet .. " $")
+                io.flush()
             elseif key == "s" or key == "S" or key == "DOWN" then
                 current_bet = current_bet - 10
-                if current_bet < config.MIN_BET then current_bet = config.MIN_BET end
+                if current_bet < config.MIN_BET then
+                    current_bet = config.MIN_BET
+                end
                 update_hud_top()
-                io.write("\x1b[12;25H\x1b[K MISE ACTUELLE : " .. current_bet .. " $") io.flush()
+                io.write("\x1b[12;25H\x1b[K MISE ACTUELLE : " .. current_bet .. " $")
+                io.flush()
             elseif key == " " or key == "\n" or key == "\r" or key == "ENVOI" then
-                if current_bet > bankroll then current_bet = bankroll end
-                
+                if current_bet > bankroll then
+                    current_bet = bankroll
+                end
+
                 player_hand = {}
                 dealer_hand = {}
                 msg_board = "DISTRIBUTION DES CARTES..."
-                
+
                 clear_play_area()
                 update_hud_top()
                 update_msg_bar()
-                
+
                 table.insert(player_hand, draw_a_card())
                 draw_single_card(5, 15, player_hand[1], false)
-                update_scores(true) minitel.play_sound("hit") minitel.sleep(0.4)
-                
+                update_scores(true)
+                minitel.play_sound("hit")
+                minitel.sleep(0.4)
+
                 table.insert(dealer_hand, draw_a_card())
                 draw_single_card(5, 5, dealer_hand[1], false)
-                update_scores(true) minitel.play_sound("hit") minitel.sleep(0.4)
-                
+                update_scores(true)
+                minitel.play_sound("hit")
+                minitel.sleep(0.4)
+
                 table.insert(player_hand, draw_a_card())
                 draw_single_card(15, 15, player_hand[2], false)
-                update_scores(true) minitel.play_sound("hit") minitel.sleep(0.4)
-                
+                update_scores(true)
+                minitel.play_sound("hit")
+                minitel.sleep(0.4)
+
                 table.insert(dealer_hand, draw_a_card())
                 draw_single_card(15, 5, dealer_hand[2], true)
-                minitel.play_sound("hit") minitel.sleep(0.4)
-                
+                minitel.play_sound("hit")
+                minitel.sleep(0.4)
+
                 if check_blackjack(player_hand) then
                     resolve_game()
                 else
@@ -459,32 +508,32 @@ while true do
                 end
             end
             minitel.sleep(0.05)
-            
+
         elseif state == "PLAYER_TURN" then
             if key == "t" or key == "T" then
                 table.insert(player_hand, draw_a_card())
-                draw_single_card(5 + (#player_hand-1)*10, 15, player_hand[#player_hand], false)
+                draw_single_card(5 + (#player_hand - 1) * 10, 15, player_hand[#player_hand], false)
                 update_scores(true)
                 minitel.play_sound("hit")
-                
+
                 if get_score(player_hand) > 21 then
                     resolve_game()
                 end
-                
+
             elseif key == "r" or key == "R" then
                 dealer_play()
-                
+
             elseif key == "d" or key == "D" then
                 if #player_hand == 2 and (bankroll >= current_bet * 2) then
                     current_bet = current_bet * 2
                     update_hud_top()
-                    
+
                     table.insert(player_hand, draw_a_card())
                     draw_single_card(25, 15, player_hand[3], false)
                     update_scores(true)
                     minitel.play_sound("hit")
                     minitel.sleep(1.0)
-                    
+
                     if get_score(player_hand) > 21 then
                         resolve_game()
                     else
@@ -499,7 +548,7 @@ while true do
                 end
             end
             minitel.sleep(0.05)
-            
+
         elseif state == "GAMEOVER" then
             if key == " " or key == "\n" or key == "\r" or key == "ENVOI" then
                 msg_board = "NOUVELLE DONNE. PLACEZ VOS MISES."
