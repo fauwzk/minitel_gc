@@ -2,42 +2,69 @@ local minitel = require("minitel")
 minitel.init()
 
 -- =====================================================================
--- GESTION DU DICTIONNAIRE (FRANCAIS CLASSIQUE)
+-- GESTION DU DICTIONNAIRE (MULTI-TAILLES, FAMILIAL)
 -- =====================================================================
-local word_list = {"AIGLE", "ARBRE", "AVION", "BALLE", "BLANC", "BOITE", "BOUES", "BRAVO", "BRUIT", "CABLE", "CACHE",
-                   "CARRE", "CHIEN", "CHOSE", "CLAIR", "COEUR", "CORDE", "CORPS", "DANSE", "DOIGT", "DOUCE", "DROIT",
-                   "ECOLE", "ECRAN", "ENFER", "ENVIE", "ESSAI", "FAIRE", "FEMME", "FLEUR", "FORCE", "FROID", "FRUIT",
-                   "FUMEE", "FUSIL", "GLACE", "GORGE", "GRAIN", "GRAND", "GRAVE", "HABIT", "HERBE", "HEURE", "HOMME",
-                   "HOTEL", "HUILE", "IMAGE", "JOUER", "JOURS", "LAPIN", "LARGE", "LEGER", "LIGNE", "LIVRE", "LOURD",
-                   "MATIN", "MIEUX", "MONDE", "MONTE", "MOYEN", "NEIGE", "NOIRE", "NUAGE", "OMBRE", "ONCLE", "ORDRE",
-                   "OURSE", "PAGES", "PARLE", "PARMI", "PATTE", "PEINE", "PETIT", "PIECE", "PLACE", "PLEIN", "PLUIE",
-                   "PLUME", "POIDS", "POINT", "POMME", "PORTE", "POULE", "ROUGE", "ROUTE", "SABLE", "SALLE", "SAUVE",
-                   "SCENE", "SOUPE", "TABLE", "TEMPS", "TERRE", "TRACE", "TRAIN", "TROIS", "VILLE", "VIVRE", "VOILE",
-                   "ZEBRE"}
+local fallback_words = {
+    -- 3 lettres
+    "AMI", "BOL", "BUS", "COU", "DOS", "EAU", "FEU", "GAZ", "JEU", "LAC", "LIT", "MER", "NEZ", "OEU", "POT", "RUE", "SAC", "THE", "VOL", "ZOO",
+    -- 4 lettres
+    "BLEU", "BOIS", "CAFE", "CHAT", "EST", "JEUX", "JOUR", "LION", "LOUP", "LUNE", "NORD", "NUIT", "OURS", "PAIN", "PAYS", "PONT", "PORT", "ROSE", "SUD", "VELO", "VENT", "VERT",
+    -- 5 lettres
+    "ARBRE", "AVION", "BALLE", "BOITE", "CHIEN", "COEUR", "ECOLE", "FLEUR", "GLACE", "LAPIN", "LIVRE", "PLUIE", "POMME", "TABLE", "TRAIN", "VILLE",
+    -- 6 lettres
+    "BANANE", "CERISE", "CHEVAL", "CITRON", "CRAYON", "FRAISE", "GARCON", "GATEAU", "GIRAFE", "JARDIN", "MAISON", "MOTEUR", "OISEAU", "PAPIER", "PIERRE", "POULET", "SOLEIL"
+}
+
+local word_list = {}
+local word_length = 5
 
 local function load_dictionary()
-    local f = io.open("dico_minitel.txt", "r")
+    -- 1. Tentative de mise à jour réseau si internet est disponible
+    local success = os.execute("ping -c 1 -W 1 github.com > /dev/null 2>&1")
+    if success then
+        io.write("\x1b[12;20H\x1b[7m RECHERCHE DU DICTIONNAIRE EN LIGNE... \x1b[0m")
+        io.flush()
+        
+        -- URL de votre dépôt (à créer/adapter si vous voulez un dico externe)
+        local url = "https://raw.githubusercontent.com/fauwzk/minitel_gc/main/dico_fr.txt"
+        os.execute("curl -s -f -o jeux/dico_temp.txt " .. url)
+        
+        -- Si le téléchargement a fonctionné, on écrase l'ancien
+        local check = io.open("jeux/dico_temp.txt", "r")
+        if check then
+            check:close()
+            os.rename("jeux/dico_temp.txt", "jeux/dico_minitel.txt")
+        end
+    end
+
+    -- 2. Chargement depuis le fichier local
+    local f = io.open("jeux/dico_minitel.txt", "r")
     if f then
-        word_list = {}
         for line in f:lines() do
-            local word = string.match(line, "%a+")
-            if word and string.len(word) == 5 then
-                table.insert(word_list, string.upper(word))
+            local word = string.match(string.upper(line), "%a+")
+            if word then
+                local len = string.len(word)
+                if len >= 3 and len <= 6 then
+                    table.insert(word_list, word)
+                end
             end
         end
         f:close()
-    else
+    end
+
+    -- 3. Sécurité : création du fichier avec les mots de base s'il est vide/inexistant
+    if #word_list == 0 then
         io.write("\x1b[12;20H\x1b[7m GENERATION DU DICTIONNAIRE LOCAL... \x1b[0m")
         io.flush()
-
-        local out = io.open("dico_minitel.txt", "w")
+        
+        word_list = fallback_words
+        local out = io.open("jeux/dico_minitel.txt", "w")
         if out then
             for _, w in ipairs(word_list) do
                 out:write(w .. "\n")
             end
             out:close()
         end
-
         minitel.sleep(1.5)
     end
 end
@@ -56,6 +83,7 @@ local msg_board = ""
 local function reset_game()
     math.randomseed(os.time())
     target_word = word_list[math.random(#word_list)]
+    word_length = string.len(target_word)
     guesses = {}
     current_input = ""
     keyboard_status = {}
@@ -72,7 +100,7 @@ local function evaluate_guess(guess)
     local result = {}
     local target_counts = {}
 
-    for i = 1, 5 do
+    for i = 1, word_length do
         local char = string.sub(target_word, i, i)
         target_counts[char] = (target_counts[char] or 0) + 1
         result[i] = {
@@ -81,7 +109,7 @@ local function evaluate_guess(guess)
         }
     end
 
-    for i = 1, 5 do
+    for i = 1, word_length do
         if result[i].char == string.sub(target_word, i, i) then
             result[i].status = "EXACT"
             target_counts[result[i].char] = target_counts[result[i].char] - 1
@@ -89,7 +117,7 @@ local function evaluate_guess(guess)
         end
     end
 
-    for i = 1, 5 do
+    for i = 1, word_length do
         if result[i].status ~= "EXACT" then
             local c = result[i].char
             if target_counts[c] and target_counts[c] > 0 then
@@ -139,14 +167,17 @@ local function draw_title(full)
 end
 
 local function update_grid()
+    -- Calcul pour centrer la grille automatiquement selon la longueur du mot
+    local start_x = math.floor((80 - (word_length * 6)) / 2)
+    
     for i = 1, max_attempts do
         local line_y = 6 + (i * 2)
-        io.write("\x1b[" .. line_y .. ";25H\x1b[K")
+        io.write("\x1b[" .. line_y .. ";" .. start_x .. "H\x1b[K")
 
         local guess_row = guesses[i]
 
         if guess_row then
-            for j = 1, 5 do
+            for j = 1, word_length do
                 local block = ""
                 if guess_row[j].status == "EXACT" then
                     block = "\x1b[7m[ " .. guess_row[j].char .. " ]\x1b[0m"
@@ -158,7 +189,7 @@ local function update_grid()
                 io.write(block .. " ")
             end
         elseif i == #guesses + 1 and state == "PLAYING" then
-            for j = 1, 5 do
+            for j = 1, word_length do
                 local c = string.sub(current_input, j, j)
                 if c == "" then
                     c = "."
@@ -166,7 +197,9 @@ local function update_grid()
                 io.write("  " .. c .. "   ")
             end
         else
-            io.write("  .     .     .     .     .  ")
+            for j = 1, word_length do
+                io.write("  .   ")
+            end
         end
     end
     io.flush()
@@ -202,7 +235,8 @@ end
 local function draw_game_screen()
     io.write("\x1b[2J\x1b[H")
     io.write("\x1b[2;11H==========================================================\r\n")
-    io.write("\x1b[3;11H| \x1b[7m BRUTE-FORCE ACTIF \x1b[0m            FORMAT: 5 LETTRES |\r\n")
+    -- L'interface affiche le nombre de lettres requis dynamiquement
+    io.write("\x1b[3;11H| \x1b[7m BRUTE-FORCE ACTIF \x1b[0m            FORMAT: " .. word_length .. " LETTRES |\r\n")
     io.write("\x1b[4;11H==========================================================\r\n")
 
     io.write("\x1b[24;1H\x1b[K\x1b[7m MESSAGE: \x1b[0m " .. msg_board)
@@ -238,7 +272,7 @@ while true do
 
     elseif state == "PLAYING" then
         if key and string.match(key, "%a") and string.len(key) == 1 then
-            if string.len(current_input) < 5 then
+            if string.len(current_input) < word_length then
                 current_input = current_input .. string.upper(key)
                 minitel.play_sound("hit")
                 update_grid()
@@ -249,7 +283,7 @@ while true do
                 update_grid()
             end
         elseif key == "\n" or key == "\r" or key == "ENVOI" then
-            if string.len(current_input) == 5 then
+            if string.len(current_input) == word_length then
                 evaluate_guess(current_input)
                 current_input = ""
 
@@ -257,7 +291,7 @@ while true do
                 update_grid()
                 update_keyboard()
             else
-                io.write("\x1b[24;1H\x1b[K\x1b[7m ERREUR: \x1b[0m LE MOT DOIT CONTENIR 5 LETTRES.")
+                io.write("\x1b[24;1H\x1b[K\x1b[7m ERREUR: \x1b[0m LE MOT DOIT CONTENIR " .. word_length .. " LETTRES.")
                 io.flush()
             end
         end
