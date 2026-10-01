@@ -6,37 +6,44 @@ minitel.init()
 -- =====================================================================
 local function check_internet()
     local success = os.execute("ping -c 1 -W 1 github.com > /dev/null 2>&1")
-    return success
+    return success == true or success == 0
 end
 
 local is_connected = check_internet()
 
 -- =====================================================================
--- LISTE DES MODULES
+-- LISTE DES MODULES (Dynamique)
 -- =====================================================================
-local options = {
-    { name = "3615 JEUX (Modules jeux)", cmd = "lua5.3 launcher_jeux.lua" },
-    { name = "3615 OUTILS (Modules outils)", cmd = "lua5.3 launcher_utils.lua" }
-}
+local options = {}
 
-if is_connected then
-    table.insert(options, { name = "MISE A JOUR SYSTEME (Git Pull)", cmd = "update" })
+local function build_options()
+    options = {
+        { name = "3615 JEUX (Modules jeux)", cmd = "lua5.3 launcher_jeux.lua" },
+        { name = "3615 OUTILS (Modules outils)", cmd = "lua5.3 launcher_utils.lua" }
+    }
+
+    if is_connected then
+        table.insert(options, { name = "MISE A JOUR SYSTEME (Git Pull)", cmd = "update" })
+    end
+
+    table.insert(options, { name = "CONFIGURATION RESEAU (nmtui)", cmd = "TERM=vt100 nmtui" })
+    table.insert(options, { name = "INVITE DE COMMANDE (Shell)", cmd = "bash" })
+    table.insert(options, { name = "EXTINCTION DU SYSTEME", cmd = "sudo poweroff" })
+    table.insert(options, { name = "REDEMARRAGE DU SYSTEME", cmd = "sudo reboot" })
 end
 
-table.insert(options, { name = "CONFIGURATION RESEAU (nmtui)", cmd = "TERM=vt100 nmtui" })
-table.insert(options, { name = "INVITE DE COMMANDE (Shell)", cmd = "bash" })
-table.insert(options, { name = "EXTINCTION DU SYSTEME", cmd = "sudo poweroff" })
-table.insert(options, { name = "REDEMARRAGE DU SYSTEME", cmd = "sudo reboot" })
-
+build_options()
 local cursor = 1
 
 -- =====================================================================
 -- HORLOGE
 -- =====================================================================
 local function update_clock()
-    local datetime = os.date("%H:%M")
-    -- Positionnement absolu direct (sans sauvegarde de curseur pour éviter les bugs d'affichage)
-    io.write("\x1b[5;55H\x1b[1m[ " .. datetime .. " ]\x1b[0m")
+    local datetime = os.date("%H:%M:%S") -- Ajout des secondes pour voir le rafraîchissement
+    
+    -- \x1b7 sauvegarde la position actuelle du curseur de sélection
+    -- \x1b8 le remet exactement là où vous étiez en train de naviguer
+    io.write("\x1b7\x1b[5;52H\x1b[1m[ " .. datetime .. " ]\x1b[0m\x1b8")
     io.flush()
 end
 
@@ -62,10 +69,9 @@ local function draw_menu()
     
     local line_reseau = ""
     if is_connected then
-        -- L'espace manquant a été ajouté pour aligner la bordure
-        line_reseau = "| RESEAU : \x1b[7m CONNECTE \x1b[0m                                    |\r\n"
+        line_reseau = "| RESEAU : \x1b[7m CONNECTE \x1b[0m                                 |\r\n"
     else
-        line_reseau = "| RESEAU :  HORS LIGNE                                   |\r\n"
+        line_reseau = "| RESEAU :  HORS LIGNE                                 |\r\n"
     end
     
     io.write("\x1b[2;11H==========================================================\r\n")
@@ -147,7 +153,8 @@ else
 end
 
 local last_boot_draw = 0
-local last_clock_update = os.time()
+local last_clock_update = 0
+local last_net_update = os.time()
 local last_input_time = os.time()
 local INACTIVITY_TIMEOUT = 60
 
@@ -185,11 +192,28 @@ while true do
             io.write("\x1b[2J\x1b[H") 
             io.flush()
         else
-            if now - last_clock_update >= 30 then
+            -- 1. VERIFICATION DE L'HEURE (Toutes les 1 seconde)
+            if now - last_clock_update >= 1 then
                 update_clock()
                 last_clock_update = now
             end
             
+            -- 2. VERIFICATION DU RESEAU (Toutes les 30 secondes)
+            if now - last_net_update >= 30 then
+                local old_status = is_connected
+                is_connected = check_internet()
+                
+                -- Si l'état du réseau a changé, on reconstruit le menu à la volée !
+                if is_connected ~= old_status then
+                    build_options()
+                    if cursor > #options then cursor = #options end
+                    draw_menu()
+                    draw_list()
+                end
+                last_net_update = now
+            end
+            
+            -- 3. GESTION DU CLAVIER
             if key then
                 local old_cursor = cursor
                 if key == "z" or key == "Z" or key == "UP" then
@@ -213,9 +237,13 @@ while true do
                         os.execute(selected.cmd)
                         minitel.init()
                         
+                        -- Forcer le rafraîchissement au retour du module
+                        last_clock_update = 0 
+                        last_net_update = 0 
+                        last_input_time = os.time()
+                        
                         draw_menu()
                         draw_list()
-                        last_input_time = os.time() 
                     end
                 end
             end
