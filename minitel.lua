@@ -21,14 +21,20 @@ function M.sleep(seconds)
 end
 
 function M.play_sound(effect)
+    -- L'exécution avec " >/dev/null 2>&1 &" permet de lancer le son en tâche de fond 
+    -- sans bloquer l'exécution de Lua et sans salir l'affichage du Minitel.
+    
     if not effect or effect == "blip" or effect == "hit" then
-        os.execute("AUDIODRIVER=alsa play -q -n synth 0.05 square 880 >/dev/null 2>&1 &")
+        -- Petit bip court "arcade" (Onde carrée à 880 Hz pendant 50ms)
+        os.execute("play -q -n synth 0.05 square 880 >/dev/null 2>&1 &")
         
     elseif effect == "win" or effect == "pickup" then
-        os.execute("AUDIODRIVER=alsa play -q -n synth 0.15 square 440-1200 >/dev/null 2>&1 &")
+        -- Son de ramassage/victoire (Onde carrée montante de 440 Hz à 1200 Hz pendant 150ms)
+        os.execute("play -q -n synth 0.15 square 440-1200 >/dev/null 2>&1 &")
         
     elseif effect == "lose" or effect == "damage" then
-        os.execute("AUDIODRIVER=alsa play -q -n synth 0.3 sawtooth 300-100 >/dev/null 2>&1 &")
+        -- Son grave d'erreur/dégât (Onde en dent de scie descendante de 300 Hz à 100 Hz pendant 300ms)
+        os.execute("play -q -n synth 0.3 sawtooth 300-100 >/dev/null 2>&1 &")
         
     end
 end
