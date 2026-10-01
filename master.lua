@@ -40,7 +40,7 @@ local cursor = 1
 -- =====================================================================
 local function update_clock()
     local datetime = os.date("%H:%M")
-    io.write("\x1b[5;55H\x1b[1m[ " .. datetime .. " ]\x1b[0m")
+    io.write("\x1b[5;55H\x1b[1m[ " .. datetime .. " ]\x1b[0m\x1b[5;67H")
     io.flush()
 end
 
