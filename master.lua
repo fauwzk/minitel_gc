@@ -16,7 +16,7 @@ local is_connected = check_internet()
 -- =====================================================================
 local options = {
     { name = "3615 JEUX (Modules de divertissement)", cmd = "lua5.3 launcher_jeux.lua" },
-    { name = "3615 OUTILS (Modules utilitaires)", cmd = "lua5.3 launcher_utils.lua" }
+    { name = "3615 OUTILS (Modules outils)", cmd = "lua5.3 launcher_utils.lua" }
 }
 
 if is_connected then
