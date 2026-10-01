@@ -247,7 +247,7 @@ while true do
         
     elseif state == "SCREENSAVER" then
         run_screensaver_frame()
-        minitel.sleep(0.1) 
+        minitel.sleep(0.25) 
     end
 end
 
