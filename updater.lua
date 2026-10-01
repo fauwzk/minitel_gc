@@ -72,6 +72,8 @@ os.execute("git config --global --add safe.directory '*' >/dev/null 2>&1")
 
 -- Etape 2 : Préparation
 draw_interface("\x1b[1m    NETTOYAGE DU CACHE LOCAL...   \x1b[0m")
+os.execute("mkdir -p /home/minitel/minitel_gc_backup/utils/prog_basic_backup >/dev/null 2>&1")
+os.execute("cp -R /home/minitel/minitel_gc/utils/prog_basic /home/minitel/minitel_gc_backup/utils/prog_basic_backup >/dev/null 2>&1")
 os.execute("git reset --hard HEAD >/dev/null 2>&1")
 minitel.sleep(1)
 
@@ -80,6 +82,7 @@ draw_interface("\x1b[7m TELECHARGEMENT DES NOUVELLES DONNEES... \x1b[0m")
 minitel.play_sound("pickup")
 os.execute("git pull >/dev/null 2>&1")
 minitel.sleep(0.5)
+os.execute("cp -R /home/minitel/minitel_gc_backup/utils/prog_basic_backup/* /home/minitel/minitel_gc/utils/prog_basic >/dev/null 2>&1")
 
 -- Etape 4 : Fin avec lecture des infos de Commit
 local commit_info = get_latest_commit()
