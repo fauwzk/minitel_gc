@@ -15,7 +15,7 @@ local is_connected = check_internet()
 -- LISTE DES MODULES
 -- =====================================================================
 local options = {
-    { name = "3615 JEUX (Modules de divertissement)", cmd = "lua5.3 launcher_jeux.lua" },
+    { name = "3615 JEUX (Modules jeux)", cmd = "lua5.3 launcher_jeux.lua" },
     { name = "3615 OUTILS (Modules outils)", cmd = "lua5.3 launcher_utils.lua" }
 }
 
