@@ -155,12 +155,10 @@ local function execute_line(line)
         minitel.play_sound("hit") return "OK"
         
     elseif cmd == "LOCATE" then
-        -- Correction: Utilisation de eval_expr pour gérer les variables au lieu de demander des chiffres (%d)
         local str_x, str_y = string.match(rest, "^(.-)%s*,%s*(.*)$")
         if str_x and str_y then
             local x = math.floor(eval_expr(str_x))
             local y = math.floor(eval_expr(str_y))
-            -- Protection: empécher le curseur de sortir de l'écran (VT100 n'aime pas le 0 ou l'overflow)
             x = math.max(1, math.min(80, x))
             y = math.max(1, math.min(24, y))
             io.write("\x1b["..y..";"..x.."H") io.flush()
@@ -240,45 +238,87 @@ local function run_program()
 end
 
 -- =====================================================================
--- ECRAN D'AIDE
+-- ECRAN D'AIDE (AVEC DEFILEMENT/SCROLL)
 -- =====================================================================
 local function show_help()
     io.write("\x1b[r") 
     io.write("\x1b[2J\x1b[H")
     
-    io.write("\x1b[1;1H\x1b[7m MICRO-BASIC : MANUEL DE REFERENCE                  [RETOUR] POUR QUITTER \x1b[K\x1b[0m\r\n")
+    local help_lines = {
+        "\x1b[1m COMMANDES SYSTEME \x1b[0m",
+        " RUN        : Execute le code en memoire",
+        " LIST       : Affiche tout le code",
+        " LIST 10    : Affiche la ligne 10",
+        " LIST 10-50 : Affiche les lignes 10 a 50",
+        " NEW        : Efface la memoire",
+        " DIR        : Liste les fichiers locaux",
+        " SAVE       : Ex: SAVE \"NOM\" (sans .bas)",
+        " LOAD       : Ex: LOAD \"NOM\"",
+        " EXIT       : Quitter l'interpreteur",
+        "",
+        "\x1b[1m INSTRUCTIONS DU LANGAGE \x1b[0m",
+        " PRINT \"X\"  : Affiche du texte",
+        " INPUT X    : Demande une valeur",
+        " LET X EQ 5 : Assigner (ou X = 5)",
+        " IF..THEN   : Condition",
+        " GOTO X     : Saute a la ligne X",
+        " PAUSE X    : Pause de X secondes",
+        "",
+        "\x1b[1m FONCTIONS MINITEL \x1b[0m",
+        " CLS        : Efface l'ecran entier",
+        " BEEP       : Joue le son du Minitel",
+        " INVERT     : Texte en video inverse",
+        " NORMAL     : Retour au texte normal",
+        " LOCATE X,Y : Place le curseur en X, Y (ex: LOCATE X PLUS 1, Y)",
+        " MKEY()     : Lecture clavier en direct",
+        "",
+        "\x1b[1m ASTUCES D'ECRITURE \x1b[0m",
+        " Vous pouvez utiliser les mots cles EQ, NEQ, LT, GT, LE, GE",
+        " ou bien PLUS, MINUS, MUL, DIV a la place des symboles !",
+        " C'est beaucoup plus simple a taper sur un Minitel.",
+        " La touche RETOUR arrete toujours un programme en cours."
+    }
     
-    io.write("\r\n\x1b[1m COMMANDES SYSTEME \x1b[0m\r\n")
-    io.write(" RUN        : Execute le code en memoire\r\n")
-    io.write(" LIST       : Affiche tout le code\r\n")
-    io.write(" LIST 10    : Affiche la ligne 10\r\n")
-    io.write(" LIST 10-50 : Affiche les lignes 10 a 50\r\n")
-    io.write(" NEW        : Efface la memoire\r\n")
-    io.write(" DIR        : Liste les fichiers locaux\r\n")
-    io.write(" SAVE       : Ex: SAVE \"NOM\" (sans .bas)\r\n")
-    io.write(" LOAD       : Ex: LOAD \"NOM\"\r\n")
-    io.write(" EXIT       : Quitter l'interpreteur\r\n")
+    local offset = 1
+    local max_visible = 20 -- Nombre de lignes affichables entre la bannière haut et bas
+    local max_offset = math.max(1, #help_lines - max_visible + 1)
     
-    io.write("\r\n\x1b[1m INSTRUCTIONS DU LANGAGE \x1b[0m\r\n")
-    io.write(" PRINT \"X\"  : Affiche du texte\r\n")
-    io.write(" INPUT X    : Demande une valeur\r\n")
-    io.write(" LET X EQ 5 : Assigner (ou X = 5)\r\n")
-    io.write(" IF..THEN   : Condition\r\n")
-    io.write(" GOTO X     : Saute a la ligne X\r\n")
-    io.write(" PAUSE X    : Pause de X secondes\r\n")
+    local function draw_help_screen()
+        io.write("\x1b[1;1H\x1b[7m MICRO-BASIC : MANUEL               [FLECHES] DEFILER  [RETOUR] QUITTER \x1b[K\x1b[0m\r\n")
+        
+        -- Dessin des lignes visibles selon le scroll
+        for i = 1, max_visible do
+            local line_idx = offset + i - 1
+            io.write("\x1b[" .. (i + 2) .. ";1H\x1b[K") -- On efface proprement la ligne
+            if help_lines[line_idx] then
+                io.write(" " .. help_lines[line_idx])
+            end
+        end
+        
+        -- Calcul du pourcentage de scroll (100% si on est en bas)
+        local scroll_pct = math.floor(((offset - 1) / (max_offset - 1)) * 100)
+        if max_offset == 1 then scroll_pct = 100 end
+        
+        io.write("\x1b[24;1H\x1b[7m APPUYEZ SUR [RETOUR] POUR FERMER                        SCROLL: " .. string.format("%3d", scroll_pct) .. "% \x1b[K\x1b[0m")
+        io.flush()
+    end
     
-    io.write("\r\n\x1b[1m FONCTIONS MINITEL \x1b[0m\r\n")
-    io.write(" CLS / BEEP / INVERT / NORMAL\r\n")
-    io.write(" LOCATE X,Y : Place le curseur en X, Y (ex: LOCATE X PLUS 1, Y)\r\n")
-    io.write(" MKEY()     : Lecture clavier en direct\r\n")
-    
-    io.write("\x1b[24;1H\x1b[7m APPUYEZ SUR [RETOUR] OU [ESPACE] POUR FERMER \x1b[K\x1b[0m")
-    io.flush()
+    draw_help_screen()
     
     while true do
         local k = minitel.get_key()
         if k == "RETOUR" or k == "ESC" or k == " " or k == "ENVOI" or k == "\r" or k == "\n" then
             break
+        elseif k == "UP" or k == "Z" or k == "z" then
+            if offset > 1 then 
+                offset = offset - 1 
+                draw_help_screen()
+            end
+        elseif k == "DOWN" or k == "S" or k == "s" then
+            if offset < max_offset then 
+                offset = offset + 1 
+                draw_help_screen()
+            end
         end
         minitel.sleep(0.05)
     end
@@ -290,7 +330,7 @@ end
 local function update_ui()
     io.write("\x1b7")
     
-    io.write("\x1b[1;1H\x1b[7m MICRO-BASIC TELETEL V1.6               [EXIT] OU [RETOUR] POUR QUITTER \x1b[K\x1b[0m")
+    io.write("\x1b[1;1H\x1b[7m MICRO-BASIC TELETEL V1.7               [EXIT] OU [RETOUR] POUR QUITTER \x1b[K\x1b[0m")
     
     local count = 0
     for _ in pairs(program) do count = count + 1 end
