@@ -26,7 +26,7 @@ local function apply_difficulty()
 end
 
 local function load_config()
-    local file = io.open("minitel_mines.cfg", "r")
+    local file = io.open("jeux/minitel_mines.cfg", "r")
     if file then
         for line in file:lines() do
             local k, v = string.match(line, "([^=]+)=(.+)")
@@ -39,7 +39,7 @@ local function load_config()
 end
 
 local function save_config()
-    local file = io.open("minitel_mines.cfg", "w")
+    local file = io.open("jeux/minitel_mines.cfg", "w")
     if file then
         for k, v in pairs(config) do
             file:write(k .. "=" .. tostring(v) .. "\n")

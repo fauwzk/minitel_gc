@@ -11,7 +11,7 @@ local config = {
 }
 
 local function load_config()
-    local file = io.open("minitel_blackjack.cfg", "r")
+    local file = io.open("jeux/minitel_blackjack.cfg", "r")
     if file then
         for line in file:lines() do
             local k, v = string.match(line, "([^=]+)=(.+)")
@@ -24,7 +24,7 @@ local function load_config()
 end
 
 local function save_config()
-    local file = io.open("minitel_blackjack.cfg", "w")
+    local file = io.open("jeux/minitel_blackjack.cfg", "w")
     if file then
         for k, v in pairs(config) do
             file:write(k .. "=" .. tostring(v) .. "\n")
