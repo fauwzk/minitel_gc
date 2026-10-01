@@ -1,8 +1,9 @@
 #!/bin/bash
 # =====================================================================
-# INSTALLATION SYSTEME - MINITEL MAGIS CLUB
+# INSTALLATION SYSTEME - MINITEL MAGIS CLUB (Version Optimisée)
 # =====================================================================
 
+# Vérification des droits administrateur
 if [ "$EUID" -ne 0 ]; then
   echo "ERREUR : Veuillez exécuter ce script en tant que root (sudo ./install_minitel.sh)"
   exit 1
@@ -10,6 +11,7 @@ fi
 
 echo "> 1. MISE A JOUR ET INSTALLATION DES DEPENDANCES..."
 apt-get update
+# Installation de Lua, Git, Sox (audio), Alsa (gestion matérielle du son)
 apt-get install -y lua5.3 git sox alsa-utils network-manager coreutils
 
 echo "> 2. CREATION DE L'UTILISATEUR 'minitel'..."
@@ -18,7 +20,11 @@ if id "minitel" &>/dev/null; then
 else
     useradd -m -s /bin/bash minitel
 fi
+# Ajout aux groupes vitaux (dialout/uucp pour le port série, audio pour la carte son)
 usermod -aG dialout,audio,video,plugdev minitel
+
+# Autorise l'utilisateur à lancer ses services d'arrière-plan dès le démarrage
+loginctl enable-linger minitel 2>/dev/null || true
 
 echo "> 3. CONFIGURATION DES DROITS SYSTEMES (SUDO)..."
 cat <<EOF > /etc/sudoers.d/010_minitel
@@ -44,33 +50,45 @@ EOF
 systemctl daemon-reload
 systemctl enable serial-getty@ttyUSB0.service
 
-echo "> 6. CONFIGURATION DU BASH_PROFILE (Lancement direct)..."
+echo "> 6. CONFIGURATION DU BASH_PROFILE ET DU SON..."
 cat <<'EOF' > /home/minitel/.bash_profile
 if [ "$(tty)" = "/dev/ttyUSB0" ]; then
     cd /home/minitel
+    
+    # -------------------------------------------------------------
+    # CORRECTIF AUDIO RASPBERRY PI : 
+    # Force Sox à utiliser ALSA pour éviter les crashs liés à 
+    # PipeWire/PulseAudio lors d'une connexion via le port Série.
+    # -------------------------------------------------------------
+    export AUDIODRIVER=alsa
+    
     exec lua5.3 master.lua
 fi
 EOF
 chown minitel:minitel /home/minitel/.bash_profile
 
 echo "> 7. CONFIGURATION DU DEMARRAGE SILENCIEUX (KIOSK MODE)..."
-# Cible le fichier cmdline selon la version de Raspberry Pi OS (Bookworm ou plus ancien)
 CMDLINE_FILE="/boot/firmware/cmdline.txt"
 if [ ! -f "$CMDLINE_FILE" ]; then
     CMDLINE_FILE="/boot/cmdline.txt"
 fi
 
 if [ -f "$CMDLINE_FILE" ]; then
-    # Suppression de la console série pour éviter la pollution visuelle au boot
     sed -i 's/console=serial0,[0-9]\+ //g' "$CMDLINE_FILE"
     sed -i 's/console=ttyAMA0,[0-9]\+ //g' "$CMDLINE_FILE"
     
-    # Ajout des paramètres silencieux absolus
     if ! grep -q "quiet" "$CMDLINE_FILE"; then
         sed -i 's/$/ quiet splash loglevel=0 vt.global_cursor_default=0/' "$CMDLINE_FILE"
     fi
-    echo "Démarrage silencieux configuré."
+    echo "Démarrage silencieux configuré sur le port série."
 fi
+
+echo "> 8. DEBLOCAGE ET REGLAGE DU VOLUME AUDIO MATERIEL..."
+# Débloque (unmute) la carte son et règle le volume à 85%.
+# On teste "Headphone" (prise Jack classique du Pi) et "Master" (par défaut).
+sudo -u minitel amixer -q sset Headphone 85% unmute 2>/dev/null || true
+sudo -u minitel amixer -q sset Master 85% unmute 2>/dev/null || true
+sudo -u minitel amixer -q sset PCM 85% unmute 2>/dev/null || true
 
 echo "====================================================================="
 echo " INSTALLATION TERMINEE ! "
