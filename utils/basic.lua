@@ -11,7 +11,7 @@ local current_filename = nil
 local is_modified = false
 
 -- =====================================================================
--- EVALUATEUR MATHEMATIQUE INTEGRE
+-- EVALUATEUR MATHEMATIQUE INTEGRE (AVEC FONCTIONS SCIENTIFIQUES)
 -- =====================================================================
 local function eval_expr(expr)
     local e = string.upper(expr)
@@ -33,9 +33,13 @@ local function eval_expr(expr)
         if w == "MINUS" then return "-" end
         if w == "MUL" then return "*" end
         if w == "DIV" then return "/" end
+        if w == "MOD" then return "%" end
         
-        if w == "AND" or w == "OR" or w == "NOT" then return string.lower(w) end
-        if w == "RND" or w == "MKEY" then return string.lower(w) end
+        local reserved = {
+            AND=1, OR=1, NOT=1, RND=1, MKEY=1, 
+            SIN=1, COS=1, TAN=1, ABS=1, SQR=1, INT=1, PI=1, EXP=1, LOG=1
+        }
+        if reserved[w] then return string.lower(w) end
         
         return tostring(vars[w] or 0)
     end)
@@ -45,14 +49,17 @@ local function eval_expr(expr)
         mkey = function()
             local k = minitel.get_key()
             if not k then return 0 end
-            if k == "UP" then return 200 end
-            if k == "DOWN" then return 201 end
-            if k == "LEFT" then return 202 end
-            if k == "RIGHT" then return 203 end
+            if k == "UP" or k == "Z" then return 200 end
+            if k == "DOWN" or k == "S" then return 201 end
+            if k == "LEFT" or k == "Q" then return 202 end
+            if k == "RIGHT" or k == "D" then return 203 end
             if k == "ENVOI" or k == "\r" or k == "\n" then return 13 end
             if k == "RETOUR" or k == "ESC" then return 27 end
             return string.byte(k) or 0
-        end
+        end,
+        sin = math.sin, cos = math.cos, tan = math.tan,
+        abs = math.abs, sqr = math.sqrt, int = math.floor,
+        pi = math.pi, exp = math.exp, log = math.log
     }
 
     local func = load("return " .. e, "eval", "t", env)
@@ -103,12 +110,9 @@ end
 -- MISE A JOUR DE L'INTERFACE (Barres fixées EN HAUT)
 -- =====================================================================
 local function update_ui()
-    io.write("\x1b7\x1b[s") -- Sauvegarde du curseur
-    
-    -- Le terminal scrolle uniquement entre les lignes 3 et 24
+    io.write("\x1b7\x1b[s")
     io.write("\x1b[3;24r") 
-    
-    io.write("\x1b[1;1H\x1b[7m MICRO-BASIC TELETEL V2.0               [EXIT] OU [RETOUR] POUR QUITTER \x1b[K\x1b[0m")
+    io.write("\x1b[1;1H\x1b[7m MICRO-BASIC TELETEL V3.0               [EXIT] OU [RETOUR] POUR QUITTER \x1b[K\x1b[0m")
 
     local count = 0
     for _ in pairs(program) do count = count + 1 end
@@ -117,11 +121,8 @@ local function update_ui()
     local status_text = string.format(" LIGNES : %03d | FICHIER : %s%s | TAPEZ 'HELP' ", count, fname, mod_star)
     
     status_text = string.sub(status_text, 1, 78)
-    
-    -- La barre de statut est fixée sur la ligne 2 !
     io.write("\x1b[2;1H\x1b[7m" .. status_text .. "\x1b[K\x1b[0m")
-
-    io.write("\x1b8\x1b[u") -- Restauration du curseur (dans la zone de travail)
+    io.write("\x1b8\x1b[u")
     io.flush()
 end
 
@@ -135,18 +136,44 @@ local function execute_line(line)
 
     local cmd, rest = string.match(line, "^(%a+)%s*(.*)$")
 
+    -- NOUVEAU : GESTION DE LA CONCATENATION AVEC ';'
     if cmd == "PRINT" then
         local content = string.match(rest, "^%s*%((.*)%)%s*$") or rest
-        if string.sub(content, 1, 1) == '"' then
-            local str, after = string.match(content, '^"(.-)"%s*;?%s*(.*)$')
-            io.write(str or "")
-            if after and after ~= "" then io.write(tostring(eval_expr(after))) end
-            io.write("\r\n")
-            io.flush()
-        else
-            io.write(tostring(eval_expr(content)) .. "\r\n")
-            io.flush()
+        local idx = 1
+        local len = #content
+        
+        while idx <= len do
+            local c = string.sub(content, idx, idx)
+            if c == '"' then
+                local end_idx = string.find(content, '"', idx + 1)
+                if end_idx then
+                    io.write(string.sub(content, idx + 1, end_idx - 1))
+                    idx = end_idx + 1
+                else
+                    io.write(string.sub(content, idx + 1))
+                    break
+                end
+            elseif c == ';' then
+                idx = idx + 1
+            elseif c ~= ' ' then
+                local next_semi = string.find(content, ';', idx)
+                local sub_expr
+                if next_semi then
+                    sub_expr = string.sub(content, idx, next_semi - 1)
+                    idx = next_semi
+                else
+                    sub_expr = string.sub(content, idx)
+                    idx = len + 1
+                end
+                if string.match(sub_expr, "%S") then
+                    io.write(tostring(eval_expr(sub_expr)))
+                end
+            else
+                idx = idx + 1
+            end
         end
+        io.write("\r\n")
+        io.flush()
         return "OK"
 
     elseif cmd == "LET" then
@@ -168,14 +195,9 @@ local function execute_line(line)
         local target = tonumber(eval_expr(rest))
         if target then return "GOTO", target else return "SYNTAX ERROR" end
 
-    -- NOUVEAU : IF THEN ELSE
     elseif cmd == "IF" then
-        -- Cherche d'abord avec un ELSE
         local cond, then_cmd, else_cmd = string.match(rest, "^(.-)%s+THEN%s+(.-)%s+ELSE%s+(.*)$")
-        if not cond then
-            -- S'il n'y a pas de ELSE, on fait un IF classique
-            cond, then_cmd = string.match(rest, "^(.-)%s+THEN%s+(.*)$")
-        end
+        if not cond then cond, then_cmd = string.match(rest, "^(.-)%s+THEN%s+(.*)$") end
         if cond and then_cmd then
             local cond_val = eval_expr(cond)
             if cond_val ~= 0 then 
@@ -186,7 +208,6 @@ local function execute_line(line)
         else return "SYNTAX ERROR" end
         return "OK"
 
-    -- NOUVEAU : BOUCLES FOR
     elseif cmd == "FOR" then
         local v, start_expr, end_expr = string.match(rest, "^(%a+)%s*=%s*(.-)%s+TO%s+(.*)$")
         if not v then v, start_expr, end_expr = string.match(rest, "^(%a+)%s+EQ%s+(.-)%s+TO%s+(.*)$") end
@@ -200,13 +221,11 @@ local function execute_line(line)
         local v = string.match(rest, "^(%a+)$")
         if v then return "NEXT", v else return "SYNTAX ERROR" end
 
-    -- NOUVEAU : BOUCLES WHILE
     elseif cmd == "WHILE" then
         local cond_val = eval_expr(rest)
         return "WHILE", cond_val ~= 0
 
-    elseif cmd == "WEND" then
-        return "WEND"
+    elseif cmd == "WEND" then return "WEND"
     
     elseif cmd == "CLEAR" then
         program = {}
@@ -218,13 +237,11 @@ local function execute_line(line)
     elseif cmd == "CLS" then
         io.write("\x1b[2J") 
         update_ui()         
-        io.write("\x1b[3;1H") -- On place le curseur ligne 3, sous les barres de statut
+        io.write("\x1b[3;1H")
         io.flush()
         return "OK"
 
-    elseif cmd == "BEEP" then
-        minitel.play_sound("hit")
-        return "OK"
+    elseif cmd == "BEEP" then minitel.play_sound("hit"); return "OK"
 
     elseif cmd == "LOCATE" then
         local str_x, str_y = string.match(rest, "^(.-)%s*,%s*(.*)$")
@@ -232,7 +249,7 @@ local function execute_line(line)
             local x = math.floor(eval_expr(str_x))
             local y = math.floor(eval_expr(str_y))
             x = math.max(1, math.min(80, x))
-            y = math.max(3, math.min(24, y)) -- Protection ABSOLUE des lignes 1 et 2
+            y = math.max(3, math.min(24, y))
             io.write("\x1b[" .. y .. ";" .. x .. "H")
             io.flush()
         else return "SYNTAX ERROR" end
@@ -240,16 +257,23 @@ local function execute_line(line)
 
     elseif cmd == "INVERT" then io.write("\x1b[7m"); io.flush(); return "OK"
     elseif cmd == "NORMAL" then io.write("\x1b[0m"); io.flush(); return "OK"
+    
+    -- NOUVEAU : GESTION PLUS INTELLIGENTE DE LA PAUSE (Supporte les micro-pauses)
     elseif cmd == "PAUSE" then
         local sec = tonumber(eval_expr(rest))
         if sec then
-            for i=1, math.floor(sec*10) do
-                local k = minitel.get_key()
-                if k == "RETOUR" or k == "ESC" then return "BREAK" end
-                minitel.sleep(0.1)
+            if sec < 0.1 then
+                minitel.sleep(sec)
+            else
+                for i=1, math.floor(sec*10) do
+                    local k = minitel.get_key()
+                    if k == "RETOUR" or k == "ESC" then return "BREAK" end
+                    minitel.sleep(0.1)
+                end
             end
         else return "SYNTAX ERROR" end
         return "OK"
+        
     elseif cmd == "RANDOM" then
         local quotes = {"3615 ULLA EST FERME.", "ERREUR SYSTEME : CAFEINE.", "TAPEZ 3615 PERE NOEL."}
         io.write(quotes[math.random(#quotes)] .. "\r\n"); io.flush(); return "OK"
@@ -272,7 +296,7 @@ local function run_program()
     table.sort(sorted_lines)
 
     local pc = 1
-    local loop_stack = {} -- Mémorise les FOR et WHILE en cours
+    local loop_stack = {} 
 
     while pc <= #sorted_lines do
         local k = minitel.get_key()
@@ -308,7 +332,6 @@ local function run_program()
                 break
             end
         
-        -- Moteur de boucle FOR
         elseif stat == "FOR" then
             table.insert(loop_stack, {type="FOR", var=arg.var, limit=arg.limit, start_pc=pc})
             pc = pc + 1
@@ -328,14 +351,12 @@ local function run_program()
                 break
             end
             
-        -- Moteur de boucle WHILE
         elseif stat == "WHILE" then
             local cond_true = arg
             if cond_true then
                 table.insert(loop_stack, {type="WHILE", start_pc=pc})
                 pc = pc + 1
             else
-                -- Si condition fausse, on saute au prochain WEND
                 local nest = 1
                 local wend_pc = pc + 1
                 local found = false
@@ -384,7 +405,7 @@ local function show_help()
         " CLEAR      : Efface le code en memoire",
         " SAVE / LOAD: Ex: SAVE \"NOM\" (sans .bas)", "",
         "\x1b[1m INSTRUCTIONS DU LANGAGE \x1b[0m", 
-        " PRINT \"X\"  : Affiche du texte",
+        " PRINT      : PRINT \"X=\" ; X ; \" Y=\" ; Y",
         " INPUT X    : Demande une valeur", 
         " LET X = 5  : Assigner (ou X = 5)",
         " IF..THEN   : IF X=5 THEN GOTO 10 ELSE GOTO 20", 
@@ -393,11 +414,13 @@ local function show_help()
         " GOTO X     : Saute a la ligne X",
         " PAUSE X    : Pause de X secondes", 
         " REM        : Commentaire (Ignore)", "",
-        "\x1b[1m FONCTIONS MINITEL \x1b[0m", 
+        "\x1b[1m FONCTIONS MINITEL & MATHS \x1b[0m", 
         " CLS        : Efface l'ecran",
         " LOCATE X,Y : Place le curseur (Max Y=24)",
-        " MKEY()     : Lecture clavier (Fleches 200, Entree 13)",
-        " RND(X)     : Genere un nombre aleatoire entre 1 et X"
+        " MKEY()     : Clavier (ZQSD/Fleches 200, Entree 13)",
+        " RND(X)     : Aleatoire entre 1 et X",
+        " Maths      : SIN(), COS(), TAN(), ABS(), INT(), SQR()",
+        "              EXP(), LOG(), PI, MOD"
     }
 
     local offset = 1
@@ -434,8 +457,6 @@ end
 -- =====================================================================
 local function shell()
     io.write("\x1b[2J\x1b[H")
-    
-    -- On définit la zone scrollable dès le lancement !
     io.write("\x1b[3;24r")
     io.write("\x1b[3;1H")
 
@@ -466,7 +487,7 @@ local function shell()
             run_program()
             io.write("\x1b[KREADY.\r\n")
             io.flush()
-        elseif line == "NEW" then
+        elseif line == "NEW" or line == "CLEAR" then
             program = {}
             vars = {}
             current_filename = nil
