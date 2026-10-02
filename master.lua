@@ -2,14 +2,26 @@ local minitel = require("minitel")
 minitel.init()
 
 -- =====================================================================
--- DETECTION RESEAU & SYSTEME
+-- DETECTION RESEAU & SYSTEME AVANCEE
 -- =====================================================================
-local function check_internet()
+local function get_network_info()
+    local info = { connected = false, ip = "HORS LIGNE" }
     local success = os.execute("ping -c 1 -W 1 github.com > /dev/null 2>&1")
-    return success == true or success == 0
+    
+    if success == true or success == 0 then
+        info.connected = true
+        -- Récupération de l'adresse IP locale via le système
+        local f_ip = io.popen("hostname -I | awk '{print $1}' 2>/dev/null")
+        if f_ip then
+            local ip = f_ip:read("*l")
+            if ip and ip ~= "" then info.ip = ip else info.ip = "INCONNUE" end
+            f_ip:close()
+        end
+    end
+    return info
 end
 
-local is_connected = check_internet()
+local net_info = get_network_info()
 
 -- =====================================================================
 -- LISTE DES MODULES (Dynamique)
@@ -18,16 +30,16 @@ local options = {}
 
 local function build_options()
     options = {
-        { name = "3615 JEUX (Modules jeux)", cmd = "lua5.3 launcher_jeux.lua" },
-        { name = "3615 OUTILS (Modules outils)", cmd = "lua5.3 launcher_utils.lua" }
+        { name = "3615 JEUX (Modules de divertissement)", cmd = "lua5.3 launcher_jeux.lua" },
+        { name = "3615 OUTILS (Modules utilitaires)", cmd = "lua5.3 launcher_utils.lua" }
     }
 
-    if is_connected then
+    if net_info.connected then
         table.insert(options, { name = "MISE A JOUR SYSTEME (Git Pull)", cmd = "update" })
     end
 
     table.insert(options, { name = "CONFIGURATION RESEAU (nmtui)", cmd = "TERM=vt100 nmtui" })
-    table.insert(options, { name = "INVITE DE COMMANDE (Shell)", cmd = "bash" })
+    table.insert(options, { name = "INVITE DE COMMANDE (Shell local)", cmd = "bash" })
     table.insert(options, { name = "EXTINCTION DU SYSTEME", cmd = "sudo poweroff" })
     table.insert(options, { name = "REDEMARRAGE DU SYSTEME", cmd = "sudo reboot" })
 end
@@ -36,16 +48,68 @@ build_options()
 local cursor = 1
 
 -- =====================================================================
--- HORLOGE (Format HH:MM calé sur le cadre d'origine)
+-- MOTEUR DE RECHERCHE GLOBALE LUA
 -- =====================================================================
-local function update_clock()
-    local datetime = os.date("%H:%M")
-    io.write("\x1b[5;55H\x1b[1m[ " .. datetime .. " ]\x1b[0m\x1b[5;55H")
+local function search_and_launch()
+    -- Efface les lignes du bas et affiche l'invite de recherche
+    io.write("\x1b[22;1H\x1b[K\x1b[23;1H\x1b[K\x1b[24;1H\x1b[K")
+    io.write("\x1b[23;1H\x1b[7m RECHERCHE DE SCRIPT LUA : \x1b[0m ")
     io.flush()
+    
+    local str = ""
+    while true do
+        local k = minitel.get_key()
+        if k then
+            if k == "ENVOI" or k == "\n" or k == "\r" then
+                break
+            elseif k == "RETOUR" or k == "ESC" then
+                return false
+            elseif k == "CORRECTION" or k == "ANNULATION" or k == "\x08" or k == "\x7f" then
+                if #str > 0 then
+                    str = string.sub(str, 1, -2)
+                    io.write("\x1b[D \x1b[D")
+                    io.flush()
+                end
+            elseif string.match(k, "^[%w%s%p_]$") and #k == 1 then
+                str = str .. string.lower(k)
+                io.write(string.lower(k))
+                io.flush()
+            end
+        end
+        minitel.sleep(0.01)
+    end
+
+    if str ~= "" then
+        io.write("\x1b[23;1H\x1b[K\x1b[1m Recherche en cours...\x1b[0m")
+        io.flush()
+        
+        -- Recherche dans le dossier courant et les sous-dossiers (profondeur 2)
+        local cmd = "find . -maxdepth 2 -name '*" .. str .. "*.lua' 2>/dev/null | head -n 1"
+        local f = io.popen(cmd)
+        local result = f:read("*l")
+        f:close()
+
+        if result and result ~= "" then
+            minitel.play_sound("pickup")
+            minitel.cleanup()
+            os.execute("lua5.3 " .. result)
+            minitel.init()
+            return true
+        else
+            io.write("\x1b[23;1H\x1b[K\x1b[7m AUCUN SCRIPT TROUVE. APPUYEZ SUR [RETOUR] \x1b[0m")
+            io.flush()
+            while true do
+                local k = minitel.get_key()
+                if k == "RETOUR" or k == "ESC" or k == "ENVOI" or k == "\r" or k == "\n" then break end
+                minitel.sleep(0.05)
+            end
+        end
+    end
+    return false
 end
 
 -- =====================================================================
--- INTERFACE GRAPHIQUE (STYLE CLASSIQUE)
+-- INTERFACE GRAPHIQUE (PORTAIL SYSADMIN)
 -- =====================================================================
 local function draw_boot_screen()
     io.write("\x1b[1;1H\x1b[K========================================")
@@ -64,37 +128,37 @@ local function draw_menu()
     io.write("\x1b[2J\x1b[H")
     minitel.sleep(0.08)
     
-    local line_reseau = ""
-    if is_connected then
-        line_reseau = "| RESEAU : \x1b[7m CONNECTE \x1b[0m                                 |\r\n"
-    else
-        line_reseau = "| RESEAU :  HORS LIGNE                                 |\r\n"
-    end
+    -- BANDEAU EN-TETE PORTAIL
+    io.write("\x1b[1;1H\x1b[7m                                                                                \x1b[0m\r\n")
+    io.write("\x1b[2;1H\x1b[7m      * * *   P O R T A I L   S Y S T E M E   :   M A G I S   C L U B   * * *   \x1b[0m\r\n")
+    io.write("\x1b[3;1H\x1b[7m                                                                                \x1b[0m\r\n")
     
-    io.write("\x1b[2;11H==========================================================\r\n")
-    io.write("\x1b[3;11H|               \x1b[1m TABLEAU DE BORD PRINCIPAL \x1b[0m              |\r\n")
-    io.write("\x1b[4;11H|========================================================|\r\n")
-    io.write("\x1b[5;11H" .. line_reseau)
-    io.write("\x1b[6;11H|                                                        |\r\n")
-    io.write("\x1b[7;11H|             SELECTION DU MODULE DE DEMARRAGE           |\r\n")
-    io.write("\x1b[8;11H|                                                        |\r\n")
-    io.write("\x1b[9;11H==========================================================\r\n")
+    -- PANNEAU D'INFORMATIONS RESEAU
+    local status_badge = net_info.connected and "\x1b[7m CONNECTE \x1b[0m" or "HORS LIGNE"
+    local formatted_ip = string.format("%-15s", net_info.ip)
     
-    io.write("\x1b[21;11H==========================================================\r\n")
-    io.write("\x1b[23;14H  ZQSD / FLECHES : NAVIGUER  |  ENVOI : VALIDER   \r\n")
+    io.write("\x1b[5;4H+----------------------------------------------------------------------+\r\n")
+    io.write("\x1b[6;4H|  \x1b[1mDIAGNOSTIC RESEAU\x1b[0m                                                 |\r\n")
+    io.write("\x1b[7;4H|  STATUT INTERNET : " .. status_badge .. "             ADRESSE IP : " .. formatted_ip .. "  |\r\n")
+    io.write("\x1b[8;4H+----------------------------------------------------------------------+\r\n")
+    
+    -- TITRE LISTE
+    io.write("\x1b[11;4H\x1b[1m[ SELECTION DU MODULE D'EXECUTION ]\x1b[0m\r\n")
+    
+    -- BANDEAU PIED DE PAGE
+    io.write("\x1b[23;1H\x1b[7m                                                                                \x1b[0m\r\n")
+    io.write("\x1b[24;1H\x1b[7m  FLECHES: NAVIGUER  |  ENVOI: VALIDER  |  [R] RECHERCHE GLOBALE LUA            \x1b[0m")
     io.flush()
-    
-    update_clock()
 end
 
 local function draw_list()
-    for i=10, 19 do io.write("\x1b["..i..";1H\x1b[K") end
+    for i=13, 21 do io.write("\x1b["..i..";1H\x1b[K") end
     for i, opt in ipairs(options) do
-        local line_y = 10 + i
+        local line_y = 12 + i
         if i == cursor then
-            io.write("\x1b[" .. line_y .. ";18H\x1b[7m > " .. opt.name .. " \x1b[0m")
+            io.write("\x1b[" .. line_y .. ";8H\x1b[7m > " .. opt.name .. " \x1b[0m")
         else
-            io.write("\x1b[" .. line_y .. ";18H   " .. opt.name .. "   ")
+            io.write("\x1b[" .. line_y .. ";8H   " .. opt.name .. "   ")
         end
     end
     io.flush()
@@ -102,9 +166,9 @@ end
 
 local function update_cursor(old_index, new_index)
     local old_opt = options[old_index]
-    if old_opt then io.write("\x1b[" .. (10 + old_index) .. ";1H\x1b[K\x1b[" .. (10 + old_index) .. ";18H   " .. old_opt.name .. "   ") end
+    if old_opt then io.write("\x1b[" .. (12 + old_index) .. ";1H\x1b[K\x1b[" .. (12 + old_index) .. ";8H   " .. old_opt.name .. "   ") end
     local new_opt = options[new_index]
-    if new_opt then io.write("\x1b[" .. (10 + new_index) .. ";1H\x1b[K\x1b[" .. (10 + new_index) .. ";18H\x1b[7m > " .. new_opt.name .. " \x1b[0m") end
+    if new_opt then io.write("\x1b[" .. (12 + new_index) .. ";1H\x1b[K\x1b[" .. (12 + new_index) .. ";8H\x1b[7m > " .. new_opt.name .. " \x1b[0m") end
     io.flush()
 end
 
@@ -113,8 +177,8 @@ end
 -- =====================================================================
 local ss_x, ss_y = 30, 12
 local ss_dx, ss_dy = 1, 1
-local ss_text = " \x1b[7m 3615 MINITEL \x1b[0m "
-local ss_len = 14 
+local ss_text = " \x1b[7m MAGIS CLUB SYS \x1b[0m "
+local ss_len = 16 
 
 local function run_screensaver_frame()
     io.write("\x1b["..ss_y..";"..ss_x.."H" .. string.rep(" ", ss_len))
@@ -150,7 +214,6 @@ else
 end
 
 local last_boot_draw = 0
-local last_clock_update = os.time()
 local last_net_update = os.time()
 local last_input_time = os.time()
 local INACTIVITY_TIMEOUT = 60
@@ -189,27 +252,23 @@ while true do
             io.write("\x1b[2J\x1b[H") 
             io.flush()
         else
-            -- 1. VERIFICATION DE L'HEURE (Toutes les 30 secondes pour rafraîchir discrètement)
-            if now - last_clock_update >= 30 then
-                update_clock()
-                last_clock_update = now
-            end
-            
-            -- 2. VERIFICATION DU RESEAU (Toutes les 30 secondes)
+            -- VERIFICATION DU RESEAU (Toutes les 30 secondes)
             if now - last_net_update >= 30 then
-                local old_status = is_connected
-                is_connected = check_internet()
+                local old_status = net_info.connected
+                net_info = get_network_info()
                 
-                if is_connected ~= old_status then
+                if net_info.connected ~= old_status then
                     build_options()
                     if cursor > #options then cursor = #options end
-                    draw_menu()
-                    draw_list()
                 end
+                
+                -- On redessine silencieusement le panneau réseau pour actualiser l'IP
+                draw_menu()
+                draw_list()
                 last_net_update = now
             end
             
-            -- 3. GESTION DU CLAVIER
+            -- GESTION DU CLAVIER
             if key then
                 local old_cursor = cursor
                 if key == "z" or key == "Z" or key == "UP" then
@@ -220,6 +279,12 @@ while true do
                     cursor = cursor + 1
                     if cursor > #options then cursor = 1 end
                     update_cursor(old_cursor, cursor)
+                elseif key == "r" or key == "R" then
+                    local launched = search_and_launch()
+                    -- Si un script a été lancé ou annulé, on redessine le menu propre
+                    draw_menu()
+                    draw_list()
+                    last_net_update = os.time()
                 elseif key == " " or key == "\n" or key == "\r" or key == "ENVOI" then
                     local selected = options[cursor]
                     if selected.cmd == "update" then
@@ -233,7 +298,6 @@ while true do
                         os.execute(selected.cmd)
                         minitel.init()
                         
-                        last_clock_update = 0 
                         last_net_update = 0 
                         last_input_time = os.time()
                         
@@ -247,7 +311,7 @@ while true do
         
     elseif state == "SCREENSAVER" then
         run_screensaver_frame()
-        minitel.sleep(0.25) 
+        minitel.sleep(0.1) 
     end
 end
 
