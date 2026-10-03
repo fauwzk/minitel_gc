@@ -180,16 +180,17 @@ local function show_menu()
 end
 
 -- =====================================================================
--- BOUCLE PRINCIPALE DE L'EDITEUR
+-- BOUCLE PRINCIPALE DE L'EDITEUR (CORRIGEE)
 -- =====================================================================
 io.write("\x1b[2J\x1b[H")
 draw_text()
+clamp_cursor()
+update_status()
 
 while running do
-    update_status()
-    clamp_cursor()
-    
     local k = minitel.get_key()
+    
+    -- Le coeur de la correction : on ne met à jour QUE si une touche est pressée !
     if k then
         if k == "UP" or k == "Z" or k == "z" then
             cy = cy - 1
@@ -246,7 +247,15 @@ while running do
                 draw_line(cy)
             end
         end
+        
+        -- Si l'éditeur n'a pas été fermé par le menu, on actualise l'affichage
+        if running then
+            clamp_cursor()
+            update_status()
+        end
     end
+    
+    -- Pause pour éviter de surcharger le processeur
     minitel.sleep(0.01)
 end
 
