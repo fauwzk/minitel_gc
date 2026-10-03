@@ -31,7 +31,8 @@ local options = {}
 local function build_options()
     options = {
         { name = "3615 JEUX (Modules de divertissement)", cmd = "lua5.3 launcher_jeux.lua" },
-        { name = "3615 OUTILS (Modules utilitaires)", cmd = "lua5.3 launcher_utils.lua" }
+        { name = "3615 OUTILS (Modules utilitaires)", cmd = "lua5.3 launcher_utils.lua" },
+        { name = "MAGIS EDIT (Editeur de texte)", cmd = "lua5.3 utils/edit.lua" }
     }
 
     if net_info.connected then
@@ -51,7 +52,6 @@ local cursor = 1
 -- MOTEUR DE RECHERCHE GLOBALE LUA
 -- =====================================================================
 local function search_and_launch()
-    -- Efface les lignes du bas et affiche l'invite de recherche
     io.write("\x1b[22;1H\x1b[K\x1b[23;1H\x1b[K\x1b[24;1H\x1b[K")
     io.write("\x1b[23;1H\x1b[7m RECHERCHE DE SCRIPT LUA : \x1b[0m ")
     io.flush()
@@ -83,7 +83,6 @@ local function search_and_launch()
         io.write("\x1b[23;1H\x1b[K\x1b[1m Recherche en cours...\x1b[0m")
         io.flush()
         
-        -- Recherche dans le dossier courant et les sous-dossiers (profondeur 2)
         local cmd = "find . -maxdepth 2 -name '*" .. str .. "*.lua' 2>/dev/null | head -n 1"
         local f = io.popen(cmd)
         local result = f:read("*l")
@@ -128,12 +127,10 @@ local function draw_menu()
     io.write("\x1b[2J\x1b[H")
     minitel.sleep(0.08)
     
-    -- BANDEAU EN-TETE PORTAIL
     io.write("\x1b[1;1H\x1b[7m                                                                                \x1b[0m\r\n")
     io.write("\x1b[2;1H\x1b[7m      * * *   P O R T A I L   S Y S T E M E   :   M A G I S   C L U B   * * *   \x1b[0m\r\n")
     io.write("\x1b[3;1H\x1b[7m                                                                                \x1b[0m\r\n")
     
-    -- PANNEAU D'INFORMATIONS RESEAU
     local status_badge = net_info.connected and "\x1b[7m CONNECTE \x1b[0m" or "HORS LIGNE"
     local formatted_ip = string.format("%-15s", net_info.ip)
     
@@ -142,10 +139,8 @@ local function draw_menu()
     io.write("\x1b[7;4H|  STATUT INTERNET : " .. status_badge .. "             ADRESSE IP : " .. formatted_ip .. "  |\r\n")
     io.write("\x1b[8;4H+----------------------------------------------------------------------+\r\n")
     
-    -- TITRE LISTE
     io.write("\x1b[11;4H\x1b[1m[ SELECTION DU MODULE D'EXECUTION ]\x1b[0m\r\n")
     
-    -- BANDEAU PIED DE PAGE
     io.write("\x1b[23;1H\x1b[7m                                                                                \x1b[0m\r\n")
     io.write("\x1b[24;1H\x1b[7m  FLECHES: NAVIGUER  |  ENVOI: VALIDER  |  [R] RECHERCHE GLOBALE LUA            \x1b[0m")
     io.flush()
@@ -240,8 +235,20 @@ while true do
         
         if key == "ENVOI" or key == " " or key == "\n" or key == "\r" then
             minitel.play_sound("hit")
-            state = "MENU"
+            
+            -- Sécurité : on pose le flag pour ne pas repasser par cet écran au prochain reboot du service
             os.execute("touch /tmp/minitel_warmboot")
+            
+            -- MISE A JOUR AUTOMATIQUE
+            -- On revérifie la connexion ici car le Pi a eu le temps de s'initialiser pendant l'écran de boot
+            net_info = get_network_info()
+            if net_info.connected then
+                minitel.cleanup()
+                os.execute("lua5.3 updater.lua")
+                break -- L'updater va redémarrer le système, on quitte le script proprement
+            end
+            
+            state = "MENU"
             draw_menu()
             draw_list()
         end
@@ -252,7 +259,6 @@ while true do
             io.write("\x1b[2J\x1b[H") 
             io.flush()
         else
-            -- VERIFICATION DU RESEAU (Toutes les 30 secondes)
             if now - last_net_update >= 30 then
                 local old_status = net_info.connected
                 net_info = get_network_info()
@@ -262,13 +268,11 @@ while true do
                     if cursor > #options then cursor = #options end
                 end
                 
-                -- On redessine silencieusement le panneau réseau pour actualiser l'IP
                 draw_menu()
                 draw_list()
                 last_net_update = now
             end
             
-            -- GESTION DU CLAVIER
             if key then
                 local old_cursor = cursor
                 if key == "z" or key == "Z" or key == "UP" then
@@ -281,7 +285,6 @@ while true do
                     update_cursor(old_cursor, cursor)
                 elseif key == "r" or key == "R" then
                     local launched = search_and_launch()
-                    -- Si un script a été lancé ou annulé, on redessine le menu propre
                     draw_menu()
                     draw_list()
                     last_net_update = os.time()
