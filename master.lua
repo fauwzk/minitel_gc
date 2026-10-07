@@ -135,8 +135,9 @@ local function draw_menu()
     local formatted_ip = string.format("%-15s", net_info.ip)
     
     io.write("\x1b[5;4H+----------------------------------------------------------------------+\r\n")
-    io.write("\x1b[6;4H|  \x1b[1mDIAGNOSTIC RESEAU\x1b[0m                                                 |\r\n")
-    io.write("\x1b[7;4H|  STATUT INTERNET : " .. status_badge .. "             ADRESSE IP : " .. formatted_ip .. "  |\r\n")
+    io.write("\x1b[6;4H|  \x1b[1mDIAGNOSTIC RESEAU\x1b[0m                                                   |\r\n")
+    -- La ligne 7 contient exactement 70 caracteres "visibles" a l'interieur du cadre
+    io.write("\x1b[7;4H|  STATUT : " .. status_badge .. "             IP : " .. formatted_ip .. "                |\r\n")
     io.write("\x1b[8;4H+----------------------------------------------------------------------+\r\n")
     
     io.write("\x1b[11;4H\x1b[1m[ SELECTION DU MODULE D'EXECUTION ]\x1b[0m\r\n")
@@ -261,15 +262,19 @@ while true do
         else
             if now - last_net_update >= 30 then
                 local old_status = net_info.connected
+                local old_ip = net_info.ip
+                
                 net_info = get_network_info()
                 
-                if net_info.connected ~= old_status then
+                -- On ne redessine l'écran QUE si la connexion ou l'IP change
+                if net_info.connected ~= old_status or net_info.ip ~= old_ip then
                     build_options()
                     if cursor > #options then cursor = #options end
+                    
+                    draw_menu()
+                    draw_list()
                 end
                 
-                draw_menu()
-                draw_list()
                 last_net_update = now
             end
             
