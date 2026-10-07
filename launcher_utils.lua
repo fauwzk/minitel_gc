@@ -6,8 +6,8 @@ minitel.init()
 -- =====================================================================
 local CONFIG = {
     DOSSIER = "utils/",
-    TITRE = "MODULE UTILITAIRE",
-    MSG_VIDE = "AUCUN OUTIL DETECTE DANS /utils"
+    TITRE = "UTILITAIRES",
+    MSG_VIDE = "AUCUN SCRIPT DETECTE"
 }
 -- =====================================================================
 
@@ -40,60 +40,81 @@ end
 
 local items = scan_directory()
 local cursor = 1
+local offset = 0
+local max_visible = 12
+local start_y = 8
 
+-- =====================================================================
+-- AFFICHAGE STATIQUE (HEADER ET FOOTER FACON MASTER.LUA)
+-- =====================================================================
 local function draw_static_menu()
     io.write("\x1b[2J\x1b[H")
-    io.flush()
     minitel.sleep(0.08)
-
-    local title_len = string.len(CONFIG.TITRE) + 2
-    local pad_left = math.floor((56 - title_len) / 2)
-    local pad_right = 56 - title_len - pad_left
-    local formatted_title = string.rep(" ", pad_left) .. "\x1b[1m " .. CONFIG.TITRE .. " \x1b[0m" ..
-                                string.rep(" ", pad_right)
-
-    io.write("\x1b[2;11H==========================================================\r\n")
-    io.write("\x1b[3;11H|" .. formatted_title .. "|\r\n")
-    io.write("\x1b[4;11H|========================================================|\r\n")
-    io.write("\x1b[5;11H|                                                        |\r\n")
-    io.write("\x1b[6;11H|              INDEX DES PROGRAMMES DISPONIBLES          |\r\n")
-    io.write("\x1b[7;11H|                                                        |\r\n")
-    io.write("\x1b[8;11H==========================================================\r\n")
-
-    io.write("\x1b[21;11H==========================================================\r\n")
-    io.write("\x1b[23;14H  ZQSD / FLECHES : NAVIGUER  |  ENVOI : EXECUTER  \r\n")
+    
+    io.write("\x1b[1;1H\x1b[7m                                                                                \x1b[0m\r\n")
+    io.write("\x1b[2;1H\x1b[7m      * * *   P O R T A I L   S Y S T E M E   :   M A G I S   C L U B   * * *   \x1b[0m\r\n")
+    io.write("\x1b[3;1H\x1b[7m                                                                                \x1b[0m\r\n")
+    
+    io.write("\x1b[5;4H\x1b[1m[ SELECTION DU MODULE : " .. string.upper(CONFIG.TITRE) .. " ]\x1b[0m\r\n")
+    
+    io.write("\x1b[23;1H\x1b[7m                                                                                \x1b[0m\r\n")
+    io.write("\x1b[24;1H\x1b[7m  FLECHES: NAVIGUER  |  ENVOI: EXECUTER  |  [RETOUR] MENU PRINCIPAL             \x1b[0m")
     io.flush()
 end
 
+-- =====================================================================
+-- GESTION DE LA LISTE ET DU DEFILEMENT (SCROLL)
+-- =====================================================================
 local function draw_full_list()
-    for i = 10, 20 do
-        io.write("\x1b[" .. i .. ";1H\x1b[K")
+    -- On nettoie la zone de la liste
+    for i = 1, max_visible do
+        io.write("\x1b[" .. (start_y + i - 1) .. ";1H\x1b[K")
     end
-    for i, item in ipairs(items) do
-        local line_y = 10 + i
-        if i == cursor then
-            io.write("\x1b[" .. line_y .. ";25H\x1b[7m > EXECUTER : " .. item.display .. " \x1b[0m")
-        else
-            io.write("\x1b[" .. line_y .. ";25H   MODULE   : " .. item.display .. "   ")
+    
+    -- On dessine les elements visibles
+    for i = 1, max_visible do
+        local idx = offset + i
+        local item = items[idx]
+        if item then
+            local line_y = start_y + i - 1
+            if idx == cursor then
+                io.write("\x1b[" .. line_y .. ";8H\x1b[7m > " .. item.display .. " \x1b[0m")
+            else
+                io.write("\x1b[" .. line_y .. ";8H   " .. item.display .. "   ")
+            end
         end
     end
+    
+    -- Indicateur de defilement si la liste est longue
+    io.write("\x1b[21;1H\x1b[K")
+    if #items > max_visible then
+        local progress = math.floor(((offset + max_visible) / math.max(1, #items)) * 100)
+        if progress > 100 then progress = 100 end
+        io.write(string.format("\x1b[21;64H\x1b[1m DEFILEMENT : %02d%% \x1b[0m", progress))
+    end
+    
     io.flush()
 end
 
 local function update_cursor(old_index, new_index)
+    local old_y = start_y + (old_index - offset) - 1
+    local new_y = start_y + (new_index - offset) - 1
+    
     local old_item = items[old_index]
-    if old_item then
-        io.write("\x1b[" .. (10 + old_index) .. ";1H\x1b[K\x1b[" .. (10 + old_index) .. ";25H   MODULE   : " ..
-                     old_item.display .. "   ")
+    if old_item and old_y >= start_y and old_y < start_y + max_visible then
+        io.write("\x1b[" .. old_y .. ";1H\x1b[K\x1b[" .. old_y .. ";8H   " .. old_item.display .. "   ")
     end
+    
     local new_item = items[new_index]
-    if new_item then
-        io.write("\x1b[" .. (10 + new_index) .. ";1H\x1b[K\x1b[" .. (10 + new_index) .. ";25H\x1b[7m > EXECUTER : " ..
-                     new_item.display .. " \x1b[0m")
+    if new_item and new_y >= start_y and new_y < start_y + max_visible then
+        io.write("\x1b[" .. new_y .. ";1H\x1b[K\x1b[" .. new_y .. ";8H\x1b[7m > " .. new_item.display .. " \x1b[0m")
     end
     io.flush()
 end
 
+-- =====================================================================
+-- INITIALISATION ET BOUCLE PRINCIPALE
+-- =====================================================================
 draw_static_menu()
 draw_full_list()
 
@@ -104,19 +125,41 @@ while true do
     if key == "r" or key == "R" then
         items = scan_directory()
         cursor = 1
+        offset = 0
         draw_full_list()
+        
     elseif key == "z" or key == "Z" or key == "UP" then
-        cursor = cursor - 1
-        if cursor < 1 then
+        if cursor > 1 then
+            cursor = cursor - 1
+            if cursor <= offset then
+                offset = cursor - 1
+                draw_full_list()
+            else
+                update_cursor(old_cursor, cursor)
+            end
+        else
+            -- Boucle vers le bas
             cursor = #items
+            offset = math.max(0, #items - max_visible)
+            draw_full_list()
         end
-        update_cursor(old_cursor, cursor)
+        
     elseif key == "s" or key == "S" or key == "DOWN" then
-        cursor = cursor + 1
-        if cursor > #items then
+        if cursor < #items then
+            cursor = cursor + 1
+            if cursor > offset + max_visible then
+                offset = cursor - max_visible
+                draw_full_list()
+            else
+                update_cursor(old_cursor, cursor)
+            end
+        else
+            -- Boucle vers le haut
             cursor = 1
+            offset = 0
+            draw_full_list()
         end
-        update_cursor(old_cursor, cursor)
+        
     elseif key == " " or key == "\n" or key == "\r" or key == "ENVOI" then
         minitel.play_sound("hit")
         local selected = items[cursor]
@@ -124,16 +167,21 @@ while true do
             minitel.cleanup()
             os.execute("lua5.3 " .. selected.filepath)
             minitel.init()
+            
+            -- Re-scan et re-dessine en cas d'ajout de fichiers
             items = scan_directory()
-            if cursor > #items then
+            if cursor > #items then 
                 cursor = 1
+                offset = 0
             end
             draw_static_menu()
             draw_full_list()
         end
+        
     elseif key == "RETOUR" or key == "ESC" then
         break
     end
+    
     minitel.sleep(0.02)
 end
 
