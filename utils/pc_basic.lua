@@ -259,7 +259,7 @@ local function execute_line(line)
         local str_x, str_y = string.match(rest, "^(.-)%s*,%s*(.*)$")
         if str_x and str_y then
             local x = math.max(1, math.min(80, math.floor(eval_expr(str_x))))
-            local y = math.max(3, math.min(24, math.floor(eval_expr(str_y))))
+            local y = math.max(1, math.min(24, math.floor(eval_expr(str_y))))
             io.write("\x1b[" .. y .. ";" .. x .. "H"); io.flush()
         else return "SYNTAX ERROR" end
         return "OK"
