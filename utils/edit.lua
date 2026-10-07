@@ -2,7 +2,7 @@ local minitel = require("minitel")
 minitel.init()
 
 os.execute("stty raw -echo -icanon min 0 time 0 2>/dev/null")
-os.execute("mkdir -p utils/prog_basic")
+os.execute("mkdir -p utils/prog_basic 2>/dev/null")
 
 -- =====================================================================
 -- VARIABLES D'ETAT
@@ -11,50 +11,56 @@ local lines = {""}
 local cx, cy = 1, 1
 local offset_y = 0
 local filename = ""
+local current_dir = "utils/"
 local is_modified = false
 local running = true
 
 -- =====================================================================
--- UTILITAIRES DE FICHIER
+-- EXPLORATEUR NATIF LINUX (INDESCTRUCTIBLE)
 -- =====================================================================
 local function scan_dir(path)
     local items = {}
+    local dirs = {}
+    local files = {}
     
-    -- Ajoute l'option "Dossier Parent" si on n'est pas a la racine absolue
-    if path ~= "./" and path ~= "" then
+    if path ~= "./" and path ~= "" and path ~= "/" then
         table.insert(items, { name = ".. (Dossier Parent)", is_dir = true, real_name = ".." })
     end
     
-    -- Liste les dossiers d'abord
-    local f_dir = io.popen("ls -1d " .. path .. "*/ 2>/dev/null")
-    if f_dir then
-        for d in f_dir:lines() do
-            local clean_name = string.match(d, "([^/]+)/$")
-            if clean_name then
-                table.insert(items, { name = "[" .. clean_name .. "]", is_dir = true, real_name = clean_name })
+    -- Le \ls force la commande native sans les alias de couleur
+    local cmd = "\\ls -1p '" .. path .. "' 2>/dev/null"
+    local f = io.popen(cmd)
+    
+    if f then
+        for line in f:lines() do
+            if string.sub(line, -1) == "/" then
+                table.insert(dirs, string.sub(line, 1, -2))
+            else
+                table.insert(files, line)
             end
         end
-        f_dir:close()
+        f:close()
     end
     
-    -- Liste les fichiers ensuite
-    local f_file = io.popen("ls -1p " .. path .. " 2>/dev/null | grep -v /")
-    if f_file then
-        for file in f_file:lines() do
-            table.insert(items, { name = file, is_dir = false, real_name = file })
-        end
-        f_file:close()
+    -- On trie : d'abord les dossiers, puis les fichiers
+    for _, d in ipairs(dirs) do
+        table.insert(items, { name = "[" .. d .. "]", is_dir = true, real_name = d })
+    end
+    for _, file in ipairs(files) do
+        table.insert(items, { name = file, is_dir = false, real_name = file })
     end
     
-    if #items == 0 then table.insert(items, {name = "(Dossier Vide)", is_dir = false, real_name = ""}) end
+    if #items == 0 then 
+        table.insert(items, {name = "(Dossier Vide)", is_dir = false, real_name = ""}) 
+    end
+    
     return items
 end
 
 -- =====================================================================
--- L'EXPLORATEUR DE FICHIERS (STYLE NORTON COMMANDER)
+-- L'INTERFACE "COMMANDER"
 -- =====================================================================
 local function file_browser(mode)
-    -- mode: "OPEN" ou "SAVE"
     local items = scan_dir(current_dir)
     local cursor = 1
     local list_offset = 0
@@ -62,39 +68,39 @@ local function file_browser(mode)
     local input_buffer = ""
     
     local function draw_browser()
-        -- Le grand cadre de l'explorateur
         io.write("\x1b[4;15H\x1b[1m+--------------------------------------------------+\x1b[0m\r\n")
         for i=5, 20 do io.write("\x1b["..i..";15H\x1b[1m|                                                  |\x1b[0m\r\n") end
         io.write("\x1b[21;15H\x1b[1m+--------------------------------------------------+\x1b[0m\r\n")
         
-        -- En-tete
         local title = mode == "OPEN" and " OUVRIR UN FICHIER " or " SAUVEGARDER LE FICHIER "
         local pad = string.rep(" ", math.floor((50 - #title) / 2))
         io.write("\x1b[4;16H\x1b[7m" .. pad .. title .. pad .. "\x1b[0m")
         io.write("\x1b[5;17H CHEMIN : \x1b[1m" .. string.sub(current_dir, 1, 38) .. "\x1b[0m\r\n")
         io.write("\x1b[6;16H--------------------------------------------------\r\n")
         
-        -- La liste
         for i = 1, max_visible do
             local idx = list_offset + i
             local item = items[idx]
             local y = 6 + i
-            io.write("\x1b["..y..";16H\x1b[K\x1b["..y..";66H\x1b[1m|\x1b[0m") -- Nettoie la ligne
+            io.write("\x1b["..y..";16H\x1b[K\x1b["..y..";66H\x1b[1m|\x1b[0m")
             
             if item then
-                local display_name = string.sub(item.name, 1, 46)
+                local display_name = string.sub(item.name, 1, 45)
+                local space_count = math.max(0, 45 - #display_name)
+                
                 if idx == cursor then
-                    io.write("\x1b["..y..";18H\x1b[7m > " .. display_name .. string.rep(" ", 45 - #display_name) .. "\x1b[0m")
+                    io.write("\x1b["..y..";18H\x1b[7m > " .. display_name .. string.rep(" ", space_count) .. "\x1b[0m")
                 else
                     io.write("\x1b["..y..";18H   " .. display_name)
                 end
             end
         end
         
-        -- Zone de saisie pour la sauvegarde
         if mode == "SAVE" then
             io.write("\x1b[19;16H--------------------------------------------------\r\n")
-            io.write("\x1b[20;17H NOM : \x1b[7m " .. input_buffer .. string.rep(" ", 38 - #input_buffer) .. "\x1b[0m")
+            local safe_input = string.sub(input_buffer, 1, 38)
+            local space_count = math.max(0, 38 - #safe_input)
+            io.write("\x1b[20;17H NOM : \x1b[7m " .. safe_input .. string.rep(" ", space_count) .. "\x1b[0m")
         else
             io.write("\x1b[20;17H \x1b[1m [ENVOI] SELECTIONNER   |   [RETOUR] ANNULER \x1b[0m")
         end
@@ -124,8 +130,6 @@ local function file_browser(mode)
             if cursor > 1 then
                 cursor = cursor - 1
                 if cursor <= list_offset then list_offset = cursor - 1 end
-                
-                -- Si en mode sauvegarde on selectionne un fichier, on copie son nom
                 if mode == "SAVE" and not items[cursor].is_dir and items[cursor].real_name ~= "" then
                     input_buffer = items[cursor].real_name
                 end
@@ -135,7 +139,6 @@ local function file_browser(mode)
             if cursor < #items then
                 cursor = cursor + 1
                 if cursor > list_offset + max_visible then list_offset = cursor - max_visible end
-                
                 if mode == "SAVE" and not items[cursor].is_dir and items[cursor].real_name ~= "" then
                     input_buffer = items[cursor].real_name
                 end
@@ -147,7 +150,6 @@ local function file_browser(mode)
             
             if mode == "OPEN" then
                 if sel.is_dir then
-                    -- Navigation dans les dossiers
                     if sel.real_name == ".." then
                         current_dir = string.match(current_dir, "^(.*)/[^/]+/$") or ""
                     else
@@ -158,13 +160,11 @@ local function file_browser(mode)
                     list_offset = 0
                     draw_browser()
                 elseif sel.real_name ~= "" then
-                    -- Ouverture du fichier
                     return current_dir .. sel.real_name
                 end
                 
             elseif mode == "SAVE" then
                 if sel and sel.is_dir and input_buffer == "" then
-                    -- Si on n'a rien tape, l'envoi sert a naviguer dans les dossiers
                     if sel.real_name == ".." then
                         current_dir = string.match(current_dir, "^(.*)/[^/]+/$") or ""
                     else
@@ -175,7 +175,6 @@ local function file_browser(mode)
                     list_offset = 0
                     draw_browser()
                 elseif input_buffer ~= "" then
-                    -- Sauvegarde le nom tape
                     return current_dir .. input_buffer
                 end
             end
@@ -185,7 +184,7 @@ local function file_browser(mode)
 end
 
 -- =====================================================================
--- LE MENU PRINCIPAL DE L'EDITEUR
+-- MENU PRINCIPAL DE L'EDITEUR
 -- =====================================================================
 local function draw_main_menu()
     io.write("\x1b[r\x1b[2J\x1b[H")
@@ -210,7 +209,7 @@ local function handle_menu()
         local k = minitel.get_key()
         
         if k == "1" or k == "RETOUR" or k == "ESC" then
-            return -- Retour a l'edition
+            return
             
         elseif k == "2" then
             if is_modified then
@@ -239,8 +238,6 @@ local function handle_menu()
                     for l in f:lines() do table.insert(lines, l) end
                     f:close()
                     if #lines == 0 then lines = {""} end
-                    
-                    -- On garde juste le nom pour l'affichage, pas le chemin
                     filename = string.match(target, "([^/]+)$") or target
                     cx, cy, offset_y = 1, 1, 0
                     is_modified = false
@@ -292,15 +289,15 @@ end
 -- FONCTIONS D'AFFICHAGE DE L'EDITEUR
 -- =====================================================================
 local function update_status()
-    io.write("\x1b7") -- Sauvegarde
-    io.write("\x1b[1;1H\x1b[7m MAGIS EDIT                     [RETOUR] MENU FICHIER \x1b[K\x1b[0m")
+    io.write("\x1b7") 
+    io.write("\x1b[1;1H\x1b[7m MAGIS EDIT                                     [RETOUR] MENU FICHIER \x1b[K\x1b[0m")
     
     local fname = filename == "" and "SANS NOM" or filename
     local mod = is_modified and "*" or ""
     local status = string.format(" FICHIER : %s%s | LIGNE : %03d/%03d | COL : %02d ", fname, mod, cy, #lines, cx)
     
     io.write("\x1b[2;1H\x1b[7m" .. string.sub(status, 1, 79) .. "\x1b[K\x1b[0m")
-    io.write("\x1b8") -- Restauration
+    io.write("\x1b8")
     io.flush()
 end
 
