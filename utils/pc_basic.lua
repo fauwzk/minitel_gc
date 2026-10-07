@@ -44,6 +44,16 @@ local program = {}
 local vars = {}
 local current_filename = nil
 local is_modified = false
+local key_buffer = nil -- Le fameux tampon pour sauver les touches !
+
+local function check_break()
+    local k = get_key()
+    if k then
+        if k == "ESC" then return true end
+        key_buffer = k -- On garde la touche pour MKEY()
+    end
+    return false
+end
 
 -- =====================================================================
 -- EVALUATEUR MATHEMATIQUE INTEGRE
@@ -80,7 +90,9 @@ local function eval_expr(expr)
     local env = {
         rnd = function(max) return math.random(1, math.floor(max or 10)) end,
         mkey = function()
-            local k = get_key()
+            local k = key_buffer
+            key_buffer = nil -- On vide le tampon après lecture
+            if not k then k = get_key() end
             if not k then return 0 end
             if k == "UP" or k == "Z" or k == "z" then return 200 end
             if k == "DOWN" or k == "S" or k == "s" then return 201 end
@@ -205,6 +217,7 @@ local function execute_line(line)
         if v then vars[v] = eval_expr(val) else return "SYNTAX ERROR" end
         return "OK"
     elseif cmd == "INPUT" then
+        key_buffer = nil -- On vide le buffer pour ne pas polluer l'INPUT
         local v = string.match(rest, "^(%a+)$")
         if v then
             local res = input_string("? ")
@@ -260,6 +273,7 @@ local function execute_line(line)
                 for i=1, math.floor(sec*10) do
                     local k = get_key()
                     if k == "ESC" then return "BREAK" end
+                    if k then key_buffer = k end
                     sleep(0.1)
                 end
             end
@@ -288,8 +302,9 @@ local function run_program()
     local gosub_stack = {}
 
     while pc <= #sorted_lines do
-        local k = get_key()
-        if k == "ESC" then io.write("\r\n\x1b[K\x1b[7m BREAK IN " .. sorted_lines[pc] .. " \x1b[0m\r\n"); io.flush(); break end
+        if check_break() then 
+            io.write("\r\n\x1b[K\x1b[7m BREAK IN " .. sorted_lines[pc] .. " \x1b[0m\r\n"); io.flush(); break 
+        end
 
         local line_num = sorted_lines[pc]
         local stat, arg = execute_line(program[line_num])
