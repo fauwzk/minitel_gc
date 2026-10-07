@@ -46,10 +46,10 @@ local function eval_expr(expr)
         mkey = function()
             local k = minitel.get_key()
             if not k then return 0 end
-            if k == "UP" or k == "Z" then return 200 end
-            if k == "DOWN" or k == "S" then return 201 end
-            if k == "LEFT" or k == "Q" then return 202 end
-            if k == "RIGHT" or k == "D" then return 203 end
+            if k == "UP" or k == "Z" or k == "z" then return 200 end
+            if k == "DOWN" or k == "S" or k == "s" then return 201 end
+            if k == "LEFT" or k == "Q" or k == "q" then return 202 end
+            if k == "RIGHT" or k == "D" or k == "d" then return 203 end
             if k == "ENVOI" or k == "\r" or k == "\n" then return 13 end
             if k == "RETOUR" or k == "ESC" then return 27 end
             return string.byte(k) or 0
@@ -183,7 +183,11 @@ local function execute_line(line)
                 if string.match(sub_expr, "%S") then io.write(tostring(eval_expr(sub_expr))) end
             else idx = idx + 1 end
         end
-        io.write("\r\n"); io.flush(); return "OK"
+        if not string.match(content, ";%s*$") then
+            io.write("\r\n")
+        end
+        io.flush()
+        return "OK"
 
     elseif cmd == "LET" then
         local v, val = string.match(rest, "^(%a+)%s*=%s*(.*)$")
@@ -265,6 +269,7 @@ local function execute_line(line)
         return "OK"
         
     elseif cmd == "END" then return "END"
+    elseif cmd == "STOP" then return "STOP"
     elseif cmd == "REM" then return "OK" end
 
     local v, val = string.match(line, "^(%a+)%s*=%s*(.*)$")
@@ -297,6 +302,8 @@ local function run_program()
 
         if stat == "BREAK" then
             io.write("\r\n\x1b[K\x1b[7m BREAK IN " .. line_num .. " \x1b[0m\r\n"); io.flush(); break
+        elseif stat == "STOP" then
+            io.write("\r\n\x1b[K\x1b[7m PROGRAM STOPPED AT LINE " .. line_num .. " \x1b[0m\r\n"); io.flush(); break
         elseif stat == "SYNTAX ERROR" then
             io.write("\r\n\x1b[K SYNTAX ERROR IN " .. line_num .. "\r\n"); io.flush(); break
         elseif stat == "END" then break
@@ -344,40 +351,56 @@ local function run_program()
 end
 
 -- =====================================================================
--- ECRAN D'AIDE
+-- ECRAN D'AIDE (LE GUIDE COMPLET)
 -- =====================================================================
 local function show_help()
     io.write("\x1b[r\x1b[2J\x1b[H")
     local help_lines = {
-        "\x1b[1m COMMANDES SYSTEME \x1b[0m", 
-        " RUN        : Execute le code en memoire",
-        " LIST       : Affiche tout le code", 
-        " EDIT X     : Edite la ligne X", 
-        " DIR / CLEAR: Fichiers locaux / Effacer memoire",
-        " SAVE / LOAD: Ex: SAVE \"NOM\" (sans .bas)", "",
-        "\x1b[1m INSTRUCTIONS DU LANGAGE \x1b[0m", 
-        " PRINT      : PRINT \"X=\" ; X ; \" Y=\" ; Y",
-        " INPUT X    : Demande une valeur", 
-        " IF..THEN   : IF X=5 THEN GOTO 10 ELSE GOTO 20", 
-        " FOR..NEXT  : FOR I=1 TO 5 (puis) NEXT I",
-        " WHILE..WEND: WHILE X < 10 (puis) WEND",
-        " GOSUB / RET: GOSUB 1000 (puis) RETURN", 
-        " GOTO X     : Saute a la ligne X",
-        " PAUSE X    : Pause de X secondes", "",
-        "\x1b[1m FONCTIONS MINITEL & MATHS \x1b[0m", 
-        " CLS        : Efface l'ecran",
-        " LOCATE X,Y : Place le curseur (Max Y=24)",
-        " INVERT/NORM: Video Inverse / Normale",
-        " MKEY()     : Clavier (Fleches 200 a 203)",
-        " Maths      : SIN, COS, TAN, ABS, INT, SQR, EXP",
-        "              LOG, PI, MOD, RND(X)"
+        "\x1b[1m === SYSTEME ========================== \x1b[0m", 
+        " RUN        : Execute le code        NEW/CLEAR  : Efface la memoire",
+        " LIST       : Affiche le code        DIR        : Fichiers locaux", 
+        " EDIT X     : Edite la ligne X       SAVE \"N\"   : Sauvegarde (ex: SAVE \"JEU\")", 
+        " STOP / END : Arrete l'execution     LOAD \"N\"   : Charge un fichier",
+        "",
+        "\x1b[1m === INSTRUCTIONS ET VARIABLES ======== \x1b[0m", 
+        " PRINT      : Affiche texte/var. (Ex: PRINT \"X=\" ; X)",
+        "              (Terminer par ';' empeche le saut de ligne)",
+        " INPUT X    : Met en pause et demande de taper une valeur", 
+        " LET X = 5  : Assigne une valeur (ou juste X = 5)",
+        " PAUSE X    : Met le programme en pause X secondes",
+        " REM        : Ligne de commentaire (ignoree par le systeme)",
+        "",
+        "\x1b[1m === CONDITIONS ET BOUCLES ============ \x1b[0m", 
+        " IF..THEN   : Ex: IF X >= 5 THEN PRINT \"GAGNE\" ELSE GOTO 10", 
+        " Operateurs : = (ou EQ), <> (ou NEQ), < (LT), > (GT), <= (LE), >= (GE)",
+        " Logique    : AND, OR, NOT",
+        " GOTO X     : Saute directement a la ligne X",
+        " GOSUB X    : Saute a la ligne X, et revient avec RETURN", 
+        " FOR..NEXT  : Ex: FOR I=1 TO 5 (puis) NEXT I",
+        " WHILE..WEND: Ex: WHILE X < 10 (puis) WEND",
+        "",
+        "\x1b[1m === ECRAN MINITEL ET CLAVIER ========= \x1b[0m", 
+        " CLS        : Efface l'ecran et replace le curseur",
+        " LOCATE X,Y : Place le curseur (Colonnes 1-80, Lignes 3-24)",
+        " INVERT/NORM: Bascule en texte inverse (Noir sur Blanc)",
+        " BEEP       : Emet un bip sonore",
+        " MKEY()     : Lit la touche pressee SANS bloquer le programme.",
+        "              (Haut:200, Bas:201, Gauche:202, Droite:203, Envoi:13)",
+        "",
+        "\x1b[1m === MATHEMATIQUES ==================== \x1b[0m", 
+        " RND(X)     : Tire un nombre au hasard entre 1 et X",
+        " SIN,COS,TAN: Trigonometrie classique (en radians)",
+        " SQR(X)     : Racine carree      ABS(X) : Valeur absolue",
+        " INT(X)     : Partie entiere     X MOD Y: Reste de division",
+        " EXP(X)     : Exponentielle      LOG(X) : Logarithme",
+        " PI         : 3.14159..."
     }
 
     local offset = 1; local max_visible = 20
     local max_offset = math.max(1, #help_lines - max_visible + 1)
 
     local function draw_help_screen()
-        io.write("\x1b[1;1H\x1b[7m MICRO-BASIC : MANUEL               [FLECHES] DEFILER  [RETOUR] QUITTER \x1b[K\x1b[0m\r\n")
+        io.write("\x1b[1;1H\x1b[7m MICRO-BASIC : LE GUIDE COMPLET     [FLECHES] DEFILER  [RETOUR] QUITTER \x1b[K\x1b[0m\r\n")
         for i = 1, max_visible do
             local line_idx = offset + i - 1
             io.write("\x1b[" .. (i + 2) .. ";1H\x1b[K")
