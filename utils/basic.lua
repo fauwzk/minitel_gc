@@ -1,3 +1,6 @@
+-- @TYPE: DEVELOPPEMENT / EXEC
+-- @DESC: Interpreteur et environnement d'execution pour vos programmes ecrits en langage BASIC.
+
 local minitel = require("minitel")
 minitel.init()
 
