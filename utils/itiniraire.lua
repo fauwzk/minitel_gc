@@ -43,13 +43,11 @@ local function get_city_coords(city_query)
     local json = query_url(url)
     if not json or json == "" then return nil, nil end
 
-    -- Extraction des coordonnees [lon, lat] dans "geometry":{"type":"Point","coordinates":[lon,lat]}
     local lon, lat = json:match('"coordinates"%s*:%s*%[%s*([%-%.%d]+)%s*,%s*([%-%.%d]+)%s*%]')
     local label = json:match('"label"%s*:%s*"([^"]+)"')
     local postcode = json:match('"postcode"%s*:%s*"([^"]+)"')
 
     if not lon or not lat then
-        -- Deuxieme essai sans le filtre municipality (pour les lieux-dits ou gares)
         url = "https://api-adresse.data.gouv.fr/search/?q=" .. urlencode(city_query) .. "&limit=1"
         json = query_url(url)
         if not json then return nil, nil end
@@ -74,10 +72,10 @@ end
 local MOD_FR = {
     ["left"]         = "A GAUCHE",
     ["right"]        = "A DROITE",
-    ["slight left"]  = "LEGEREMENT A GAUCHE",
-    ["slight right"] = "LEGEREMENT A DROITE",
-    ["sharp left"]   = "FRANCHEMENT A GAUCHE",
-    ["sharp right"]  = "FRANCHEMENT A DROITE",
+    ["slight left"]  = "LEGER. A GAUCHE",
+    ["slight right"] = "LEGER. A DROITE",
+    ["sharp left"]   = "FRANCH. A GAUCHE",
+    ["sharp right"]  = "FRANCH. A DROITE",
     ["straight"]     = "TOUT DROIT",
     ["uturn"]        = "DEMI-TOUR"
 }
@@ -95,7 +93,9 @@ local function build_french_instruction(m_type, m_mod, m_exit, name, ref, dest)
     end
 
     if dest ~= "" then
-        road = road .. " [DIR. " .. dest .. "]"
+        -- On garde uniquement la 1ere ou 2e ville de destination pour que ce soit lisible
+        local short_dest = dest:match("^([^,]+,[^,]+)") or dest:match("^([^,]+)") or dest
+        road = road .. " [DIR. " .. short_dest .. "]"
     end
 
     local dir = MOD_FR[m_mod or ""] or ""
@@ -108,17 +108,17 @@ local function build_french_instruction(m_type, m_mod, m_exit, name, ref, dest)
         local ex = m_exit and (" (SORTIE " .. m_exit .. ")") or ""
         return "ROND-POINT" .. ex .. " -> " .. road
     elseif m_type == "exit roundabout" or m_type == "exit rotary" then
-        return "SORTIR DU ROND-POINT SUR " .. road
+        return "SORTIE ROND-POINT -> " .. road
     elseif m_type == "fork" then
-        return "BIFURQUER " .. (dir ~= "" and dir or "SUR") .. " -> " .. road
+        return "BIFURQUER " .. (dir ~= "" and dir or "") .. " -> " .. road
     elseif m_type == "on ramp" or m_type == "off ramp" then
-        return "PRENDRE LA BRETELLE " .. (dir ~= "" and dir or "") .. " -> " .. road
+        return "BRETELLE " .. (dir ~= "" and dir or "") .. " -> " .. road
     elseif m_type == "merge" then
         return "REJOINDRE " .. road
     elseif m_type == "end of road" then
-        return "EN FIN DE ROUTE, TOURNER " .. dir .. " SUR " .. road
+        return "FIN DE ROUTE, " .. (dir ~= "" and dir or "CONTINUER") .. " SUR " .. road
     elseif m_type == "new name" or m_type == "continue" then
-        return "CONTINUER " .. (dir ~= "" and (dir .. " ") or "") .. "SUR " .. road
+        return "CONTINUER SUR " .. road
     else
         if dir ~= "" then
             return "TOURNER " .. dir .. " SUR " .. road
@@ -129,7 +129,7 @@ local function build_french_instruction(m_type, m_mod, m_exit, name, ref, dest)
 end
 
 -- =====================================================================
--- 3. CALCUL DE L'ITINERAIRE PAR OSRM (100% LUA AVEC %b{})
+-- 3. CALCUL DE L'ITINERAIRE PAR OSRM (AVEC PURGE DES POLYLINE GEOMETRY)
 -- =====================================================================
 local function get_route(city_start, city_end)
     minitel.draw_window(15, 9, 52, 5, "CALCUL SATELLITE EN COURS")
@@ -154,19 +154,22 @@ local function get_route(city_start, city_end)
         return "AUCUN ITINERAIRE ROUTIER TROUVE", nil
     end
 
-    -- Extraction du tableau steps avec le motif equilibre %b[]
+    -- CRUCIAL : On supprime les chaines "geometry":"..." et "intersections":[...]
+    -- car les polylines OSRM contiennent des caracteres '{' et '}' non apparies qui cassent %b{} !
+    json = json:gsub('"geometry"%s*:%s*"[^"]*"%s*,?', "")
+    json = json:gsub('"intersections"%s*:%s*%b[]%s*,?', "")
+
     local steps_array = json:match('"steps"%s*:%s*(%b[])')
     if not steps_array then return "ERREUR LECTURE FEUILLE DE ROUTE", nil end
 
-    -- Distance et duree globales (situees dans l'objet leg ou route)
-    local total_dist = tonumber(json:match('"distance"%s*:%s*([%d%.]+)')) or 0
-    local total_dur  = tonumber(json:match('"duration"%s*:%s*([%d%.]+)')) or 0
-
-    local steps = {}
+    local raw_steps = {}
+    local sum_dist = 0
+    local sum_dur  = 0
     local inner = steps_array:sub(2, -2)
 
     for step_block in inner:gmatch("%b{}") do
         local dist = tonumber(step_block:match('"distance"%s*:%s*([%d%.]+)')) or 0
+        local dur  = tonumber(step_block:match('"duration"%s*:%s*([%d%.]+)')) or 0
         local name = decode_json_str(step_block:match('"name"%s*:%s*"([^"]*)"') or "")
         local ref  = decode_json_str(step_block:match('"ref"%s*:%s*"([^"]*)"') or "")
         local dest = decode_json_str(step_block:match('"destinations"%s*:%s*"([^"]*)"') or "")
@@ -176,21 +179,65 @@ local function get_route(city_start, city_end)
         local m_mod  = man_block:match('"modifier"%s*:%s*"([^"]*)"') or ""
         local m_exit = man_block:match('"exit"%s*:%s*(%d+)')
 
-        -- On filtre les micro-etapes parasites (< 15m) sauf le depart et l'arrivee
-        if m_type == "depart" or m_type == "arrive" or dist >= 15 then
-            local text = build_french_instruction(m_type, m_mod, m_exit, name, ref, dest)
+        sum_dist = sum_dist + dist
+        sum_dur  = sum_dur + dur
+
+        table.insert(raw_steps, {
+            m_type = m_type,
+            m_exit = m_exit,
+            dist   = dist,
+            dur    = dur,
+            road_key = ref .. "|" .. name,
+            text   = build_french_instruction(m_type, m_mod, m_exit, name, ref, dest)
+        })
+    end
+
+    -- Fusion intelligente : regroupe l'entree et la sortie d'un meme rond-point ou les segments continus sur la meme route
+    local steps = {}
+    local i = 1
+    while i <= #raw_steps do
+        local cur = raw_steps[i]
+        local nxt = raw_steps[i + 1]
+
+        if (cur.m_type == "roundabout" or cur.m_type == "rotary") and nxt and (nxt.m_type == "exit roundabout" or nxt.m_type == "exit rotary") then
+            -- On garde l'instruction de sortie (qui a le vrai nom de la route suivante) avec le numero de sortie du rond-point !
+            local ex_str = cur.m_exit and (" (SORTIE " .. cur.m_exit .. ")") or ""
+            local merged_text = nxt.text:gsub("^SORTIE ROND%-POINT", "ROND-POINT" .. ex_str)
             table.insert(steps, {
-                distance = dist,
-                instruction = text
+                distance = cur.dist + nxt.dist,
+                duration = cur.dur + nxt.dur,
+                instruction = merged_text
             })
+            i = i + 2
+        elseif cur.m_type ~= "depart" and cur.m_type ~= "arrive" and cur.dist < 25 and #steps > 0 then
+            -- Ajoute les micro-segments (< 25m) a l'etape precedente
+            steps[#steps].distance = steps[#steps].distance + cur.dist
+            steps[#steps].duration = steps[#steps].duration + cur.dur
+            i = i + 1
+        else
+            table.insert(steps, {
+                distance = cur.dist,
+                duration = cur.dur,
+                instruction = cur.text
+            })
+            i = i + 1
         end
+    end
+
+    -- Calcul des distances cumulees pour la fiche detaillee
+    local cum_d, cum_t = 0, 0
+    for _, s in ipairs(steps) do
+        s.cum_dist = cum_d
+        s.cum_dur  = cum_t
+        cum_d = cum_d + s.distance
+        cum_t = cum_t + s.duration
     end
 
     local summary = {
         from = real_a,
         to   = real_b,
-        dist = total_dist,
-        dur  = total_dur
+        dist = sum_dist,
+        dur  = sum_dur
     }
 
     return summary, steps
@@ -210,7 +257,7 @@ local function format_dist(meters)
             return string.format("%4.1f KM", km)
         end
     elseif meters > 0 then
-        return string.format("%4d M ", math.floor(meters))
+        return string.format("%4d M ", math.floor(meters + 0.5))
     else
         return "  FIN  "
     end
@@ -236,19 +283,29 @@ local function draw_step_row(steps, slot, offset, cursor)
     end
 end
 
+local function draw_scrollbar(total_items, cursor)
+    if total_items > max_visible then
+        local thumb = math.floor(((cursor - 1) / math.max(1, total_items - 1)) * (max_visible - 3)) + 2
+        for i = 1, max_visible do
+            local char = (i == 1 and "^") or (i == max_visible and "v") or (i == thumb and "\x1b[7m#\x1b[0m") or ":"
+            io.write(string.format("\x1b[%d;78H%s", 7 + i, char))
+        end
+    end
+end
+
 local function draw_route_full(summary, steps, offset, cursor)
     io.write("\x1b[r\x1b[2J\x1b[H")
     minitel.sleep(0.04)
 
-    local tot_km = math.floor((summary.dist / 1000) + 0.5)
-    local tot_min = math.floor((summary.dur / 60) + 0.5)
+    local tot_km = math.max(1, math.floor((summary.dist / 1000) + 0.5))
+    local tot_min = math.max(1, math.floor((summary.dur / 60) + 0.5))
     local h = math.floor(tot_min / 60)
     local m = tot_min % 60
 
     local top_title = string.format("3615 ITINERAIRE : %s -> %s", string.sub(summary.from, 1, 24), string.sub(summary.to, 1, 24))
     io.write("\x1b[1;1H\x1b[7m" .. minitel.center(top_title, 80) .. "\x1b[0m")
 
-    local win_title = string.format("DISTANCE : %d KM | TEMPS ESTIME : %02dH%02d (%d ETAPES)", tot_km, h, m, #steps)
+    local win_title = string.format("DISTANCE : %d KM | DUREE : %02dH%02d | %d ETAPES", tot_km, h, m, #steps)
     minitel.draw_window(2, 3, 78, 19, win_title)
 
     io.write("\x1b[5;3H\x1b[7m  N.  | DIST.   | DIRECTION & VOIE A SUIVRE                                 \x1b[0m")
@@ -257,6 +314,7 @@ local function draw_route_full(summary, steps, offset, cursor)
     for slot = 1, max_visible do
         draw_step_row(steps, slot, offset, cursor)
     end
+    draw_scrollbar(#steps, cursor)
 
     io.write("\x1b[24;1H\x1b[7m [Z/S] DEFILER | [ENVOI] DETAIL ETAPE | [N] NOUVEAU TRAJET | [RETOUR] QUITTER \x1b[0m")
     io.flush()
@@ -276,45 +334,45 @@ local function show_route_loop(summary, steps)
                 return "NEW"
             elseif k == "REPETITION" then
                 draw_route_full(summary, steps, offset, cursor)
-            elseif k == "UP" or k == "Z" or k == "z" then
+            elseif k == "UP" or k == "Z" or k == "z" or k == "DOWN" or k == "S" or k == "s" then
+                local is_up = (k == "UP" or k == "Z" or k == "z")
                 local old_c, old_off = cursor, offset
-                if cursor > 1 then
-                    cursor = cursor - 1
-                    if cursor <= offset then offset = cursor - 1 end
-                else
-                    cursor = #steps
-                    offset = math.max(0, #steps - max_visible)
-                end
-                if offset ~= old_off then
-                    for s = 1, max_visible do draw_step_row(steps, s, offset, cursor) end
-                else
-                    draw_step_row(steps, old_c - offset, offset, cursor)
-                    draw_step_row(steps, cursor - offset, offset, cursor)
-                end
-                io.flush()
 
-            elseif k == "DOWN" or k == "S" or k == "s" then
-                local old_c, old_off = cursor, offset
-                if cursor < #steps then
-                    cursor = cursor + 1
-                    if cursor > offset + max_visible then offset = cursor - max_visible end
+                if is_up then
+                    if cursor > 1 then
+                        cursor = cursor - 1
+                        if cursor <= offset then offset = cursor - 1 end
+                    else
+                        cursor = #steps
+                        offset = math.max(0, #steps - max_visible)
+                    end
                 else
-                    cursor = 1
-                    offset = 0
+                    if cursor < #steps then
+                        cursor = cursor + 1
+                        if cursor > offset + max_visible then offset = cursor - max_visible end
+                    else
+                        cursor = 1
+                        offset = 0
+                    end
                 end
+
                 if offset ~= old_off then
                     for s = 1, max_visible do draw_step_row(steps, s, offset, cursor) end
                 else
                     draw_step_row(steps, old_c - offset, offset, cursor)
                     draw_step_row(steps, cursor - offset, offset, cursor)
                 end
+                draw_scrollbar(#steps, cursor)
                 io.flush()
 
             elseif k == "ENVOI" or k == "\r" or k == "\n" or k == " " then
                 local st = steps[cursor]
                 if st then
-                    local msg = string.format("Etape %d/%d (%s) : %s", cursor, #steps, format_dist(st.distance), st.instruction)
-                    minitel.msg_box("DETAIL DE L'ETAPE", msg, "pickup")
+                    local km_done = math.floor((st.cum_dist / 1000) + 0.5)
+                    local min_done = math.floor((st.cum_dur / 60) + 0.5)
+                    local msg = string.format("%s — Suivre sur %s (Cumul: %d km / %d min)",
+                        st.instruction, format_dist(st.distance), km_done, min_done)
+                    minitel.msg_box(string.format("ETAPE %02d / %02d", cursor, #steps), msg, "pickup")
                     draw_route_full(summary, steps, offset, cursor)
                 end
             end
