@@ -61,7 +61,7 @@ local GAME_DB = {
         },
         desc = "Aventure textuelle avec inventaire et sauvegarde persistante. Explorez la station relais et survivez a l'anomalie."
     },
-    [" PIRATE"] = {
+    ["PIRATE"] = {
         genre = "LOGIQUE / HACKING",
         players = "1 JOUEUR",
         art = {
@@ -72,6 +72,18 @@ local GAME_DB = {
             "   TENTATIVES : [][][][]  "
         },
         desc = "Infiltrez le terminal central en devinant le mot de passe cache dans les octets de la memoire."
+    },
+    ["BOURSE"] = {
+        genre = "GESTION / COMMERCE",
+        players = "1 JOUEUR (SAUVEGARDE)",
+        art = {
+            "   15k |        /\\   /    ",
+            "   10k |   /\\  /  \\ /     ",
+            "    5k |  /  \\/    v      ",
+            "       +----------------  ",
+            "       PARIS  LYON REIMS  "
+        },
+        desc = "Speculez sur les composants electroniques entre 6 villes en 30 jours. Remboursez votre dette et faites fortune !"
     }
 }
 
