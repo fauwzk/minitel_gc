@@ -39,8 +39,12 @@ function M.cleanup()
 end
 
 function M.sleep(seconds)
-    local t0 = os.clock()
-    while os.clock() - t0 <= seconds do end
+    -- Pour les pauses courtes ou longues, rend la main au noyau Linux (0% CPU !)
+    local ok = os.execute(string.format("sleep %.3f 2>/dev/null", seconds))
+    if not ok then
+        local t0 = os.clock()
+        while os.clock() - t0 <= seconds do end
+    end
 end
 
 function M.play_sound(effect)

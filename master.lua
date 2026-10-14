@@ -6,15 +6,21 @@ minitel.init()
 -- =====================================================================
 local function get_network_info()
     local info = { connected = false, ip = "HORS LIGNE" }
-    local success = os.execute("ping -c 1 -W 1 github.com > /dev/null 2>&1")
+    local success = os.execute("ping -c 1 -W 1 1.1.1.1 > /dev/null 2>&1")
     
     if success == true or success == 0 then
         info.connected = true
-        local f_ip = io.popen("hostname -I | awk '{print $1}' 2>/dev/null")
+        -- Commande universelle Linux (iproute2 + fallback hostname) avec stderr masque partout
+        local cmd = "(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i==\"src\") print $(i+1)}'; hostname -I 2>/dev/null | awk '{print $1}') | head -n 1"
+        local f_ip = io.popen(cmd)
         if f_ip then
             local ip = f_ip:read("*l")
-            if ip and ip ~= "" then info.ip = ip else info.ip = "LOCALE" end
             f_ip:close()
+            if ip and ip ~= "" then
+                info.ip = ip
+            else
+                info.ip = "LOCALE"
+            end
         end
     end
     return info
@@ -236,21 +242,21 @@ local function draw_boot_screen()
     io.flush()
 end
 
--- Met a jour uniquement la ligne de diagnostic reseau et CPU (Zero clignotement)
+-- Met a jour uniquement l'interieur des pieds de cadres (Col 3-36 et Col 41-78) sans toucher aux bordures !
 local function draw_telemetry_bar()
     local temp, up = get_sys_metrics()
+    local t_str = pad_str(temp, 7)
+    local u_str = pad_str(up, 7)
+
+    -- Pied Gauche (34 caracteres entre col 3 et col 36)
+    local status_left = string.format("CPU: %s | UP: %s", t_str, u_str)
+    io.write(string.format("\x1b[21;3H\x1b[1m%s\x1b[0m", center_str(status_left, 34)))
+
+    -- Pied Droit (38 caracteres exacts entre col 41 et col 78)
     local status_badge = net_info.connected and "\x1b[7m EN LIGNE \x1b[0m" or "HORS LIGNE"
     local ip_str = pad_str(net_info.ip, 15)
-    local t_str  = pad_str(temp, 7)
-    local u_str  = pad_str(up, 7)
-
-    io.write("\x1b[21;40H| ")
-    io.write("NET:" .. status_badge .. " IP:" .. ip_str .. " ")
-    io.write("|\x1b[0m")
-
-    -- Compteur et CPU dans le pied gauche
-    local status_left = string.format("CPU: %s | UP: %s", t_str, u_str)
-    io.write(string.format("\x1b[21;4H\x1b[1m%s\x1b[0m", center_str(status_left, 30)))
+    -- 1 (" ") + 4 ("NET:") + 10 (badge) + 4 (" IP:") + 15 (ip_str) + 4 ("    ") = 38 colonnes exactes !
+    io.write("\x1b[21;41H NET:" .. status_badge .. " IP:" .. ip_str .. "    ")
     io.flush()
 end
 
@@ -301,19 +307,16 @@ local function draw_details_panel()
     local item = options[cursor]
     if not item then return end
 
-    -- Illustration ASCII (Lignes 8 a 12)
     for i = 1, 5 do
         local art_line = item.art[i] or ""
         io.write(string.format("\x1b[%d;41H\x1b[1m%s\x1b[0m", 7 + i, center_str(art_line, 38)))
     end
 
-    -- Infos techniques (Lignes 14 et 15)
     local title_line = "CIBLE : " .. item.title
     local type_line  = "TYPE  : " .. item.type
     io.write(string.format("\x1b[14;42H\x1b[1m%s\x1b[0m", pad_str(title_line, 36)))
     io.write(string.format("\x1b[15;42H%s", pad_str(type_line, 36)))
 
-    -- Description multi-lignes (Lignes 17 a 19)
     local desc_lines = wrap_text(item.desc, 36, 3)
     for i = 1, 3 do
         io.write(string.format("\x1b[%d;42H%s", 16 + i, desc_lines[i]))
@@ -359,46 +362,16 @@ local function update_cursor(old_index, new_index)
 end
 
 -- =====================================================================
--- MOTEUR DE RECHERCHE GLOBALE LUA (INTEGRE EN BAS D'ECRAN)
+-- MOTEUR DE RECHERCHE GLOBALE LUA
 -- =====================================================================
 local function search_and_launch()
-    io.write("\x1b[23;1H\x1b[K\x1b[24;1H\x1b[K")
-    io.write("\x1b[24;1H\x1b[7m RECHERCHE SCRIPT LUA : \x1b[0m ")
-    io.flush()
-    
-    local str = ""
-    while true do
-        local k = minitel.get_key()
-        if k then
-            if k == "ENVOI" or k == "\n" or k == "\r" then
-                break
-            elseif k == "RETOUR" or k == "ESC" then
-                return false
-            elseif k == "CORRECTION" or k == "ANNULATION" or k == "\x08" or k == "\x7f" then
-                if #str > 0 then
-                    str = string.sub(str, 1, -2)
-                    io.write("\x1b[D \x1b[D")
-                    io.flush()
-                end
-            elseif string.match(k, "^[%w%s%p_]$") and #k == 1 then
-                if #str < 40 then
-                    str = str .. string.lower(k)
-                    io.write(string.lower(k))
-                    io.flush()
-                end
-            end
-        end
-        minitel.sleep(0.01)
-    end
-
-    if str ~= "" then
-        io.write("\x1b[24;1H\x1b[K\x1b[7m RECHERCHE EN COURS...                                                          \x1b[0m")
-        io.flush()
-        
+    local str = minitel.input_box("RECHERCHE GLOBALE LUA", "Nom du script a chercher et lancer :", "", 30)
+    if str and str ~= "" then
+        str = string.lower(str:gsub("%s+", ""))
         local cmd = "find . -maxdepth 2 -name '*" .. str .. "*.lua' 2>/dev/null | head -n 1"
         local f = io.popen(cmd)
-        local result = f:read("*l")
-        f:close()
+        local result = f and f:read("*l") or nil
+        if f then f:close() end
 
         if result and result ~= "" then
             minitel.play_sound("pickup")
@@ -407,13 +380,7 @@ local function search_and_launch()
             minitel.init()
             return true
         else
-            io.write("\x1b[24;1H\x1b[K\x1b[7m AUCUN SCRIPT TROUVE. APPUYEZ SUR [RETOUR] OU [ENVOI]                           \x1b[0m")
-            io.flush()
-            while true do
-                local k = minitel.get_key()
-                if k == "RETOUR" or k == "ESC" or k == "ENVOI" or k == "\r" or k == "\n" then break end
-                minitel.sleep(0.05)
-            end
+            minitel.msg_box("INTROUVABLE", "Aucun script Lua ne correspond a : " .. str, "lose")
         end
     end
     return false
@@ -507,20 +474,16 @@ while true do
             io.write("\x1b[2J\x1b[H") 
             io.flush()
         else
-            -- Verification reseau et telemetrie toutes les 30s sans clignotement
             if now - last_net_update >= 30 then
                 local old_status = net_info.connected
-                local old_ip = net_info.ip
                 net_info = get_network_info()
                 
                 if net_info.connected ~= old_status then
                     build_options()
                     if cursor > #options then cursor = #options end
                     draw_full_list()
-                elseif net_info.ip ~= old_ip then
-                    draw_telemetry_bar()
                 else
-                    draw_telemetry_bar() -- Rafraichit juste l'uptime et la temp CPU
+                    draw_telemetry_bar()
                 end
                 last_net_update = now
             end
@@ -528,21 +491,11 @@ while true do
             if key then
                 local old_cursor = cursor
                 if key == "z" or key == "Z" or key == "UP" then
-                    if cursor > 1 then
-                        cursor = cursor - 1
-                        update_cursor(old_cursor, cursor)
-                    else
-                        cursor = #options
-                        update_cursor(old_cursor, cursor)
-                    end
+                    cursor = (cursor > 1) and (cursor - 1) or #options
+                    update_cursor(old_cursor, cursor)
                 elseif key == "s" or key == "S" or key == "DOWN" then
-                    if cursor < #options then
-                        cursor = cursor + 1
-                        update_cursor(old_cursor, cursor)
-                    else
-                        cursor = 1
-                        update_cursor(old_cursor, cursor)
-                    end
+                    cursor = (cursor < #options) and (cursor + 1) or 1
+                    update_cursor(old_cursor, cursor)
                 elseif key == "r" or key == "R" then
                     search_and_launch()
                     draw_static_portal()
@@ -579,7 +532,7 @@ while true do
                 end
             end
         end
-        minitel.sleep(0.01)
+        minitel.sleep(0.02)
         
     elseif state == "SCREENSAVER" then
         run_screensaver_frame()
