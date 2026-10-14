@@ -2,7 +2,7 @@ local minitel = require("minitel")
 minitel.init()
 
 -- =====================================================================
--- DETECTION RESEAU & SYSTEME AVANCEE
+-- DETECTION RESEAU & TELEMETRIE SYSTEME (LINUX / RASPBERRY PI)
 -- =====================================================================
 local function get_network_info()
     local info = { connected = false, ip = "HORS LIGNE" }
@@ -10,50 +10,360 @@ local function get_network_info()
     
     if success == true or success == 0 then
         info.connected = true
-        -- Récupération de l'adresse IP locale via le système
         local f_ip = io.popen("hostname -I | awk '{print $1}' 2>/dev/null")
         if f_ip then
             local ip = f_ip:read("*l")
-            if ip and ip ~= "" then info.ip = ip else info.ip = "INCONNUE" end
+            if ip and ip ~= "" then info.ip = ip else info.ip = "LOCALE" end
             f_ip:close()
         end
     end
     return info
 end
 
+local function get_sys_metrics()
+    local temp = "N/A"
+    local up = "ACTIF"
+    
+    local f_t = io.open("/sys/class/thermal/thermal_zone0/temp", "r")
+    if f_t then
+        local t = tonumber(f_t:read("*l"))
+        f_t:close()
+        if t then temp = string.format("%.1f C", t / 1000) end
+    end
+    
+    local f_u = io.open("/proc/uptime", "r")
+    if f_u then
+        local line = f_u:read("*l")
+        f_u:close()
+        if line then
+            local sec = tonumber(string.match(line, "^(%d+)"))
+            if sec then
+                local h = math.floor(sec / 3600)
+                local m = math.floor((sec % 3600) / 60)
+                up = string.format("%02dh%02dm", h, m)
+            end
+        end
+    end
+    return temp, up
+end
+
 local net_info = get_network_info()
 
 -- =====================================================================
--- LISTE DES MODULES (Dynamique)
+-- UTILITAIRES DE FORMATAGE TEXTE
+-- =====================================================================
+local function pad_str(str, len)
+    if #str > len then return string.sub(str, 1, len) end
+    return str .. string.rep(" ", len - #str)
+end
+
+local function center_str(str, len)
+    if #str >= len then return string.sub(str, 1, len) end
+    local left = math.floor((len - #str) / 2)
+    local right = len - #str - left
+    return string.rep(" ", left) .. str .. string.rep(" ", right)
+end
+
+local function wrap_text(text, max_width, max_lines)
+    local lines = {}
+    local current = ""
+    for word in text:gmatch("%S+") do
+        if #current + #word + 1 > max_width then
+            table.insert(lines, pad_str(current, max_width))
+            current = word
+            if #lines >= max_lines then break end
+        else
+            current = (current == "") and word or (current .. " " .. word)
+        end
+    end
+    if #lines < max_lines and current ~= "" then
+        table.insert(lines, pad_str(current, max_width))
+    end
+    while #lines < max_lines do
+        table.insert(lines, string.rep(" ", max_width))
+    end
+    return lines
+end
+
+-- =====================================================================
+-- CATALOGUE DES MODULES DU PORTAIL MAITRE
 -- =====================================================================
 local options = {}
+local cursor = 1
+local offset = 0
+local max_visible = 12
+local list_start_y = 8
 
 local function build_options()
     options = {
-        { name = "3615 JEUX (Modules de divertissement)", cmd = "lua5.3 launcher_jeux.lua" },
-        { name = "3615 OUTILS (Modules utilitaires)", cmd = "lua5.3 launcher_utils.lua" },
-        { name = "MAGIS EDIT (Editeur de texte)", cmd = "lua5.3 utils/edit.lua" }
+        {
+            display = "3615 JEUX",
+            title = "SALLE D'ARCADE",
+            type = "DIVERTISSEMENT",
+            cmd = "lua5.3 launcher_jeux.lua",
+            art = {
+                "       .------------.     ",
+                "       | [CARTOUCHE]|     ",
+                "       |   .----.   |     ",
+                "       |   | () |   |     ",
+                "       '---'----'---'     "
+            },
+            desc = "Accedez au catalogue de jeux du Magis Club : Casino Poker, Rogue-like Enigma et fictions interactives."
+        },
+        {
+            display = "3615 OUTILS",
+            title = "POSTE DE TRAVAIL",
+            type = "BUREAUTIQUE & TELEMATIQUE",
+            cmd = "lua5.3 launcher_utils.lua",
+            art = {
+                "     .----------------.   ",
+                "     | [CALC]  [TRAIN]|   ",
+                "     | [EDIT]  [SYS]  |   ",
+                "     '----------------'   ",
+                "      =======()=======    "
+            },
+            desc = "Suite logicielle : tableur dynamique multi-feuilles, horaires SNCF en direct et utilitaires systeme."
+        },
+        {
+            display = "MAGIS EDIT",
+            title = "EDITEUR DE CODE",
+            type = "DEVELOPPEMENT RAPIDE",
+            cmd = "lua5.3 utils/edit.lua",
+            art = {
+                "   .--------------------. ",
+                "   | 10 PRINT \"MAGIS\"   | ",
+                "   | 20 GOTO 10         | ",
+                "   | > _                | ",
+                "   '--------------------' "
+            },
+            desc = "Acces direct a l'editeur de texte plein ecran avec gestionnaire de fichiers style Norton Commander."
+        }
     }
 
     if net_info.connected then
-        table.insert(options, { name = "MISE A JOUR SYSTEME (Git Pull)", cmd = "update" })
+        table.insert(options, {
+            display = "MISE A JOUR GIT",
+            title = "SYNCHRONISATION",
+            type = "MAINTENANCE DEPOT",
+            cmd = "update",
+            art = {
+                "      .---.      .---.    ",
+                "     | GIT |<-->| MAG |   ",
+                "      '---'      '---'    ",
+                "     PULL / PUSH / BKP    ",
+                "   ====================== "
+            },
+            desc = "Synchronise le systeme avec le serveur Git distant. Gere les conflits locaux, sauvegardes et envois (Push)."
+        })
     end
 
-    table.insert(options, { name = "CONFIGURATION RESEAU (nmtui)", cmd = "TERM=vt100 nmtui" })
-    table.insert(options, { name = "INVITE DE COMMANDE (Shell local)", cmd = "bash" })
-    table.insert(options, { name = "EXTINCTION DU SYSTEME", cmd = "sudo poweroff" })
-    table.insert(options, { name = "REDEMARRAGE DU SYSTEME", cmd = "sudo reboot" })
+    table.insert(options, {
+        display = "CONFIG RESEAU",
+        title = "INTERFACE NMTUI",
+        type = "ADMINISTRATION IP/WIFI",
+        cmd = "TERM=vt100 nmtui",
+        art = {
+            "          ( ( ( ) ) )     ",
+            "             \\ | /        ",
+            "              (|)         ",
+            "             / | \\        ",
+            "         [ ETH0 / WLAN ]  "
+        },
+        desc = "Configurez les connexions Wi-Fi, les parametres Ethernet et le routage reseau de l'hote Linux."
+    })
+
+    table.insert(options, {
+        display = "TERMINAL BASH",
+        title = "CONSOLE LINUX",
+        type = "ACCES DIRECT HOTE",
+        cmd = "bash",
+        art = {
+            "   .--------------------. ",
+            "   | minitel@host:~$ _  | ",
+            "   |                    | ",
+            "   | [SHELL INTERACTIF] | ",
+            "   '--------------------' "
+        },
+        desc = "Ouvre une session shell Bash native sur le Raspberry Pi. Tapez 'exit' pour revenir au portail Magis."
+    })
+
+    table.insert(options, {
+        display = "REDEMARRAGE",
+        title = "REBOOT SYSTEME",
+        type = "ALIMENTATION",
+        cmd = "sudo reboot",
+        art = {
+            "          .------.        ",
+            "         /   ||   \\       ",
+            "        |    ||    |      ",
+            "         \\  '--'  /       ",
+            "          '------'        "
+        },
+        desc = "Redemarre completement le systeme hote Linux et reinitialise tous les services telematiques."
+    })
+
+    table.insert(options, {
+        display = "EXTINCTION",
+        title = "ARRET COMPLET",
+        type = "ALIMENTATION",
+        cmd = "sudo poweroff",
+        art = {
+            "       .------------.     ",
+            "       |  ARRET DU  |     ",
+            "       |  SYSTEME   |     ",
+            "       |   [OFF]    |     ",
+            "       '------------'     "
+        },
+        desc = "Parcage des disques et extinction securisee de l'hote Linux avant coupure electrique du Minitel."
+    })
 end
 
 build_options()
-local cursor = 1
 
 -- =====================================================================
--- MOTEUR DE RECHERCHE GLOBALE LUA
+-- AFFICHAGE DU SQUELETTE ET DES ENCARTS (9600 BAUDS)
+-- =====================================================================
+local function draw_boot_screen()
+    io.write("\x1b[1;1H\x1b[K========================================")
+    io.write("\x1b[2;1H\x1b[K\x1b[7m  INITIALISATION MAGIS CLUB REQUISE   \x1b[0m")
+    io.write("\x1b[3;1H\x1b[K========================================")
+    io.write("\x1b[5;1H\x1b[KVeuillez taper ces commandes au clavier:")
+    io.write("\x1b[7;1H\x1b[K1. 80 Colonnes : \x1b[1mCtrl+Esc\x1b[0m puis \x1b[1mT\x1b[0m puis \x1b[1mA\x1b[0m")
+    io.write("\x1b[8;1H\x1b[K2. Echo OFF    : \x1b[1mCtrl+Esc\x1b[0m puis \x1b[1mT\x1b[0m puis \x1b[1mE\x1b[0m")
+    io.write("\x1b[9;1H\x1b[K3. Clav. Etendu: \x1b[1mCtrl+Esc\x1b[0m puis \x1b[1mC\x1b[0m puis \x1b[1mE\x1b[0m")
+    io.write("\x1b[12;1H\x1b[K(Le terminal s'effacera a chaque fois)")
+    io.write("\x1b[15;1H\x1b[K\x1b[7m APPUYEZ SUR [ENVOI] QUAND TERMINE. \x1b[0m")
+    io.flush()
+end
+
+-- Met a jour uniquement la ligne de diagnostic reseau et CPU (Zero clignotement)
+local function draw_telemetry_bar()
+    local temp, up = get_sys_metrics()
+    local status_badge = net_info.connected and "\x1b[7m EN LIGNE \x1b[0m" or "HORS LIGNE"
+    local ip_str = pad_str(net_info.ip, 15)
+    local t_str  = pad_str(temp, 7)
+    local u_str  = pad_str(up, 7)
+
+    io.write("\x1b[21;40H| ")
+    io.write("NET:" .. status_badge .. " IP:" .. ip_str .. " ")
+    io.write("|\x1b[0m")
+
+    -- Compteur et CPU dans le pied gauche
+    local status_left = string.format("CPU: %s | UP: %s", t_str, u_str)
+    io.write(string.format("\x1b[21;4H\x1b[1m%s\x1b[0m", center_str(status_left, 30)))
+    io.flush()
+end
+
+local function draw_static_portal()
+    io.write("\x1b[r\x1b[2J\x1b[H")
+    minitel.sleep(0.04)
+
+    -- Bandeau Superieur (3 lignes)
+    io.write("\x1b[1;1H\x1b[7m" .. string.rep(" ", 80) .. "\x1b[0m")
+    io.write("\x1b[2;1H\x1b[7m  [OS]   " .. center_str("* * *  PORTAIL SYSTEME : MAGIS CLUB  * * *", 60) .. "  9600 BDS \x1b[0m")
+    io.write("\x1b[3;1H\x1b[7m" .. string.rep(" ", 80) .. "\x1b[0m")
+
+    -- Entetes des 2 panneaux (Ligne 5)
+    io.write("\x1b[5;2H.----------------------------------.")
+    io.write("\x1b[5;40H.--------------------------------------.")
+
+    io.write("\x1b[6;2H|\x1b[7m" .. center_str("COMMANDES & MODULES", 34) .. "\x1b[0m|")
+    io.write("\x1b[6;40H|\x1b[7m" .. center_str("MONITEUR & APERCU SYSTEME", 38) .. "\x1b[0m|")
+
+    io.write("\x1b[7;2H|----------------------------------|")
+    io.write("\x1b[7;40H|--------------------------------------|")
+
+    -- Corps des panneaux (Lignes 8 a 19)
+    for y = 8, 19 do
+        io.write(string.format("\x1b[%d;2H|                                  |", y))
+        io.write(string.format("\x1b[%d;40H|                                      |", y))
+    end
+
+    -- Separateur interne dans le panneau droit (Ligne 13)
+    io.write("\x1b[13;40H|--------------------------------------|")
+
+    -- Bas des panneaux (Lignes 20 et 21)
+    io.write("\x1b[20;2H|----------------------------------|")
+    io.write("\x1b[20;40H|--------------------------------------|")
+
+    io.write("\x1b[21;2H|                                  |")
+    io.write("\x1b[21;40H|                                      |")
+
+    io.write("\x1b[22;2H'----------------------------------'")
+    io.write("\x1b[22;40H'--------------------------------------'")
+
+    -- Bandeau Inferieur (Ligne 24)
+    io.write("\x1b[24;1H\x1b[7m  [Z/S] NAVIGUER   |   [ENVOI] VALIDER   |   [R] RECHERCHE LUA   |   [VEILLE]   \x1b[0m")
+    draw_telemetry_bar()
+end
+
+local function draw_details_panel()
+    local item = options[cursor]
+    if not item then return end
+
+    -- Illustration ASCII (Lignes 8 a 12)
+    for i = 1, 5 do
+        local art_line = item.art[i] or ""
+        io.write(string.format("\x1b[%d;41H\x1b[1m%s\x1b[0m", 7 + i, center_str(art_line, 38)))
+    end
+
+    -- Infos techniques (Lignes 14 et 15)
+    local title_line = "CIBLE : " .. item.title
+    local type_line  = "TYPE  : " .. item.type
+    io.write(string.format("\x1b[14;42H\x1b[1m%s\x1b[0m", pad_str(title_line, 36)))
+    io.write(string.format("\x1b[15;42H%s", pad_str(type_line, 36)))
+
+    -- Description multi-lignes (Lignes 17 a 19)
+    local desc_lines = wrap_text(item.desc, 36, 3)
+    for i = 1, 3 do
+        io.write(string.format("\x1b[%d;42H%s", 16 + i, desc_lines[i]))
+    end
+end
+
+local function format_list_entry(idx, is_selected)
+    local item = options[idx]
+    if not item then return string.rep(" ", 32) end
+    local num_str = string.format("%02d.", idx)
+    local label = num_str .. " " .. pad_str(item.display, 24)
+    if is_selected then
+        return "\x1b[7m > " .. label .. " < \x1b[0m"
+    else
+        return "   " .. label .. "   "
+    end
+end
+
+local function draw_full_list()
+    for i = 1, max_visible do
+        local idx = offset + i
+        local y = list_start_y + i - 1
+        io.write(string.format("\x1b[%d;3H%s", y, format_list_entry(idx, idx == cursor)))
+    end
+    draw_details_panel()
+    draw_telemetry_bar()
+    io.flush()
+end
+
+local function update_cursor(old_index, new_index)
+    local old_y = list_start_y + (old_index - offset) - 1
+    local new_y = list_start_y + (new_index - offset) - 1
+
+    if old_y >= list_start_y and old_y < list_start_y + max_visible then
+        io.write(string.format("\x1b[%d;3H%s", old_y, format_list_entry(old_index, false)))
+    end
+    if new_y >= list_start_y and new_y < list_start_y + max_visible then
+        io.write(string.format("\x1b[%d;3H%s", new_y, format_list_entry(new_index, true)))
+    end
+
+    draw_details_panel()
+    io.flush()
+end
+
+-- =====================================================================
+-- MOTEUR DE RECHERCHE GLOBALE LUA (INTEGRE EN BAS D'ECRAN)
 -- =====================================================================
 local function search_and_launch()
-    io.write("\x1b[22;1H\x1b[K\x1b[23;1H\x1b[K\x1b[24;1H\x1b[K")
-    io.write("\x1b[23;1H\x1b[7m RECHERCHE DE SCRIPT LUA : \x1b[0m ")
+    io.write("\x1b[23;1H\x1b[K\x1b[24;1H\x1b[K")
+    io.write("\x1b[24;1H\x1b[7m RECHERCHE SCRIPT LUA : \x1b[0m ")
     io.flush()
     
     local str = ""
@@ -71,16 +381,18 @@ local function search_and_launch()
                     io.flush()
                 end
             elseif string.match(k, "^[%w%s%p_]$") and #k == 1 then
-                str = str .. string.lower(k)
-                io.write(string.lower(k))
-                io.flush()
+                if #str < 40 then
+                    str = str .. string.lower(k)
+                    io.write(string.lower(k))
+                    io.flush()
+                end
             end
         end
         minitel.sleep(0.01)
     end
 
     if str ~= "" then
-        io.write("\x1b[23;1H\x1b[K\x1b[1m Recherche en cours...\x1b[0m")
+        io.write("\x1b[24;1H\x1b[K\x1b[7m RECHERCHE EN COURS...                                                          \x1b[0m")
         io.flush()
         
         local cmd = "find . -maxdepth 2 -name '*" .. str .. "*.lua' 2>/dev/null | head -n 1"
@@ -95,7 +407,7 @@ local function search_and_launch()
             minitel.init()
             return true
         else
-            io.write("\x1b[23;1H\x1b[K\x1b[7m AUCUN SCRIPT TROUVE. APPUYEZ SUR [RETOUR] \x1b[0m")
+            io.write("\x1b[24;1H\x1b[K\x1b[7m AUCUN SCRIPT TROUVE. APPUYEZ SUR [RETOUR] OU [ENVOI]                           \x1b[0m")
             io.flush()
             while true do
                 local k = minitel.get_key()
@@ -108,67 +420,6 @@ local function search_and_launch()
 end
 
 -- =====================================================================
--- INTERFACE GRAPHIQUE (PORTAIL SYSADMIN)
--- =====================================================================
-local function draw_boot_screen()
-    io.write("\x1b[1;1H\x1b[K========================================")
-    io.write("\x1b[2;1H\x1b[K\x1b[7m  INITIALISATION MAGIS CLUB REQUISE   \x1b[0m")
-    io.write("\x1b[3;1H\x1b[K========================================")
-    io.write("\x1b[5;1H\x1b[KVeuillez taper ces commandes au clavier:")
-    io.write("\x1b[7;1H\x1b[K1. 80 Colonnes : \x1b[1mCtrl+Esc\x1b[0m puis \x1b[1mT\x1b[0m puis \x1b[1mA\x1b[0m")
-    io.write("\x1b[8;1H\x1b[K2. Echo OFF    : \x1b[1mCtrl+Esc\x1b[0m puis \x1b[1mT\x1b[0m puis \x1b[1mE\x1b[0m")
-    io.write("\x1b[9;1H\x1b[K3. Clav. Etendu: \x1b[1mCtrl+Esc\x1b[0m puis \x1b[1mC\x1b[0m puis \x1b[1mE\x1b[0m")
-    io.write("\x1b[12;1H\x1b[K(Le terminal s'effacera a chaque fois)")
-    io.write("\x1b[15;1H\x1b[K\x1b[7m APPUYEZ SUR [ENVOI] QUAND TERMINE. \x1b[0m")
-    io.flush()
-end
-
-local function draw_menu()
-    io.write("\x1b[2J\x1b[H")
-    minitel.sleep(0.08)
-    
-    io.write("\x1b[1;1H\x1b[7m                                                                                \x1b[0m\r\n")
-    io.write("\x1b[2;1H\x1b[7m      * * *   P O R T A I L   S Y S T E M E   :   M A G I S   C L U B   * * *   \x1b[0m\r\n")
-    io.write("\x1b[3;1H\x1b[7m                                                                                \x1b[0m\r\n")
-    
-    local status_badge = net_info.connected and "\x1b[7m CONNECTE \x1b[0m" or "HORS LIGNE"
-    local formatted_ip = string.format("%-15s", net_info.ip)
-    
-    io.write("\x1b[5;4H+----------------------------------------------------------------------+\r\n")
-    io.write("\x1b[6;4H|  \x1b[1mDIAGNOSTIC RESEAU\x1b[0m                                                   |\r\n")
-    -- La ligne 7 contient exactement 70 caracteres "visibles" a l'interieur du cadre
-    io.write("\x1b[7;4H|  STATUT : " .. status_badge .. "             IP : " .. formatted_ip .. "                |\r\n")
-    io.write("\x1b[8;4H+----------------------------------------------------------------------+\r\n")
-    
-    io.write("\x1b[11;4H\x1b[1m[ SELECTION DU MODULE D'EXECUTION ]\x1b[0m\r\n")
-    
-    io.write("\x1b[23;1H\x1b[7m                                                                                \x1b[0m\r\n")
-    io.write("\x1b[24;1H\x1b[7m  FLECHES: NAVIGUER  |  ENVOI: VALIDER  |  [R] RECHERCHE GLOBALE LUA            \x1b[0m")
-    io.flush()
-end
-
-local function draw_list()
-    for i=13, 21 do io.write("\x1b["..i..";1H\x1b[K") end
-    for i, opt in ipairs(options) do
-        local line_y = 12 + i
-        if i == cursor then
-            io.write("\x1b[" .. line_y .. ";8H\x1b[7m > " .. opt.name .. " \x1b[0m")
-        else
-            io.write("\x1b[" .. line_y .. ";8H   " .. opt.name .. "   ")
-        end
-    end
-    io.flush()
-end
-
-local function update_cursor(old_index, new_index)
-    local old_opt = options[old_index]
-    if old_opt then io.write("\x1b[" .. (12 + old_index) .. ";1H\x1b[K\x1b[" .. (12 + old_index) .. ";8H   " .. old_opt.name .. "   ") end
-    local new_opt = options[new_index]
-    if new_opt then io.write("\x1b[" .. (12 + new_index) .. ";1H\x1b[K\x1b[" .. (12 + new_index) .. ";8H\x1b[7m > " .. new_opt.name .. " \x1b[0m") end
-    io.flush()
-end
-
--- =====================================================================
 -- GESTION DE L'ECRAN DE VEILLE (SCREENSAVER)
 -- =====================================================================
 local ss_x, ss_y = 30, 12
@@ -178,7 +429,6 @@ local ss_len = 16
 
 local function run_screensaver_frame()
     io.write("\x1b["..ss_y..";"..ss_x.."H" .. string.rep(" ", ss_len))
-    
     ss_x = ss_x + ss_dx
     ss_y = ss_y + ss_dy
     
@@ -203,8 +453,8 @@ local f = io.open("/tmp/minitel_warmboot", "r")
 if f then
     state = "MENU"
     f:close()
-    draw_menu()
-    draw_list()
+    draw_static_portal()
+    draw_full_list()
 else
     io.write("\x1b[2J\x1b[H")
 end
@@ -212,7 +462,7 @@ end
 local last_boot_draw = 0
 local last_net_update = os.time()
 local last_input_time = os.time()
-local INACTIVITY_TIMEOUT = 60
+local INACTIVITY_TIMEOUT = 90
 
 while true do
     local key = minitel.get_key()
@@ -222,8 +472,8 @@ while true do
         last_input_time = now 
         if state == "SCREENSAVER" then
             state = "MENU"
-            draw_menu()
-            draw_list()
+            draw_static_portal()
+            draw_full_list()
             key = nil 
         end
     end
@@ -236,22 +486,19 @@ while true do
         
         if key == "ENVOI" or key == " " or key == "\n" or key == "\r" then
             minitel.play_sound("hit")
-            
-            -- Sécurité : on pose le flag pour ne pas repasser par cet écran au prochain reboot du service
             os.execute("touch /tmp/minitel_warmboot")
             
-            -- MISE A JOUR AUTOMATIQUE
-            -- On revérifie la connexion ici car le Pi a eu le temps de s'initialiser pendant l'écran de boot
             net_info = get_network_info()
             if net_info.connected then
                 minitel.cleanup()
                 os.execute("lua5.3 updater.lua")
-                break -- L'updater va redémarrer le système, on quitte le script proprement
+                break
             end
             
+            build_options()
             state = "MENU"
-            draw_menu()
-            draw_list()
+            draw_static_portal()
+            draw_full_list()
         end
         
     elseif state == "MENU" then
@@ -260,62 +507,79 @@ while true do
             io.write("\x1b[2J\x1b[H") 
             io.flush()
         else
+            -- Verification reseau et telemetrie toutes les 30s sans clignotement
             if now - last_net_update >= 30 then
                 local old_status = net_info.connected
                 local old_ip = net_info.ip
-                
                 net_info = get_network_info()
                 
-                -- On ne redessine l'écran QUE si la connexion ou l'IP change
-                if net_info.connected ~= old_status or net_info.ip ~= old_ip then
+                if net_info.connected ~= old_status then
                     build_options()
                     if cursor > #options then cursor = #options end
-                    
-                    draw_menu()
-                    draw_list()
+                    draw_full_list()
+                elseif net_info.ip ~= old_ip then
+                    draw_telemetry_bar()
+                else
+                    draw_telemetry_bar() -- Rafraichit juste l'uptime et la temp CPU
                 end
-                
                 last_net_update = now
             end
             
             if key then
                 local old_cursor = cursor
                 if key == "z" or key == "Z" or key == "UP" then
-                    cursor = cursor - 1
-                    if cursor < 1 then cursor = #options end
-                    update_cursor(old_cursor, cursor)
+                    if cursor > 1 then
+                        cursor = cursor - 1
+                        update_cursor(old_cursor, cursor)
+                    else
+                        cursor = #options
+                        update_cursor(old_cursor, cursor)
+                    end
                 elseif key == "s" or key == "S" or key == "DOWN" then
-                    cursor = cursor + 1
-                    if cursor > #options then cursor = 1 end
-                    update_cursor(old_cursor, cursor)
+                    if cursor < #options then
+                        cursor = cursor + 1
+                        update_cursor(old_cursor, cursor)
+                    else
+                        cursor = 1
+                        update_cursor(old_cursor, cursor)
+                    end
                 elseif key == "r" or key == "R" then
-                    local launched = search_and_launch()
-                    draw_menu()
-                    draw_list()
+                    search_and_launch()
+                    draw_static_portal()
+                    draw_full_list()
                     last_net_update = os.time()
+                elseif key == "REPETITION" then
+                    draw_static_portal()
+                    draw_full_list()
                 elseif key == " " or key == "\n" or key == "\r" or key == "ENVOI" then
                     local selected = options[cursor]
+                    minitel.play_sound("hit")
+                    io.write("\x1b[21;41H\x1b[7m" .. center_str("LANCEMENT : " .. selected.display, 38) .. "\x1b[0m")
+                    io.flush()
+                    minitel.sleep(0.2)
+
                     if selected.cmd == "update" then
-                        minitel.play_sound("hit")
                         minitel.cleanup()
                         os.execute("lua5.3 updater.lua")
                         break 
                     else
-                        minitel.play_sound("hit")
                         minitel.cleanup()
                         os.execute(selected.cmd)
                         minitel.init()
                         
-                        last_net_update = 0 
+                        net_info = get_network_info()
+                        build_options()
+                        if cursor > #options then cursor = #options end
+                        last_net_update = os.time()
                         last_input_time = os.time()
                         
-                        draw_menu()
-                        draw_list()
+                        draw_static_portal()
+                        draw_full_list()
                     end
                 end
             end
         end
-        minitel.sleep(0.02)
+        minitel.sleep(0.01)
         
     elseif state == "SCREENSAVER" then
         run_screensaver_frame()
