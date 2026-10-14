@@ -1,14 +1,28 @@
 -- Fichier : minitel.lua
--- SDK & Moteur Système pour Minitel Magis Club (9600 bauds 8N1)
+-- SDK & Moteur Système (Compatible Minitel Réel 9600 Bauds & Mode Test PC / VT100)
 
 local M = {}
+
+-- Détection automatique : Mode PC de dev ou Mode Minitel réel
+local is_pc = true
+local f_check = io.open("/dev/ttyUSB0", "r")
+if f_check then
+    f_check:close()
+    is_pc = false
+end
 
 -- =====================================================================
 -- 1. INITIALISATION & MATERIEL
 -- =====================================================================
 function M.init()
-    os.execute("stty -F /dev/ttyUSB0 9600 cs8 -parenb -cstopb raw -echo -icanon min 0 time 0 2>/dev/null")
-    os.execute("stty raw -echo -icanon min 0 time 0 2>/dev/null")
+    if is_pc then
+        -- Mode PC / Test Terminal (Linux / macOS)
+        os.execute("stty raw -echo min 0 time 0 2>/dev/null")
+    else
+        -- Mode Minitel Réel sur Raspberry Pi (/dev/ttyUSB0)
+        os.execute("stty -F /dev/ttyUSB0 9600 cs8 -parenb -cstopb raw -echo -icanon min 0 time 0 2>/dev/null")
+        os.execute("stty raw -echo -icanon min 0 time 0 2>/dev/null")
+    end
     io.write("\x1b[?25l") -- Masque le curseur matériel
     io.flush()
 end
@@ -16,8 +30,12 @@ end
 function M.cleanup()
     io.write("\x1b[r\x1b[0m\x1b[?25h\x1b[2J\x1b[H") -- Réinitialise marges, attributs, curseur et écran
     io.flush()
-    os.execute("stty -F /dev/ttyUSB0 sane 2>/dev/null")
-    os.execute("stty sane 2>/dev/null")
+    if is_pc then
+        os.execute("stty sane 2>/dev/null")
+    else
+        os.execute("stty -F /dev/ttyUSB0 sane 2>/dev/null")
+        os.execute("stty sane 2>/dev/null")
+    end
 end
 
 function M.sleep(seconds)
@@ -26,17 +44,22 @@ function M.sleep(seconds)
 end
 
 function M.play_sound(effect)
-    if not effect or effect == "blip" or effect == "hit" then
-        os.execute("play -q -n synth 0.05 square 880 >/dev/null 2>&1 &")
-    elseif effect == "win" or effect == "pickup" then
-        os.execute("play -q -n synth 0.15 square 440-1200 >/dev/null 2>&1 &")
+    -- Vérifie si SoX (commande 'play') est disponible pour éviter les erreurs sur PC
+    local freq_cmd = "880"
+    local dur = "0.05"
+    local wave = "square"
+    
+    if effect == "win" or effect == "pickup" then
+        wave = "square"; dur = "0.15"; freq_cmd = "440-1200"
     elseif effect == "lose" or effect == "damage" then
-        os.execute("play -q -n synth 0.3 sawtooth 300-100 >/dev/null 2>&1 &")
+        wave = "sawtooth"; dur = "0.3"; freq_cmd = "300-100"
     end
+    
+    os.execute(string.format("which play >/dev/null 2>&1 && (play -q -n synth %s %s %s >/dev/null 2>&1 &)", dur, wave, freq_cmd))
 end
 
 -- =====================================================================
--- 2. GESTION DU CLAVIER (AVEC TOUCHES TELEMATIQUES ETENDUES)
+-- 2. GESTION DU CLAVIER (DOUBLE COMPATIBILITÉ PC / MINITEL)
 -- =====================================================================
 function M.get_key()
     local c = io.read(1)
@@ -50,13 +73,17 @@ function M.get_key()
         return nil
     end
 
+    -- Correspondances directes clavier PC
+    if c == "\r" or c == "\n" then return "ENVOI" end
+    if c == "\x7f" or c == "\x08" then return "CORRECTION" end
+
     if c == "\x1b" then
         local seq1 = read_next()
-        if not seq1 then return "ESC" end
+        if not seq1 then return "RETOUR" end -- Échap seul sur PC = RETOUR
         local seq2 = read_next()
         local full_seq = seq1 .. (seq2 or "")
 
-        -- Flèches standards
+        -- Flèches standards (PC & Minitel)
         if full_seq == "[A" then return "UP" end
         if full_seq == "[B" then return "DOWN" end
         if full_seq == "[C" then return "RIGHT" end
@@ -64,7 +91,7 @@ function M.get_key()
         if full_seq == "[H" then return "HOME" end
         if full_seq == "[F" then return "END" end
         
-        -- Séquences à 3 caractères (ex: Suppr = \x1b[3~)
+        -- Séquences à 3 caractères (ex: Suppr = \x1b[3~ sur PC)
         if seq1 == "[" and seq2 and seq2:match("%d") then
             local seq3 = read_next()
             if seq2 == "3" and seq3 == "~" then return "CORRECTION" end
@@ -72,7 +99,13 @@ function M.get_key()
             if seq2 == "6" and seq3 == "~" then return "PAGE_DOWN" end
         end
 
-        -- Touches spéciales Magis Club / VT100
+        -- Touches de fonction PC (F1 à F4) pour simuler les touches Minitel sur PC
+        if full_seq == "OP" or full_seq == "[11~" then return "SOMMAIRE" end
+        if full_seq == "OQ" or full_seq == "[12~" then return "ANNULATION" end
+        if full_seq == "OR" or full_seq == "[13~" then return "RETOUR" end
+        if full_seq == "OS" or full_seq == "[14~" then return "REPETITION" end
+
+        -- Touches spéciales Minitel réel (Standards Télétel)
         if full_seq == "OP" then return "SOMMAIRE" end
         if full_seq == "OQ" then return "ANNULATION" end
         if full_seq == "OR" then return "RETOUR" end
@@ -143,7 +176,6 @@ end
 -- 4. PRIMITIVES GRAPHIQUES & COMPOSANTS UI (BOITES DE DIALOGUE)
 -- =====================================================================
 
--- Dessine un cadre générique aux coordonnées (x, y) de taille (w, h)
 function M.draw_window(x, y, w, h, title)
     local inner_w = w - 2
     if title and title ~= "" then
@@ -161,7 +193,6 @@ function M.draw_window(x, y, w, h, title)
     io.flush()
 end
 
--- Dessine une barre de progression ASCII (ex: Vie, Charge CPU, Réseau)
 function M.progress_bar(x, y, width, current, max, show_pct)
     local bar_w = show_pct and (width - 7) or (width - 2)
     if bar_w < 2 then bar_w = 2 end
@@ -177,7 +208,6 @@ function M.progress_bar(x, y, width, current, max, show_pct)
     io.flush()
 end
 
--- Boîte d'alerte / Notification modale
 function M.msg_box(title, message, sound_effect)
     if sound_effect then M.play_sound(sound_effect) end
     local w, h = 50, 8
@@ -201,7 +231,6 @@ function M.msg_box(title, message, sound_effect)
     end
 end
 
--- Boîte de confirmation Oui/Non avec sélection au curseur ou clavier (Retourne true ou false)
 function M.confirm_box(title, question)
     M.play_sound("hit")
     local w, h = 50, 8
@@ -213,7 +242,7 @@ function M.confirm_box(title, question)
         io.write(string.format("\x1b[%d;%dH%s", y + 1 + i, x + 3, M.center(lines[i]:gsub("%s+$", ""), w - 6)))
     end
 
-    local choice = true -- true = OUI, false = NON
+    local choice = true
     local function draw_buttons()
         local b_oui = choice and "\x1b[7m > [ OUI ] < \x1b[0m" or "   [ OUI ]   "
         local b_non = (not choice) and "\x1b[7m > [ NON ] < \x1b[0m" or "   [ NON ]   "
@@ -239,7 +268,6 @@ function M.confirm_box(title, question)
     end
 end
 
--- Boîte de saisie de texte modale (Retourne la chaîne ou nil si annulé)
 function M.input_box(title, prompt, default_val, max_len)
     local w, h = 52, 8
     local x, y = 15, 8
