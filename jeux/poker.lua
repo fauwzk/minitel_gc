@@ -1,7 +1,8 @@
+-- @GENRE: CASINO / CARTES
+-- @DESC: Affrontez l'IA du Magis Club au Poker a 5 cartes. Misez vos jetons et tentez le Carre ou les 5 Identiques !
+
 local minitel = require("minitel")
 minitel.init()
-
-os.execute("stty raw -echo -icanon min 0 time 0 2>/dev/null")
 
 -- =====================================================================
 -- CONFIGURATION DU JEU
@@ -9,25 +10,22 @@ os.execute("stty raw -echo -icanon min 0 time 0 2>/dev/null")
 local chips = 100
 local current_bet = 5
 
--- Noms et valeurs des cartes (de 1 a 6)
 local CARD_TYPES = {
-    { val = 1, name = "NUAGE", symbol = "(=)" },
+    { val = 1, name = "NUAGE",  symbol = "(=)" },
     { val = 2, name = "CHAMPI", symbol = "(#)" },
-    { val = 3, name = "FLEUR", symbol = "(@)" },
-    { val = 4, name = "PIECE", symbol = "(&)" },
-    { val = 5, name = "MAGIS", symbol = "(M)" },
+    { val = 3, name = "FLEUR",  symbol = "(@)" },
+    { val = 4, name = "PIECE",  symbol = "(&)" },
+    { val = 5, name = "MAGIS",  symbol = "(M)" },
     { val = 6, name = "ETOILE", symbol = "(*)" }
 }
 
--- Variables de la partie
 local state = "BETTING"
 local player_hand = {}
 local dealer_hand = {}
 local held_cards = {false, false, false, false, false}
 local cursor = 1
 local deck = {}
-local message = "FAITES VOTRE MISE (FLECHES HAUT/BAS)"
-local win_amount = 0
+local message = "FLECHES: MISER | [M] MISE LIBRE | [ENVOI] JOUER"
 
 -- =====================================================================
 -- MOTEUR DU JEU (PAQUET ET IA)
@@ -48,12 +46,10 @@ local function draw_card()
     return table.remove(deck)
 end
 
--- Evalue une main et retourne un score
 local function evaluate(hand)
     local counts = {}
     for _, v in ipairs(hand) do counts[v] = (counts[v] or 0) + 1 end
     
-    -- CORRECTION : Changement de nom pour ne pas ecraser la fonction pairs() de Lua
     local group_list = {}
     for val, count in pairs(counts) do table.insert(group_list, {val=val, count=count}) end
     
@@ -62,15 +58,13 @@ local function evaluate(hand)
         return a.val > b.val
     end)
 
-    local score = 0
-    local name = ""
-    -- CORRECTION : Securisation des verifications group_list[2] au cas ou il n'y a qu'un groupe (ex: 5 identiques)
-    if group_list[1].count == 5 then score = 7; name = "5 IDENTIQUES !"
-    elseif group_list[1].count == 4 then score = 6; name = "CARRE"
-    elseif group_list[1].count == 3 and group_list[2] and group_list[2].count == 2 then score = 5; name = "FULL"
-    elseif group_list[1].count == 3 then score = 4; name = "BRELAN"
-    elseif group_list[1].count == 2 and group_list[2] and group_list[2].count == 2 then score = 3; name = "DOUBLE PAIRE"
-    elseif group_list[1].count == 2 then score = 2; name = "PAIRE"
+    local score, name = 0, ""
+    if group_list[1].count == 5 then score = 7; name = "5 IDENTIQUES (x16)"
+    elseif group_list[1].count == 4 then score = 6; name = "CARRE (x8)"
+    elseif group_list[1].count == 3 and group_list[2] and group_list[2].count == 2 then score = 5; name = "FULL (x6)"
+    elseif group_list[1].count == 3 then score = 4; name = "BRELAN (x4)"
+    elseif group_list[1].count == 2 and group_list[2] and group_list[2].count == 2 then score = 3; name = "DOUBLE PAIRE (x3)"
+    elseif group_list[1].count == 2 then score = 2; name = "PAIRE (x2)"
     else score = 1; name = "CARTE HAUTE" end
 
     return score, group_list, name
@@ -89,8 +83,7 @@ local function dealer_ai(hand)
             if vals_to_hold[c] then holds[i] = true end
         end
     else
-        local max_val = 0
-        local max_idx = 1
+        local max_val, max_idx = 0, 1
         for i, c in ipairs(hand) do
             if c > max_val then max_val = c; max_idx = i end
         end
@@ -100,84 +93,105 @@ local function dealer_ai(hand)
 end
 
 -- =====================================================================
--- MOTEUR GRAPHIQUE
+-- MOTEUR GRAPHIQUE OPTIMISE (DELTA-DRAWING & SDK)
 -- =====================================================================
 local function draw_single_card(x, y, card_val, hidden, inverted)
-    local c = hidden and "\x1b[7m" or ""
+    local c = (hidden or inverted) and "\x1b[7m" or ""
     local res = "\x1b[0m"
-    if inverted and not hidden then c = "\x1b[7m" end
     
     if hidden then
         io.write(string.format("\x1b[%d;%dH%s+-------+%s", y, x, c, res))
         io.write(string.format("\x1b[%d;%dH%s| MAGIS |%s", y+1, x, c, res))
         io.write(string.format("\x1b[%d;%dH%s| POKER |%s", y+2, x, c, res))
-        io.write(string.format("\x1b[%d;%dH%s|       |%s", y+3, x, c, res))
+        io.write(string.format("\x1b[%d;%dH%s|  ***  |%s", y+3, x, c, res))
         io.write(string.format("\x1b[%d;%dH%s+-------+%s", y+4, x, c, res))
     else
         local t = CARD_TYPES[card_val]
         io.write(string.format("\x1b[%d;%dH%s+-------+%s", y, x, c, res))
         io.write(string.format("\x1b[%d;%dH%s|  %-3s  |%s", y+1, x, c, t.symbol, res))
-        io.write(string.format("\x1b[%d;%dH%s|%-7s|%s", y+2, x, c, string.sub(t.name.."      ", 1, 7), res))
+        io.write(string.format("\x1b[%d;%dH%s|%s|%s", y+2, x, c, minitel.center(t.name, 7), res))
         io.write(string.format("\x1b[%d;%dH%s|       |%s", y+3, x, c, res))
         io.write(string.format("\x1b[%d;%dH%s+-------+%s", y+4, x, c, res))
     end
 end
 
-local function draw_interface()
-    -- Efface l'ecran et repositionne
-    io.write("\x1b[r\x1b[2J\x1b[H")
-    
-    -- CORRECTION MISE EN PAGE : On retire les \r\n des lignes pleines (80 colonnes) pour eviter les scrolls inattendus
-    io.write("\x1b[1;1H\x1b[1m 3615 POKER \x1b[0m                                             \x1b[1m CASINO MAGIS \x1b[0m")
-    io.write("\x1b[2;1H================================================================================")
-    
-    io.write("\x1b[3;34H LE CROUPIER ")
-    for i = 1, 5 do
-        local x = 10 + ((i-1) * 12)
-        if state == "SHOWDOWN" then
-            draw_single_card(x, 4, dealer_hand[i], false, false)
+local function draw_player_slot(i)
+    local x = 11 + ((i - 1) * 12)
+    if #player_hand >= i then
+        local is_selected = (state == "HOLDING" and cursor == i)
+        draw_single_card(x, 15, player_hand[i], false, is_selected)
+        if held_cards[i] then
+            io.write(string.format("\x1b[20;%dH\x1b[7m  GARDER \x1b[0m", x))
         else
-            if state == "BETTING" and #dealer_hand == 0 then
-                -- Ne rien dessiner
-            else
-                draw_single_card(x, 4, 1, true, false)
-            end
+            io.write(string.format("\x1b[20;%dH         ", x))
         end
+    else
+        for r = 0, 5 do io.write(string.format("\x1b[%d;%dH         ", 15 + r, x)) end
     end
-    
-    io.write("\x1b[10;1H--------------------------------------------------------------------------------")
-    io.write(string.format("\x1b[11;5H \x1b[1mJETONS : %04d \x1b[0m", chips))
-    io.write(string.format("\x1b[11;32H \x1b[7m %s \x1b[0m", string.sub(" " .. message .. string.rep(" ", 30), 1, 38)))
-    io.write(string.format("\x1b[11;65H \x1b[1mMISE : %02d \x1b[0m", current_bet))
-    io.write("\x1b[12;1H--------------------------------------------------------------------------------")
-    
-    io.write("\x1b[13;36H VOUS ")
-    for i = 1, 5 do
-        local x = 10 + ((i-1) * 12)
-        if #player_hand >= i then
-            local is_selected = (state == "HOLDING" and cursor == i)
-            draw_single_card(x, 14, player_hand[i], false, is_selected)
-            
-            if held_cards[i] then
-                io.write(string.format("\x1b[19;%dH\x1b[7m GARDER \x1b[0m", x))
-            else
-                io.write(string.format("\x1b[19;%dH        ", x))
-            end
-        end
-    end
-    
+end
+
+local function update_status_box()
+    io.write(string.format("\x1b[11;6H\x1b[1mJETONS : %05d\x1b[0m", chips))
+    io.write(string.format("\x1b[11;23H\x1b[7m%s\x1b[0m", minitel.center(message, 40)))
+    io.write(string.format("\x1b[11;66H\x1b[1mMISE : %03d\x1b[0m", current_bet))
+
     local footer = ""
     if state == "BETTING" then
-        footer = "  [HAUT/BAS] MISER   |   [ENVOI] DISTRIBUER   |   [RETOUR] QUITTER        "
+        footer = "[Z/S] MISER | [M] MISE LIBRE | [ENVOI] DISTRIBUER | [G] TABLE GAINS | [RETOUR]"
     elseif state == "HOLDING" then
-        footer = "  [FLECHES] CHOISIR   |   [HAUT] GARDER/JETER   |   [ENVOI] VALIDER       "
+        footer = "[Q/D] CHOISIR | [Z/S] GARDER/JETER | [ENVOI] TIRER LES CARTES | [G] GAINS"
     elseif state == "SHOWDOWN" then
-        footer = "  [ENVOI] REJOUER UNE PARTIE   |   [RETOUR] QUITTER LE CASINO             "
+        footer = "[ENVOI] NOUVELLE DONNE | [G] TABLE DES GAINS | [RETOUR] QUITTER LE CASINO"
     end
-    
-    local pad = string.rep(" ", 80 - #footer)
-    io.write("\x1b[24;1H\x1b[7m" .. footer .. pad .. "\x1b[0m")
+    io.write("\x1b[24;1H\x1b[7m" .. minitel.center(footer, 80) .. "\x1b[0m")
     io.flush()
+end
+
+local function draw_full_table()
+    io.write("\x1b[r\x1b[2J\x1b[H")
+    minitel.sleep(0.04)
+
+    io.write("\x1b[1;1H\x1b[7m" .. minitel.center("* * *  3615 POKER - CASINO MAGIS CLUB  * * *", 80) .. "\x1b[0m")
+    io.write("\x1b[3;34H\x1b[1m[ LE CROUPIER ]\x1b[0m")
+
+    for i = 1, 5 do
+        local x = 11 + ((i - 1) * 12)
+        if state == "SHOWDOWN" then
+            draw_single_card(x, 4, dealer_hand[i], false, false)
+        elseif #dealer_hand > 0 then
+            draw_single_card(x, 4, 1, true, false)
+        end
+    end
+
+    minitel.draw_window(4, 10, 74, 3, "")
+    io.write("\x1b[14;34H\x1b[1m[ VOTRE MAIN ]\x1b[0m")
+
+    for i = 1, 5 do draw_player_slot(i) end
+    update_status_box()
+end
+
+local function show_paytable()
+    minitel.draw_window(16, 4, 50, 16, "TABLE DES GAINS & VALEURS")
+    io.write("\x1b[6;19H\x1b[1mCOMBINAISONS GAGNANTES :\x1b[0m")
+    io.write("\x1b[7;20H- 5 IDENTIQUES : Mise x 16")
+    io.write("\x1b[8;20H- CARRE        : Mise x 8")
+    io.write("\x1b[9;20H- FULL         : Mise x 6")
+    io.write("\x1b[10;20H- BRELAN       : Mise x 4")
+    io.write("\x1b[11;20H- DOUBLE PAIRE : Mise x 3")
+    io.write("\x1b[12;20H- PAIRE        : Mise x 2")
+
+    io.write("\x1b[14;19H\x1b[1mORDRE DES CARTES (FAIBLE -> FORT) :\x1b[0m")
+    io.write("\x1b[15;20H(=) NUAGE < (#) CHAMPI < (@) FLEUR")
+    io.write("\x1b[16;20H(&) PIECE < (M) MAGIS  < (*) ETOILE")
+    io.write("\x1b[18;28H\x1b[7m [ENVOI / RETOUR] FERMER \x1b[0m")
+    io.flush()
+
+    while true do
+        local k = minitel.get_key()
+        if k == "ENVOI" or k == "RETOUR" or k == "ESC" or k == "\r" or k == "\n" or k == " " then break end
+        minitel.sleep(0.02)
+    end
+    draw_full_table()
 end
 
 -- =====================================================================
@@ -187,9 +201,7 @@ local function do_showdown()
     local p_score, p_groups, p_name = evaluate(player_hand)
     local d_score, d_groups, d_name = evaluate(dealer_hand)
     
-    local player_wins = false
-    local tie = false
-    
+    local player_wins, tie = false, false
     if p_score > d_score then player_wins = true
     elseif p_score < d_score then player_wins = false
     else
@@ -202,8 +214,9 @@ local function do_showdown()
     end
     
     if tie then
-        message = "EGALITE ! " .. p_name
+        message = "EGALITE ! MISE REMBOURSEE."
         chips = chips + current_bet
+        minitel.play_sound("hit")
     elseif player_wins then
         local mult = 2
         if p_score == 7 then mult = 16
@@ -213,92 +226,118 @@ local function do_showdown()
         elseif p_score == 3 then mult = 3 end
         
         local gain = current_bet * mult
-        message = p_name .. " ! VOUS GAGNEZ " .. gain .. " !"
+        message = p_name .. " ! +" .. gain .. " JETONS !"
         chips = chips + gain
+        minitel.play_sound("win")
     else
-        message = d_name .. " GAGNE ! PERDU."
+        message = "CROUPIER : " .. d_name .. ". PERDU."
+        minitel.play_sound("lose")
     end
     
     state = "SHOWDOWN"
-    draw_interface()
+    draw_full_table()
 end
 
 -- =====================================================================
 -- BOUCLE PRINCIPALE
 -- =====================================================================
 math.randomseed(os.time())
-draw_interface()
+draw_full_table()
 
 while true do
     local k = minitel.get_key()
     
     if k == "RETOUR" or k == "ESC" then
-        break
-    end
-    
-    if state == "BETTING" then
+        if minitel.confirm_box("QUITTER LE CASINO", "Voulez-vous encaisser vos " .. chips .. " jetons et quitter la table ?") then
+            break
+        end
+        draw_full_table()
+
+    elseif k == "G" or k == "g" or k == "GUIDE" then
+        show_paytable()
+
+    elseif k == "REPETITION" then
+        draw_full_table()
+        
+    elseif state == "BETTING" then
         if k == "UP" or k == "Z" or k == "z" then
-            if current_bet < 5 and chips >= current_bet + 1 then current_bet = current_bet + 1 end
-            draw_interface()
+            if current_bet < math.min(50, chips) then
+                current_bet = current_bet + 1
+                update_status_box()
+            end
         elseif k == "DOWN" or k == "S" or k == "s" then
-            if current_bet > 1 then current_bet = current_bet - 1 end
-            draw_interface()
-        elseif k == "ENVOI" or k == "\n" or k == "\r" then
+            if current_bet > 1 then
+                current_bet = current_bet - 1
+                update_status_box()
+            end
+        elseif k == "M" or k == "m" then
+            local max_b = math.min(50, chips)
+            local rep = minitel.input_box("MISE PERSONNALISEE", "Entrez votre mise (1 a " .. max_b .. " jetons) :", tostring(current_bet), 5)
+            local val = tonumber(rep)
+            if val and val >= 1 then
+                current_bet = math.floor(math.min(val, max_b))
+            end
+            draw_full_table()
+        elseif k == "ENVOI" or k == "\n" or k == "\r" or k == " " then
             if chips >= current_bet then
+                minitel.play_sound("pickup")
                 chips = chips - current_bet
                 init_deck()
                 player_hand = {draw_card(), draw_card(), draw_card(), draw_card(), draw_card()}
                 dealer_hand = {draw_card(), draw_card(), draw_card(), draw_card(), draw_card()}
                 held_cards = {false, false, false, false, false}
                 cursor = 1
-                message = "CHOISISSEZ LES CARTES A GARDER."
+                message = "SELECTIONNEZ LES CARTES A GARDER"
                 state = "HOLDING"
-                draw_interface()
+                draw_full_table()
             end
         end
         
     elseif state == "HOLDING" then
         if k == "LEFT" or k == "Q" or k == "q" then
-            if cursor > 1 then cursor = cursor - 1 end
-            draw_interface()
+            local old_c = cursor
+            cursor = (cursor > 1) and (cursor - 1) or 5
+            draw_player_slot(old_c)
+            draw_player_slot(cursor)
+            io.flush()
         elseif k == "RIGHT" or k == "D" or k == "d" then
-            if cursor < 5 then cursor = cursor + 1 end
-            draw_interface()
-        elseif k == "UP" or k == "DOWN" or k == "Z" or k == "S" or k == "z" or k == "s" then
+            local old_c = cursor
+            cursor = (cursor < 5) and (cursor + 1) or 1
+            draw_player_slot(old_c)
+            draw_player_slot(cursor)
+            io.flush()
+        elseif k == "UP" or k == "DOWN" or k == "Z" or k == "S" or k == "z" or k == "s" or k == " " then
             held_cards[cursor] = not held_cards[cursor]
-            draw_interface()
+            minitel.play_sound("hit")
+            draw_player_slot(cursor)
+            io.flush()
         elseif k == "ENVOI" or k == "\n" or k == "\r" then
             for i = 1, 5 do
                 if not held_cards[i] then player_hand[i] = draw_card() end
             end
-            
             local d_holds = dealer_ai(dealer_hand)
             for i = 1, 5 do
                 if not d_holds[i] then dealer_hand[i] = draw_card() end
             end
-            
             do_showdown()
         end
         
     elseif state == "SHOWDOWN" then
-        if k == "ENVOI" or k == "\n" or k == "\r" then
-            if chips == 0 then
-                message = "RUINE ! LE MAGIS CLUB VOUS OFFRE 50 JETONS."
+        if k == "ENVOI" or k == "\n" or k == "\r" or k == " " then
+            if chips <= 0 then
+                minitel.msg_box("BANQUEROUTE !", "Vous n'avez plus un sou ! Le Magis Club vous offre une avance de 50 jetons.", "win")
                 chips = 50
-            else
-                message = "FAITES VOTRE MISE (FLECHES HAUT/BAS)"
             end
+            message = "FLECHES: MISER | [M] MISE LIBRE | [ENVOI] JOUER"
             player_hand = {}
             dealer_hand = {}
             if current_bet > chips then current_bet = chips end
             state = "BETTING"
-            draw_interface()
+            draw_full_table()
         end
     end
     
-    minitel.sleep(0.02)
+    minitel.sleep(0.01)
 end
 
-io.write("\x1b[r\x1b[2J\x1b[H")
-io.flush()
 minitel.cleanup()
