@@ -6,9 +6,6 @@ minitel.init()
 
 math.randomseed(os.time())
 
--- =====================================================================
--- CONFIGURATION RESEAU (PARTAGEE AVEC 3615 PICTO)
--- =====================================================================
 local CFG_FILE = "utils/pictochat.cfg"
 local server_url = "http://127.0.0.1:8085"
 local pseudo = "AMIRAL_52"
@@ -42,11 +39,8 @@ local function http_query(path)
     return res
 end
 
--- =====================================================================
--- CONSTANTES ET FLOTTE (GRILLE 8x8 : A-H / 1-8)
--- =====================================================================
 local GRID_SIZE = 8
-local TOTAL_SHIP_CELLS = 14 -- 4 + 3 + 3 + 2 + 2 = 14 cases
+local TOTAL_SHIP_CELLS = 14
 local SHIPS_DEF = {4, 3, 3, 2, 2}
 local ROW_NAMES = {"A", "B", "C", "D", "E", "F", "G", "H"}
 
@@ -97,11 +91,6 @@ local function serialize_fleet(grid)
     return table.concat(chars)
 end
 
--- =====================================================================
--- RENDU GRAPHIQUE DELTA-DRAWING DES DEUX GRILLES
--- =====================================================================
--- Grille Gauche (Ma Flotte) : X = 6, Y = 7
--- Grille Droite (Radar Ennemi) : X = 46, Y = 7
 local function draw_single_cell(is_radar, grid, x, y, is_cursor)
     local base_x = is_radar and 48 or 8
     local scr_x = base_x + (x - 1) * 3
@@ -163,19 +152,13 @@ local function update_status_box(msg, my_hits, en_hits)
 end
 
 -- =====================================================================
--- PHASE DE PREPARATION : PLACEMENT DE LA FLOTTE
+-- PHASE DE PREPARATION (DESSINE UNE SEULE FOIS HORS BOUCLE !)
 -- =====================================================================
 local function prepare_my_fleet()
     local my_grid = create_empty_grid()
     place_fleet_random(my_grid)
 
-    while true do
-        io.write("\x1b[r\x1b[2J\x1b[H")
-        minitel.sleep(0.04)
-        io.write("\x1b[1;1H\x1b[7m" .. minitel.center("* * *  DEPLOIEMENT DE VOTRE FLOTTE (5 NAVIRES / 14 CASES)  * * *", 80) .. "\x1b[0m")
-        minitel.draw_window(18, 4, 46, 15, "DISPOSITION TACTIQUE")
-
-        io.write("\x1b[6;28H    1  2  3  4  5  6  7  8")
+    local function draw_prep_grid_only()
         for y = 1, GRID_SIZE do
             io.write(string.format("\x1b[%d;28H %s ", 6 + y, ROW_NAMES[y]))
             for x = 1, GRID_SIZE do
@@ -184,17 +167,26 @@ local function prepare_my_fleet()
                 io.write(d)
             end
         end
-
-        io.write("\x1b[16;21H[R] GENERER UN AUTRE PLACEMENT ALEATOIRE")
-        io.write("\x1b[17;21H[ENVOI] VALIDER ET LANCER LA BATAILLE")
-        io.write("\x1b[24;1H\x1b[7m  [R] REORGANISER LA FLOTTE   |   [ENVOI] DEPART AU COMBAT   |   [RETOUR] MENU  \x1b[0m")
         io.flush()
+    end
 
+    io.write("\x1b[r\x1b[2J\x1b[H")
+    minitel.sleep(0.04)
+    io.write("\x1b[1;1H\x1b[7m" .. minitel.center("* * *  DEPLOIEMENT DE VOTRE FLOTTE (5 NAVIRES / 14 CASES)  * * *", 80) .. "\x1b[0m")
+    minitel.draw_window(18, 4, 46, 15, "DISPOSITION TACTIQUE")
+    io.write("\x1b[6;28H    1  2  3  4  5  6  7  8")
+    io.write("\x1b[16;21H[R] GENERER UN AUTRE PLACEMENT ALEATOIRE")
+    io.write("\x1b[17;21H[ENVOI] VALIDER ET LANCER LA BATAILLE")
+    io.write("\x1b[24;1H\x1b[7m  [R] REORGANISER LA FLOTTE   |   [ENVOI] DEPART AU COMBAT   |   [RETOUR] MENU  \x1b[0m")
+    draw_prep_grid_only()
+
+    while true do
         local k = minitel.get_key()
         if k == "RETOUR" or k == "ESC" then return nil
         elseif k == "R" or k == "r" then
             minitel.play_sound("hit")
             place_fleet_random(my_grid)
+            draw_prep_grid_only()
         elseif k == "ENVOI" or k == " " then
             minitel.play_sound("pickup")
             return my_grid
@@ -204,7 +196,7 @@ local function prepare_my_fleet()
 end
 
 -- =====================================================================
--- MODE 1 : CONTRE L'AMIRAL IA (HORS-LIGNE)
+-- MODE 1 : CONTRE L'AMIRAL IA
 -- =====================================================================
 local function play_vs_ai(my_grid)
     local ai_ships = create_empty_grid()
@@ -213,7 +205,7 @@ local function play_vs_ai(my_grid)
 
     local cx, cy = 4, 4
     local my_hits, ai_hits = 0, 0
-    local ai_targets = {} -- Pile de chasse intelligente de l'IA
+    local ai_targets = {}
 
     draw_battle_screen("RADAR : FLOTTE AMIRAL IA", my_grid, radar_grid, cx, cy, "A VOUS DE TIRER ! SELECTIONNEZ UNE COORDONNEE.", 0, 0)
 
@@ -241,7 +233,6 @@ local function play_vs_ai(my_grid)
                     minitel.play_sound("lose")
                     update_status_box("VOUS AVEZ DEJA TIRE EN " .. ROW_NAMES[cy] .. cx .. " !", my_hits, ai_hits)
                 else
-                    -- 1. Tir du joueur
                     local coord_str = ROW_NAMES[cy] .. cx
                     local msg = ""
                     if ai_ships[cy][cx] == "#" then
@@ -261,7 +252,6 @@ local function play_vs_ai(my_grid)
                         return
                     end
 
-                    -- 2. Riposte de l'IA
                     local ax, ay
                     while #ai_targets > 0 do
                         local t = table.remove(ai_targets, 1)
@@ -282,7 +272,7 @@ local function play_vs_ai(my_grid)
                         my_grid[ay][ax] = "X"
                         ai_hits = ai_hits + 1
                         minitel.play_sound("lose")
-                        msg = msg .. " | RIPOSTE IA EN " .. ai_coord .. " : TOUCHÉ !"
+                        msg = msg .. " | RIPOSTE IA EN " .. ai_coord .. " : TOUCHE !"
                         local dirs = {{0,-1},{0,1},{-1,0},{1,0}}
                         for _, d in ipairs(dirs) do
                             local nx, ny = ax + d[1], ay + d[2]
@@ -309,7 +299,7 @@ local function play_vs_ai(my_grid)
 end
 
 -- =====================================================================
--- MODE 2 : DUEL EN LIGNE MULTIJOUEUR (MINITEL VS WEB OU MINITEL)
+-- MODE 2 : DUEL EN LIGNE MULTIJOUEUR
 -- =====================================================================
 local function play_online(my_grid)
     local room = minitel.input_box("SALLE DE COMBAT EN LIGNE", "Choisissez la Salle (A, B, C ou D) :", "A", 1)
@@ -343,7 +333,6 @@ local function play_online(my_grid)
         if now - last_poll >= 2 then
             last_poll = now
             local st = http_query(string.format("/api/navy/state?room=%s&slot=%d", room, my_slot))
-            -- Format: STATE|status|turn|p1|p2|p1_hits|p2_hits|shot_seq|last_shooter|last_x|last_y|last_res|winner
             local status, turn, p1, p2, h1, h2, seq, shooter, sx, sy, sres, win =
                 st:match("^STATE|(.-)|(%d+)|(.-)|(.-)|(%d+)|(%d+)|(%d+)|(.-)|(%d+)|(%d+)|(.-)|(.*)$")
 
@@ -437,9 +426,9 @@ local function play_online(my_grid)
 end
 
 -- =====================================================================
--- MENU D'ACCUEIL DE LA BATAILLE NAVALE
+-- MENU D'ACCUEIL (DESSINE UNE SEULE FOIS HORS BOUCLE !)
 -- =====================================================================
-while true do
+local function draw_main_menu()
     io.write("\x1b[r\x1b[2J\x1b[H")
     minitel.sleep(0.04)
     io.write("\x1b[1;1H\x1b[7m" .. minitel.center("* * *  3615 BATAILLE NAVALE - AMIRAUTE TELEMATIQUE  * * *", 80) .. "\x1b[0m")
@@ -454,16 +443,22 @@ while true do
 
     io.write("\x1b[24;1H\x1b[7m  TAPEZ [1], [2] OU [3]   |   CLIENT WEB DISPONIBLE SUR : /bataille             \x1b[0m")
     io.flush()
+end
 
+draw_main_menu()
+
+while true do
     local k = minitel.get_key()
     if k == "RETOUR" or k == "ESC" then
         break
     elseif k == "1" then
         local fleet = prepare_my_fleet()
         if fleet then play_online(fleet) end
+        draw_main_menu()
     elseif k == "2" then
         local fleet = prepare_my_fleet()
         if fleet then play_vs_ai(fleet) end
+        draw_main_menu()
     elseif k == "3" then
         local ns = minitel.input_box("SERVEUR EN LIGNE", "URL du serveur :", server_url, 42)
         if ns and ns ~= "" then server_url = ns:gsub("/+$", "") end
@@ -471,6 +466,7 @@ while true do
         if np and np ~= "" then pseudo = string.upper(minitel.clean_accents(np)):gsub("[^%w_%-]", "") end
         local f = io.open(CFG_FILE, "w")
         if f then f:write(server_url .. "\n" .. pseudo .. "\n"); f:close() end
+        draw_main_menu()
     end
     minitel.sleep(0.02)
 end

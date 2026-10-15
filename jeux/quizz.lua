@@ -44,7 +44,7 @@ local function decode_json_str(str)
 end
 
 local function http_query(url_full)
-    local cmd = string.format("curl -sL -k -m 5 -A 'Mozilla/5.0' '%s' 2>/dev/null", url_full)
+    local cmd = string.format("curl -sL -k -m 4 -A 'Mozilla/5.0' '%s' 2>/dev/null", url_full)
     local f = io.popen(cmd)
     if not f then return "" end
     local res = f:read("*a") or ""
@@ -52,9 +52,6 @@ local function http_query(url_full)
     return res
 end
 
--- =====================================================================
--- GENERATEUR PROCEDURAL & API EXTERNE POUR QUESTIONS INFINIES A LA VOLEE
--- =====================================================================
 local DEPTS_90 = {
     {"01", "Ain", "Bourg-en-Bresse"}, {"02", "Aisne", "Laon"}, {"06", "Alpes-Maritimes", "Nice"},
     {"08", "Ardennes", "Charleville-Mezieres"}, {"10", "Aube", "Troyes"}, {"13", "Bouches-du-Rhone", "Marseille"},
@@ -70,14 +67,12 @@ local FALLBACK_90S = {
     { cat = "TELECOM 90S", q = "En quelle annee les PTT sont-elles devenues l'exploitant public France Telecom ?", a = "1982", b = "1991", c = "1998", d = "2004", ans = 2 },
     { cat = "AUTO 90S",    q = "Quel moteur 2.0L 16 soupapes de 167 ch equipe la Citroen ZX 16V et la 306 S16 BV6 ?", a = "XU10J4RS", b = "TU5JP4", c = "PRV V6", d = "XUD9TE", ans = 1 },
     { cat = "TELECOM 90S", q = "Quel etait le nom du premier telephone portable grand public lance par France Telecom en 1991 ?", a = "Bi-Bop", b = "Itineris", c = "Tam-Tam", d = "Mobicarte", ans = 1 },
-    { cat = "AUTO 90S",    q = "Quel calculateur d'injection equipe les Renault 25 V6 Turbo et Clio Williams dans les annees 90 ?", a = "Bosch EDC16", b = "Renix / Bendix Fenix", c = "Lucas EPIC", d = "continental", ans = 2 },
+    { cat = "AUTO 90S",    q = "Quel calculateur d'injection equipe les Renault 25 V6 Turbo et Clio Williams dans les annees 90 ?", a = "Bosch EDC16", b = "Renix / Bendix Fenix", c = "Lucas EPIC", d = "Continental", ans = 2 },
     { cat = "MICRO 90S",   q = "Quel ordinateur 16/32 bits de Commodore utilisait le Workbench sur disquette 3.5 pouces ?", a = "Amiga 500 / 1200", b = "ZX81", c = "Oric Atmos", d = "TO7-70", ans = 1 },
     { cat = "AUTO 90S",    q = "Quel diesel atmospherique ou turbo ultra-robuste a motorise les 205, 405, ZX et BX ?", a = "Moteur XUD (XUD7 / XUD9)", b = "Moteur Douvrin", c = "Moteur Cleon-Fonte", d = "Moteur Poissy", ans = 1 }
 }
 
--- Interroge une API publique francophone de Quizz (ou genere une question a la volee)
 local function fetch_dynamic_question()
-    -- 1. Tentative via l'API publique francophone QuizzAPI / OpenTrivia FR
     local raw = http_query("https://quizzapi.jomoreschi.fr/api/v1/quiz?limit=1")
     if raw and raw:find('"question"') then
         local cat  = decode_json_str(raw:match('"category"%s*:%s*"([^"]+)"') or "CULTURE GENERALE"):upper()
@@ -91,7 +86,6 @@ local function fetch_dynamic_question()
                 table.insert(opts, decode_json_str(b))
             end
             if #opts >= 4 then
-                -- Melange aleatoire des 4 choix
                 local final_opts = { opts[1], opts[2], opts[3], opts[4] }
                 for i = 4, 2, -1 do
                     local j = math.random(1, i)
@@ -111,11 +105,8 @@ local function fetch_dynamic_question()
         end
     end
 
-    -- 2. Generateur procedural a la volee (Departements / Calcul Francs 90s / Culture 90s)
-    local roll = math.random(1, 3)
-    if roll == 1 then
-        local target_idx = math.random(1, #DEPTS_90)
-        local target = DEPTS_90[target_idx]
+    if math.random(1, 3) == 1 then
+        local target = DEPTS_90[math.random(1, #DEPTS_90)]
         local opts = { target[2] .. " (" .. target[3] .. ")" }
         while #opts < 4 do
             local cand = DEPTS_90[math.random(1, #DEPTS_90)]
@@ -142,20 +133,28 @@ local function fetch_dynamic_question()
 end
 
 -- =====================================================================
--- AFFICHAGE DE L'ECRAN DE QUIZZ (100% ASCII PUR)
+-- AFFICHAGE DE L'ECRAN DE QUIZZ (SQUELETTE FIXE + MISE A JOUR LEGERE)
 -- =====================================================================
-local function draw_quizz_screen(mode_title, cat, q_text, opts, time_left, max_time, selected_opt, status_msg, scores_str)
+local function draw_quizz_skeleton(mode_title)
     io.write("\x1b[r\x1b[2J\x1b[H")
     minitel.sleep(0.04)
-
     io.write("\x1b[1;1H\x1b[7m" .. minitel.center("* * *  3615 QUIZZ LIVE - " .. mode_title .. "  * * *", 80) .. "\x1b[0m")
+    minitel.draw_window(2, 3, 52, 14, "QUESTION")
+    io.write("\x1b[8;2H\x1b[1m+--------------------------------------------------+\x1b[0m")
+    minitel.draw_window(55, 3, 25, 14, "PALMARES DIRECT")
+    minitel.draw_window(2, 18, 78, 5, "CHRONOMETRE & VERDICT DU PRESENTATEUR")
+    io.write("\x1b[24;1H\x1b[7m  TAPEZ [1], [2], [3] OU [4] POUR BUZZER   |   [RETOUR] QUITTER LE PLATEAU      \x1b[0m")
+    io.flush()
+end
 
-    minitel.draw_window(2, 3, 52, 14, "THEME : " .. string.sub(cat, 1, 36))
+local function update_quizz_content(cat, q_text, opts, time_left, selected_opt, status_msg, scores_str)
+    local t_str = " THEME : " .. string.sub(cat, 1, 36) .. " "
+    io.write(string.format("\x1b[3;2H\x1b[1m+\x1b[0m\x1b[7m%s\x1b[0m\x1b[1m+\x1b[0m", minitel.center(t_str, 50)))
+
     local q_lines = minitel.wrap(q_text, 48, 3)
     for i = 1, 3 do
         io.write(string.format("\x1b[%d;4H\x1b[1m%s\x1b[0m", 4 + i, minitel.pad(q_lines[i], 48)))
     end
-    io.write("\x1b[8;2H\x1b[1m+--------------------------------------------------+\x1b[0m")
 
     for i = 1, 4 do
         local y = 8 + (i * 2)
@@ -167,29 +166,22 @@ local function draw_quizz_screen(mode_title, cat, q_text, opts, time_left, max_t
         end
     end
 
-    minitel.draw_window(55, 3, 25, 14, "PALMARES DIRECT")
     local s_list = {}
-    for entry in tostring(scores_str or ""):gmatch("([^,]+)") do
-        table.insert(s_list, entry)
-    end
+    for entry in tostring(scores_str or ""):gmatch("([^,]+)") do table.insert(s_list, entry) end
     for i = 1, 10 do
-        local sc = s_list[i] or ""
-        io.write(string.format("\x1b[%d;57H%-21s", 4 + i, string.sub(sc, 1, 21)))
+        io.write(string.format("\x1b[%d;57H%-21s", 4 + i, string.sub(s_list[i] or "", 1, 21)))
     end
 
-    minitel.draw_window(2, 18, 78, 5, "CHRONOMETRE & VERDICT DU PRESENTATEUR")
-    io.write("\x1b[19;4HTEMPS RESTANT : ")
-    minitel.progress_bar(20, 19, 56, time_left, max_time, false)
+    io.write(string.format("\x1b[19;4HTEMPS RESTANT : \x1b[7m %02d SECONDES \x1b[0m    ", time_left))
     io.write("\x1b[21;4H> " .. minitel.pad(status_msg, 72))
-
-    io.write("\x1b[24;1H\x1b[7m  TAPEZ [1], [2], [3] OU [4] POUR BUZZER   |   [RETOUR] QUITTER LE PLATEAU      \x1b[0m")
     io.flush()
 end
 
 -- =====================================================================
--- MODE 1 : PLATEAU EN DIRECT MULTIJOUEUR (SERVEUR GENERATIF)
+-- MODE 1 : PLATEAU EN DIRECT MULTIJOUEUR
 -- =====================================================================
 local function play_live_online()
+    draw_quizz_skeleton("DIRECT MULTIJOUEUR")
     local cur_qid = -1
     local my_choice = 0
     local status_msg = "CONNEXION AU SERVEUR QUIZZ LIVE..."
@@ -197,7 +189,7 @@ local function play_live_online()
 
     while true do
         local now = os.time()
-        if now - last_poll >= 2 then
+        if now - last_poll >= 3 then
             last_poll = now
             local raw = http_query(server_url .. "/api/quizz/state?user=" .. urlencode(pseudo))
             local qid, tleft, cat, qtxt, o1, o2, o3, o4, win_info, board =
@@ -216,14 +208,10 @@ local function play_live_online()
                 my_choice = 0
                 minitel.play_sound("pickup")
                 status_msg = (win_info ~= "" and win_info) or "NOUVELLE QUESTION ! BUZZEZ VITE (1 A 4) !"
-                draw_quizz_screen("DIRECT MULTIJOUEUR", cat, qtxt, {o1, o2, o3, o4}, tleft, 25, my_choice, status_msg, board)
+                update_quizz_content(cat, qtxt, {o1, o2, o3, o4}, tleft, my_choice, status_msg, board)
             else
-                minitel.progress_bar(20, 19, 56, tleft, 25, false)
-                local s_list = {}
-                for entry in tostring(board or ""):gmatch("([^,]+)") do table.insert(s_list, entry) end
-                for i = 1, 10 do
-                    io.write(string.format("\x1b[%d;57H%-21s", 4 + i, string.sub(s_list[i] or "", 1, 21)))
-                end
+                -- Mise a jour ultra-legere (juste les 2 chiffres des secondes !)
+                io.write(string.format("\x1b[19;20H\x1b[7m %02d SECONDES \x1b[0m", tleft))
                 io.flush()
             end
         end
@@ -250,7 +238,6 @@ local function play_live_online()
                 end
                 io.write("\x1b[21;4H> " .. minitel.pad(status_msg, 72))
                 io.flush()
-                last_poll = 0
             end
         end
         minitel.sleep(0.02)
@@ -258,35 +245,45 @@ local function play_live_online()
 end
 
 -- =====================================================================
--- MODE 2 : SOLO INFINI (GENERATION DE QUESTIONS A LA VOLEE)
+-- MODE 2 : SOLO INFINI (SANS RAFRAICHISSEMENT CONTINU)
 -- =====================================================================
 local function play_solo_infinite()
+    draw_quizz_skeleton("SOLO INFINI")
     local score = 0
     local q_num = 0
 
     while true do
         q_num = q_num + 1
-        minitel.draw_window(18, 9, 46, 5, "GENERATION DE LA QUESTION #" .. q_num)
-        io.write("\x1b[11;20H" .. minitel.center("INTERROGATION DE LA BANQUE TELEMATIQUE...", 42))
+        io.write("\x1b[21;4H> " .. minitel.pad("TIRAGE DE LA QUESTION #" .. q_num .. " EN COURS...", 72))
         io.flush()
 
         local item = fetch_dynamic_question()
         local board = string.format("1. %s : %d PTS", pseudo, score)
 
-        draw_quizz_screen(
-            string.format("SOLO INFINI (Q#%02d)", q_num),
+        update_quizz_content(
             item.cat, item.q,
             {item.a, item.b, item.c, item.d},
-            20, 20, 0,
+            20, 0,
             "TAPEZ 1, 2, 3 OU 4 POUR REPONDRE ([RETOUR] = ARRETER)",
             board
         )
 
-        local t_left = 20
-        local tick = 0
+        local start_t = os.time()
+        local last_sec_drawn = 20
         local answered = false
 
-        while t_left > 0 and not answered do
+        while not answered do
+            local elapsed = os.time() - start_t
+            local t_left = math.max(0, 20 - elapsed)
+
+            if t_left ~= last_sec_drawn then
+                last_sec_drawn = t_left
+                io.write(string.format("\x1b[19;20H\x1b[7m %02d SECONDES \x1b[0m", t_left))
+                io.flush()
+            end
+
+            if t_left <= 0 then break end
+
             local k = minitel.get_key()
             if k == "RETOUR" or k == "ESC" then
                 minitel.msg_box("FIN DE PARTIE", "Vous repartez avec une cagnotte de " .. score .. " points !", "pickup")
@@ -302,26 +299,23 @@ local function play_solo_infinite()
                 else
                     minitel.msg_box("DOMMAGE !", "La bonne reponse etait [" .. item.ans .. "] : " .. opts_arr[item.ans], "lose")
                 end
+                draw_quizz_skeleton("SOLO INFINI")
             end
-            minitel.sleep(0.05)
-            tick = tick + 1
-            if tick >= 20 then
-                tick = 0
-                t_left = t_left - 1
-                minitel.progress_bar(20, 19, 56, t_left, 20, false)
-            end
+            minitel.sleep(0.02)
         end
+
         if not answered then
             local opts_arr = {item.a, item.b, item.c, item.d}
             minitel.msg_box("TEMPS ECOULE !", "La bonne reponse etait [" .. item.ans .. "] : " .. opts_arr[item.ans], "lose")
+            draw_quizz_skeleton("SOLO INFINI")
         end
     end
 end
 
 -- =====================================================================
--- MENU D'ACCUEIL
+-- MENU D'ACCUEIL (DESSINE UNE SEULE FOIS HORS BOUCLE !)
 -- =====================================================================
-while true do
+local function draw_main_menu()
     io.write("\x1b[r\x1b[2J\x1b[H")
     minitel.sleep(0.04)
     io.write("\x1b[1;1H\x1b[7m" .. minitel.center("* * *  3615 QUIZZ LIVE - LE JEU TELEVISE TELEMATIQUE  * * *", 80) .. "\x1b[0m")
@@ -336,11 +330,20 @@ while true do
 
     io.write("\x1b[24;1H\x1b[7m  TAPEZ [1], [2] OU [3]   |   GENERATION AUTOMATIQUE DE QUESTIONS FR            \x1b[0m")
     io.flush()
+end
 
+draw_main_menu()
+
+while true do
     local k = minitel.get_key()
-    if k == "RETOUR" or k == "ESC" then break
-    elseif k == "1" then play_live_online()
-    elseif k == "2" then play_solo_infinite()
+    if k == "RETOUR" or k == "ESC" then
+        break
+    elseif k == "1" then
+        play_live_online()
+        draw_main_menu()
+    elseif k == "2" then
+        play_solo_infinite()
+        draw_main_menu()
     elseif k == "3" then
         local ns = minitel.input_box("SERVEUR EN LIGNE", "URL du serveur :", server_url, 42)
         if ns and ns ~= "" then server_url = ns:gsub("/+$", "") end
@@ -348,6 +351,7 @@ while true do
         if np and np ~= "" then pseudo = string.upper(minitel.clean_accents(np)):gsub("[^%w_%-]", "") end
         local f = io.open(CFG_FILE, "w")
         if f then f:write(server_url .. "\n" .. pseudo .. "\n"); f:close() end
+        draw_main_menu()
     end
     minitel.sleep(0.02)
 end

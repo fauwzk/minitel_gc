@@ -6,9 +6,6 @@ minitel.init()
 
 math.randomseed(os.time())
 
--- =====================================================================
--- LES 4 EQUIPEMENTS TELECOMS MYTHIQUES DES ANNEES 1990
--- =====================================================================
 local trunks = {
     { name = "1. AUTOCOM ALCATEL E10B (MIC E1 2MB)", load = 35, status = "NOMINAL", calls = 24 },
     { name = "2. PABX MATRACOM 6500 (NUMERIS T2)",   load = 40, status = "NOMINAL", calls = 18 },
@@ -32,30 +29,29 @@ local TRAFFIC_SPIKES_90S = {
 
 local cursor = 1
 local qos_health = 100
-local taxed_units = 0  -- Compteur en impulsions "Taxes de base" (0,73 F l'impulsion !)
+local taxed_units = 0
 local shift_timer = 90
 local backup_cd = 0
 local last_log = "CENTRE FRANCE TELECOM (1994) EN LIGNE. TOUTES LES JONCTIONS MIC SONT SYNCHRONISEES."
 
 -- =====================================================================
--- AFFICHAGE SQUELETTE STATIQUE + DELTA-DRAWING (9600 BAUDS)
+-- AFFICHAGE DELTA-DRAWING ULTRA-COURT (SANS RE-ENVOYER LES BARRES DE 70 COL)
 -- =====================================================================
 local function update_trunk_row(idx)
     local t = trunks[idx]
-    local y = 4 + (idx - 1) * 3
+    local y = 5 + (idx - 1) * 2
     local sel = (idx == cursor) and "\x1b[7m>" or " "
     local sel_end = (idx == cursor) and "<\x1b[0m" or " "
 
-    local st_badge = " [NOMINAL]      "
+    local st_badge = " [NOMINAL]    "
     if t.status ~= "NOMINAL" then
-        st_badge = "\x1b[7m [" .. minitel.pad(t.status, 12) .. "] \x1b[0m"
+        st_badge = "\x1b[7m [" .. minitel.pad(t.status, 10) .. "] \x1b[0m"
     elseif t.load >= 85 then
-        st_badge = "\x1b[7m [SURCHARGE !]  \x1b[0m"
+        st_badge = "\x1b[7m [SURCHARGE!] \x1b[0m"
     end
 
-    io.write(string.format("\x1b[%d;4H%s %-36s%s | VOIES:%03d |%s",
-        y, sel, minitel.pad(t.name, 36), sel_end, t.calls, st_badge))
-    minitel.progress_bar(6, y + 1, 70, t.load, 100, true)
+    io.write(string.format("\x1b[%d;4H%s %-36s%s | CHARGE: %3d%% | VOIES:%03d |%s",
+        y, sel, minitel.pad(t.name, 36), sel_end, t.load, t.calls, st_badge))
 end
 
 local function update_header_and_logs()
@@ -82,9 +78,6 @@ local function draw_static_switchboard()
     update_header_and_logs()
 end
 
--- =====================================================================
--- SIMULATION TEMPS REEL DU REPARTITEUR ANNÉES 90
--- =====================================================================
 local function run_shift()
     qos_health = 100
     taxed_units = 0
@@ -97,7 +90,7 @@ local function run_shift()
     end
 
     draw_static_switchboard()
-    local tick_acc = 0
+    local last_tick_sec = os.time()
 
     while shift_timer > 0 and qos_health > 0 do
         local k = minitel.get_key()
@@ -143,7 +136,7 @@ local function run_shift()
                     update_trunk_row(cursor)
                     update_header_and_logs()
                 else
-                    last_log = "Aucun defaut matériel sur la Baie " .. cursor .. " (Voyants verts)."
+                    last_log = "Aucun defaut materiel sur la Baie " .. cursor .. " (Voyants verts)."
                     update_header_and_logs()
                 end
 
@@ -160,21 +153,20 @@ local function run_shift()
             end
         end
 
-        minitel.sleep(0.05)
-        tick_acc = tick_acc + 1
-
-        if tick_acc >= 20 then
-            tick_acc = 0
-            shift_timer = shift_timer - 1
-            if backup_cd > 0 then backup_cd = backup_cd - 1 end
+        -- Tick reseau toutes les 2 secondes pour garder une fluidite parfaite du clavier !
+        local now = os.time()
+        if now - last_tick_sec >= 2 then
+            last_tick_sec = now
+            shift_timer = math.max(0, shift_timer - 2)
+            if backup_cd > 0 then backup_cd = math.max(0, backup_cd - 2) end
 
             local ev_roll = math.random(1, 100)
-            if ev_roll <= 22 then
+            if ev_roll <= 25 then
                 local sp = TRAFFIC_SPIKES_90S[math.random(1, #TRAFFIC_SPIKES_90S)]
                 trunks[sp.target].load = math.min(100, trunks[sp.target].load + math.random(18, 28))
                 last_log = sp.msg
                 minitel.play_sound("hit")
-            elseif ev_roll <= 35 then
+            elseif ev_roll <= 38 then
                 local inc = INCIDENTS_90S[math.random(1, #INCIDENTS_90S)]
                 trunks[inc.target].status = inc.code
                 last_log = inc.msg
@@ -198,6 +190,8 @@ local function run_shift()
             end
             update_header_and_logs()
         end
+
+        minitel.sleep(0.02)
     end
 
     local total_f = math.floor(taxed_units * 0.73)
@@ -217,9 +211,9 @@ local function run_shift()
 end
 
 -- =====================================================================
--- ECRAN TITRE
+-- ECRAN TITRE (DESSINE UNE SEULE FOIS HORS BOUCLE !)
 -- =====================================================================
-while true do
+local function draw_title_screen()
     io.write("\x1b[r\x1b[2J\x1b[H")
     minitel.sleep(0.04)
     io.write("\x1b[1;1H\x1b[7m" .. minitel.center("* * *  3615 CENTRAL PTT (1994) - SUPERVISION E10B & TRANSPAC  * * *", 80) .. "\x1b[0m")
@@ -236,10 +230,17 @@ while true do
 
     io.write("\x1b[24;1H\x1b[7m  [ENVOI] PRENDRE LE SERVICE   |   [RETOUR] QUITTER VERS LE PORTAIL MAGIS       \x1b[0m")
     io.flush()
+end
 
+draw_title_screen()
+
+while true do
     local k = minitel.get_key()
-    if k == "RETOUR" or k == "ESC" then break
-    elseif k == "ENVOI" or k == " " then run_shift()
+    if k == "RETOUR" or k == "ESC" then
+        break
+    elseif k == "ENVOI" or k == " " then
+        run_shift()
+        draw_title_screen()
     end
     minitel.sleep(0.02)
 end
