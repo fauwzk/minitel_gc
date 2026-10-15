@@ -124,7 +124,6 @@ local function get_file_metadata(filepath, display_name)
         local content = f:read("*a")
         f:close()
         if content then
-            -- 1. Calcul du poids en octets / Ko
             local bytes = #content
             if bytes >= 1024 then
                 meta.size = string.format("%.1f Ko", bytes / 1024)
@@ -132,7 +131,6 @@ local function get_file_metadata(filepath, display_name)
                 meta.size = bytes .. " o"
             end
 
-            -- 2. Comptage du nombre de lignes
             local l_count = 0
             local header_lines = {}
             for line in content:gmatch("([^\r\n]*)\r?\n?") do
@@ -145,7 +143,6 @@ local function get_file_metadata(filepath, display_name)
             end
             meta.lines = math.max(1, l_count - 1)
 
-            -- 3. Lecture prioritaire des 2 premieres lignes (et jusqu'a 15 lignes d'en-tete)
             local custom_art = {}
             for _, hline in ipairs(header_lines) do
                 local g = hline:match("^%-%-%s*@GENRE%s*:%s*(.+)$") or hline:match("^%-%-%s*@TYPE%s*:%s*(.+)$")
@@ -157,7 +154,6 @@ local function get_file_metadata(filepath, display_name)
                 if a_idx and a_txt then custom_art[tonumber(a_idx)] = a_txt end
             end
 
-            -- 4. Attribution automatique du logo selon le @GENRE (ou @ART1..5 si present)
             if #custom_art == 5 then
                 meta.art = custom_art
             else
@@ -217,9 +213,30 @@ local offset = 0
 local max_visible = 12
 local list_start_y = 8
 
+-- Mode Turbo [H] : Si actif, l'aperçu de droite ne se rafraichit qu'au bout de 1.5s d'inactivite
+local fast_mode = true
+local details_dirty = false
+local last_move_ts = 0
+
+local function get_mono_time()
+    local f = io.open("/proc/uptime", "r")
+    if f then
+        local s = f:read("*l")
+        f:close()
+        local up = s and tonumber(s:match("^([%d%.]+)"))
+        if up then return up end
+    end
+    return os.time()
+end
+
 -- =====================================================================
 -- AFFICHAGE DU SQUELETTE STATIQUE (CADRES & BANDEAUX)
 -- =====================================================================
+local function draw_right_header_badge()
+    local badge = fast_mode and "APERCU [H: TURBO 1.5S]" or "APERCU [H: DIRECT]"
+    io.write("\x1b[6;40H|\x1b[7m" .. minitel.center(badge, 38) .. "\x1b[0m|")
+end
+
 local function draw_static_portal()
     io.write("\x1b[r\x1b[2J\x1b[H")
     minitel.sleep(0.04)
@@ -232,7 +249,7 @@ local function draw_static_portal()
     io.write("\x1b[5;40H.--------------------------------------.")
 
     io.write("\x1b[6;2H|\x1b[7m" .. minitel.center(CONFIG.SOUS_TITRE, 34) .. "\x1b[0m|")
-    io.write("\x1b[6;40H|\x1b[7m" .. minitel.center("APERCU DE LA CARTOUCHE", 38) .. "\x1b[0m|")
+    draw_right_header_badge()
 
     io.write("\x1b[7;2H|----------------------------------|")
     io.write("\x1b[7;40H|--------------------------------------|")
@@ -250,7 +267,7 @@ local function draw_static_portal()
     io.write("\x1b[22;2H'----------------------------------'")
     io.write("\x1b[22;40H'--------------------------------------'")
 
-    io.write("\x1b[24;1H\x1b[7m  [Z/S] NAVIGUER   |   [ENVOI] LANCER LE JEU   |   [R] SCAN   |   [RETOUR] MENU \x1b[0m")
+    io.write("\x1b[24;1H\x1b[7m [Z/S] CHOIX | [ENVOI] JOUER | [H] MODE TURBO | [R] SCAN | [RETOUR] MENU     \x1b[0m")
     io.flush()
 end
 
@@ -279,6 +296,7 @@ local function draw_details_panel()
 
     local footer_right = string.format("TAILLE: %-8s | CODE: %d LIGNES", m.size, m.lines)
     io.write(string.format("\x1b[21;42H%s", minitel.pad(footer_right, 36)))
+    details_dirty = false
 end
 
 -- =====================================================================
@@ -316,14 +334,28 @@ local function draw_scrollbar_and_counter()
     end
 end
 
-local function draw_full_list()
+local function trigger_details_update(force_now)
+    if force_now or not fast_mode then
+        draw_details_panel()
+    else
+        details_dirty = true
+        last_move_ts = get_mono_time()
+        -- Petit indicateur discret en bas a droite pendant le defilement rapide
+        local item = items[cursor]
+        if item then
+            io.write(string.format("\x1b[21;42H%-36s", "SELECTION : " .. item.display .. " ..."))
+        end
+    end
+end
+
+local function draw_full_list(force_details)
     for i = 1, max_visible do
         local idx = offset + i
         local y = list_start_y + i - 1
         io.write(string.format("\x1b[%d;3H%s", y, format_list_entry(idx, idx == cursor)))
     end
     draw_scrollbar_and_counter()
-    draw_details_panel()
+    trigger_details_update(force_details)
     io.flush()
 end
 
@@ -339,7 +371,7 @@ local function update_cursor(old_index, new_index)
     end
 
     draw_scrollbar_and_counter()
-    draw_details_panel()
+    trigger_details_update(false)
     io.flush()
 end
 
@@ -354,32 +386,44 @@ end
 -- BOUCLE PRINCIPALE
 -- =====================================================================
 draw_static_portal()
-draw_full_list()
+draw_full_list(true)
 
 while true do
     local key = minitel.get_key()
     local old_cursor = cursor
 
-    if key == "r" or key == "R" or key == "REPETITION" then
+    -- Si le mode Turbo est actif et que 1.5s s'est ecoulee depuis le dernier mouvement, on affiche l'art !
+    if details_dirty and (get_mono_time() - last_move_ts >= 1.5) then
+        draw_details_panel()
+        io.flush()
+    end
+
+    if key == "h" or key == "H" then
+        fast_mode = not fast_mode
+        draw_right_header_badge()
+        draw_details_panel()
+        io.flush()
+
+    elseif key == "r" or key == "R" or key == "REPETITION" then
         items = scan_directory()
         cursor = 1
         offset = 0
         draw_static_portal()
-        draw_full_list()
+        draw_full_list(true)
 
     elseif key == "z" or key == "Z" or key == "UP" then
         if cursor > 1 then
             cursor = cursor - 1
             if cursor <= offset then
                 offset = cursor - 1
-                draw_full_list()
+                draw_full_list(false)
             else
                 update_cursor(old_cursor, cursor)
             end
         else
             cursor = #items
             offset = math.max(0, #items - max_visible)
-            draw_full_list()
+            draw_full_list(false)
         end
 
     elseif key == "s" or key == "S" or key == "DOWN" then
@@ -387,14 +431,14 @@ while true do
             cursor = cursor + 1
             if cursor > offset + max_visible then
                 offset = cursor - max_visible
-                draw_full_list()
+                draw_full_list(false)
             else
                 update_cursor(old_cursor, cursor)
             end
         else
             cursor = 1
             offset = 0
-            draw_full_list()
+            draw_full_list(false)
         end
 
     elseif key == " " or key == "\n" or key == "\r" or key == "ENVOI" then
@@ -405,14 +449,13 @@ while true do
             os.execute("lua5.3 " .. selected.filepath)
             minitel.init()
 
-            -- Re-scan automatique des en-tetes au retour !
             items = scan_directory()
             if cursor > #items then
                 cursor = 1
                 offset = 0
             end
             draw_static_portal()
-            draw_full_list()
+            draw_full_list(true)
         end
 
     elseif key == "RETOUR" or key == "ESC" or key == "SOMMAIRE" then

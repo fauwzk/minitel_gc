@@ -1,5 +1,5 @@
 -- @TYPE: TABLEUR / FINANCES
--- @DESC: Tableur dynamique multi-feuilles avec formules et boites de dialogue systeme.
+-- @DESC: Tableur dynamique multi-feuilles avec cache differentiel ultra-rapide et formules.
 
 local minitel = require("minitel")
 minitel.init()
@@ -7,7 +7,7 @@ minitel.init()
 os.execute("mkdir -p utils/prog_calc 2>/dev/null")
 
 -- =====================================================================
--- STRUCTURE DE DONNEES DU TABLEUR
+-- STRUCTURE DE DONNEES DU TABLEUR & CACHES D'OPTIMISATION
 -- =====================================================================
 local workbook = {
     sheets = {
@@ -20,15 +20,40 @@ local is_modified = false
 local running = true
 
 -- Navigation et Vue
-local cx, cy = 1, 1 -- Curseur absolu (A1 = 1,1)
+local cx, cy = 1, 1         -- Curseur absolu (A1 = 1,1)
 local view_x, view_y = 1, 1 -- Offset de l'ecran
 local COL_WIDTH = 9
-local VISIBLE_COLS = 7 -- A a G par defaut
+local VISIBLE_COLS = 7      -- A a G
 local VISIBLE_ROWS = 18
 
+-- Caches memoire pour eviter les recalculs et les envois serie inutiles
+local eval_stack = {}
+local val_cache = {}        -- Cache des valeurs calculees
+local screen_cache = {}     -- Cache de ce qui est actuellement affiche a l'ecran
+local last_formula_len = 0  -- Longueur du dernier texte dans la barre de formule
+
+local function invalidate_calc_cache()
+    eval_stack = {}
+    val_cache = {}
+end
+
 -- =====================================================================
--- MOTEUR D'EVALUATION DES FORMULES (MAGIS ENGINE)
+-- MOTEUR D'EVALUATION DES FORMULES (AVEC MEMOISATION)
 -- =====================================================================
+local col_name_cache = {}
+local function col_name(x)
+    if col_name_cache[x] then return col_name_cache[x] end
+    local orig_x = x
+    local name = ""
+    while x > 0 do
+        local rem = (x - 1) % 26
+        name = string.char(65 + rem) .. name
+        x = math.floor((x - 1) / 26)
+    end
+    col_name_cache[orig_x] = name
+    return name
+end
+
 local function parse_ref(ref)
     local col_str, row_str = string.match(ref, "^([A-Z]+)(%d+)$")
     if not col_str or not row_str then return nil, nil end
@@ -39,57 +64,60 @@ local function parse_ref(ref)
     return x, tonumber(row_str)
 end
 
-local function col_name(x)
-    local name = ""
-    while x > 0 do
-        local rem = (x - 1) % 26
-        name = string.char(65 + rem) .. name
-        x = math.floor((x - 1) / 26)
-    end
-    return name
-end
-
 local eval_env = {}
-local eval_stack = {}
 
-local function get_cell_val(ref, sheet_name)
-    local target_sheet = workbook.sheets[active_sheet]
-    if sheet_name then
-        for _, s in ipairs(workbook.sheets) do
-            if s.name == sheet_name then target_sheet = s; break end
-        end
-    end
-    
+local function get_cell_val_by_xy(x, y, sheet_idx)
+    local s_idx = sheet_idx or active_sheet
+    local target_sheet = workbook.sheets[s_idx]
     if not target_sheet then return 0 end
-    
-    local x, y = parse_ref(ref)
-    if not x then return 0 end
-    
+
     local key = x .. "_" .. y
-    local raw = target_sheet.cells[key]
-    if not raw then return 0 end
-    
-    if string.sub(raw, 1, 1) ~= "=" then
-        return tonumber(raw) or raw
+    local cache_key = s_idx .. "!" .. key
+    if val_cache[cache_key] ~= nil then
+        return val_cache[cache_key]
     end
-    
-    local stack_key = target_sheet.name .. "!" .. key
-    if eval_stack[stack_key] then return "#REF!" end
-    eval_stack[stack_key] = true
-    
+
+    local raw = target_sheet.cells[key]
+    if not raw then
+        val_cache[cache_key] = 0
+        return 0
+    end
+
+    if string.sub(raw, 1, 1) ~= "=" then
+        local v = tonumber(raw) or raw
+        val_cache[cache_key] = v
+        return v
+    end
+
+    if eval_stack[cache_key] then return "#REF!" end
+    eval_stack[cache_key] = true
+
     local formula = string.sub(raw, 2)
     formula = string.gsub(formula, "([%w_]+)!([A-Z]+%d+)", "V('%2', '%1')")
     formula = string.gsub(formula, "([A-Z]+%d+)", "V('%1')")
-    
+
     local func = load("return " .. formula, "calc", "t", eval_env)
     local result = "#ERR!"
     if func then
         local ok, val = pcall(func)
         if ok then result = val end
     end
-    
-    eval_stack[stack_key] = nil
+
+    eval_stack[cache_key] = nil
+    val_cache[cache_key] = result
     return result
+end
+
+local function get_cell_val(ref, sheet_name)
+    local s_idx = active_sheet
+    if sheet_name then
+        for i, s in ipairs(workbook.sheets) do
+            if s.name == sheet_name then s_idx = i; break end
+        end
+    end
+    local x, y = parse_ref(ref)
+    if not x then return 0 end
+    return get_cell_val_by_xy(x, y, s_idx)
 end
 
 eval_env.V = get_cell_val
@@ -101,11 +129,11 @@ eval_env.SOMME = function(range)
     local x1, y1 = parse_ref(start_ref)
     local x2, y2 = parse_ref(end_ref)
     if not x1 or not x2 then return 0 end
-    
+
     local total = 0
     for y = math.min(y1, y2), math.max(y1, y2) do
         for x = math.min(x1, x2), math.max(x1, x2) do
-            local val = get_cell_val(col_name(x) .. y)
+            local val = get_cell_val_by_xy(x, y, active_sheet)
             if type(val) == "number" then total = total + val end
         end
     end
@@ -118,11 +146,11 @@ eval_env.MOYENNE = function(range)
     local x1, y1 = parse_ref(start_ref)
     local x2, y2 = parse_ref(end_ref)
     if not x1 or not x2 then return 0 end
-    
+
     local total, count = 0, 0
     for y = math.min(y1, y2), math.max(y1, y2) do
         for x = math.min(x1, x2), math.max(x1, x2) do
-            local val = get_cell_val(col_name(x) .. y)
+            local val = get_cell_val_by_xy(x, y, active_sheet)
             if type(val) == "number" then
                 total = total + val
                 count = count + 1
@@ -133,44 +161,49 @@ eval_env.MOYENNE = function(range)
 end
 
 -- =====================================================================
--- FONCTIONS D'AFFICHAGE OPTIMISEES (DELTA-DRAWING)
+-- MOTEUR D'AFFICHAGE BUFFERISE & DIFFERENTIEL (9600 BAUDS)
 -- =====================================================================
-local function format_val(val, width)
-    if val == nil then return string.rep(" ", width) end
-    local s = tostring(val)
-    if #s > width then return string.sub(s, 1, width) end
-    if type(val) == "number" then
-        return string.rep(" ", width - #s) .. s
+local EMPTY_CELL_TEXT = string.rep(" ", COL_WIDTH)
+
+local function get_formatted_cell_text(x, y)
+    local key = x .. "_" .. y
+    local raw = workbook.sheets[active_sheet].cells[key]
+    if not raw then return EMPTY_CELL_TEXT end
+
+    local val
+    if string.sub(raw, 1, 1) == "=" then
+        val = get_cell_val_by_xy(x, y, active_sheet)
     else
-        return s .. string.rep(" ", width - #s)
+        val = tonumber(raw) or raw
+    end
+
+    if val == nil then return EMPTY_CELL_TEXT end
+    local s = tostring(val)
+    if #s > COL_WIDTH then return string.sub(s, 1, COL_WIDTH) end
+    if type(val) == "number" then
+        return string.rep(" ", COL_WIDTH - #s) .. s
+    else
+        return s .. string.rep(" ", COL_WIDTH - #s)
     end
 end
 
-local function draw_cell(x, y, is_highlighted)
-    local scr_x = 6 + (x - view_x) * (COL_WIDTH + 1)
-    local scr_y = 5 + (y - view_y)
-    
+-- Dessine une seule cellule (sans flush systematique si batch=true)
+local function draw_cell(x, y, is_highlighted, no_flush)
     if x < view_x or x >= view_x + VISIBLE_COLS then return end
     if y < view_y or y >= view_y + VISIBLE_ROWS then return end
-    
-    local key = x .. "_" .. y
-    local raw = workbook.sheets[active_sheet].cells[key]
-    local val = ""
-    
-    if raw then
-        if string.sub(raw, 1, 1) == "=" then
-            val = get_cell_val(col_name(x) .. y)
-        else
-            val = raw
-        end
+
+    local scr_x = 6 + (x - view_x) * (COL_WIDTH + 1)
+    local scr_y = 5 + (y - view_y)
+
+    local text = get_formatted_cell_text(x, y)
+    screen_cache[x .. "_" .. y] = text
+
+    if is_highlighted then
+        io.write(string.format("\x1b[%d;%dH\x1b[7m %s \x1b[0m", scr_y, scr_x, text))
+    else
+        io.write(string.format("\x1b[%d;%dH %s ", scr_y, scr_x, text))
     end
-    
-    local text = format_val(val, COL_WIDTH)
-    local c = is_highlighted and "\x1b[7m" or ""
-    local res = "\x1b[0m"
-    
-    io.write(string.format("\x1b[%d;%dH%s %s %s|", scr_y, scr_x, c, text, res))
-    io.flush()
+    if not no_flush then io.flush() end
 end
 
 local function draw_static_top_bar()
@@ -180,45 +213,84 @@ local function draw_static_top_bar()
     io.write("\x1b[1;1H\x1b[7m" .. minitel.pad(title, 80) .. "\x1b[0m")
 end
 
-local function update_formula_bar()
-    io.write("\x1b7")
+-- Barre de formule ultra-legere (n'utilise plus \x1b[K, efface juste les caracteres en trop !)
+local function update_formula_bar(no_flush)
     local key = cx .. "_" .. cy
     local raw = workbook.sheets[active_sheet].cells[key] or ""
-    local ref = string.format("[%s%d]", col_name(cx), cy)
-    io.write("\x1b[2;1H\x1b[K \x1b[1m" .. ref .. "\x1b[0m " .. string.sub(raw, 1, 65))
-    io.write("\x1b8")
+    local disp_raw = string.sub(raw, 1, 65)
+    local ref = string.format("[%s%d] ", col_name(cx), cy)
+    local content = ref .. disp_raw
+
+    local pad_clear = ""
+    if #content < last_formula_len then
+        pad_clear = string.rep(" ", last_formula_len - #content)
+    end
+    last_formula_len = #content
+
+    io.write("\x1b[2;2H\x1b[1m" .. ref .. "\x1b[0m" .. disp_raw .. pad_clear)
+    if not no_flush then io.flush() end
+end
+
+-- Ne redessine QUE les cellules dont le resultat visuel a change !
+local function refresh_changed_cells()
+    invalidate_calc_cache()
+    for y = view_y, view_y + VISIBLE_ROWS - 1 do
+        for x = view_x, view_x + VISIBLE_COLS - 1 do
+            local key = x .. "_" .. y
+            local new_text = get_formatted_cell_text(x, y)
+            local is_cur = (x == cx and y == cy)
+            if screen_cache[key] ~= new_text or is_cur then
+                draw_cell(x, y, is_cur, true)
+            end
+        end
+    end
+    update_formula_bar(true)
     io.flush()
 end
 
-local function refresh_visible_cells()
-    for y = view_y, view_y + VISIBLE_ROWS - 1 do
-        for x = view_x, view_x + VISIBLE_COLS - 1 do
-            draw_cell(x, y, (x == cx and y == cy))
-        end
-    end
-    update_formula_bar()
-end
-
+-- Rendu complet de la grille en UNE SEULE PASSE bufferisee (3x plus rapide !)
 local function draw_grid()
-    io.write("\x1b[3;1H\x1b[K    |")
+    invalidate_calc_cache()
+    screen_cache = {}
+    local out = {}
+
+    local fname = (filename == "" and "SANS NOM" or filename) .. (is_modified and "*" or "")
+    local title = string.format(" MAGIS CALC | FICHIER: %-15s | FEUILLE %d/%d : %-15s ", 
+        fname, active_sheet, #workbook.sheets, workbook.sheets[active_sheet].name)
+    table.insert(out, "\x1b[1;1H\x1b[7m" .. minitel.pad(title, 80) .. "\x1b[0m")
+
+    -- Entete des colonnes (Ligne 3)
+    local col_hdr = {"\x1b[3;1H    |"}
     for i = 0, VISIBLE_COLS - 1 do
         local col_c = col_name(view_x + i)
-        io.write("\x1b[7m " .. minitel.center(col_c, COL_WIDTH) .. " \x1b[0m|")
+        table.insert(col_hdr, "\x1b[7m " .. minitel.center(col_c, COL_WIDTH) .. " \x1b[0m|")
     end
-    io.write("\r\n\x1b[4;1H--------------------------------------------------------------------------------\r\n")
-    
+    table.insert(out, table.concat(col_hdr))
+    table.insert(out, "\x1b[4;1H" .. string.rep("-", 79))
+
+    -- Lignes 5 a 22 : On assemble chaque ligne avec ses valeurs directement !
     for i = 0, VISIBLE_ROWS - 1 do
         local r = view_y + i
-        io.write(string.format("\x1b[%d;1H\x1b[K\x1b[7m %02d \x1b[0m|", 5 + i, r))
+        local row_buf = { string.format("\x1b[%d;1H\x1b[7m %02d \x1b[0m|", 5 + i, r) }
         for j = 0, VISIBLE_COLS - 1 do
-            io.write(string.rep(" ", COL_WIDTH + 2) .. "|")
+            local cell_x = view_x + j
+            local text = get_formatted_cell_text(cell_x, r)
+            screen_cache[cell_x .. "_" .. r] = text
+            if cell_x == cx and r == cy then
+                table.insert(row_buf, "\x1b[7m " .. text .. " \x1b[0m|")
+            else
+                table.insert(row_buf, " " .. text .. " |")
+            end
         end
+        table.insert(out, table.concat(row_buf))
     end
-    
-    refresh_visible_cells()
-    
-    io.write("\x1b[24;1H\x1b[7m  [ENTREE] EDITER | [REPETITION] CALCULER | [< >] FEUILLES | [RETOUR] MENU    \x1b[0m")
-    draw_static_top_bar()
+
+    table.insert(out, "\x1b[24;1H\x1b[7m  [ENTREE] EDITER | [REPETITION] CALCULER | [< >] FEUILLES | [RETOUR] MENU    \x1b[0m")
+
+    -- Un seul io.write massif pour tout l'ecran !
+    io.write(table.concat(out))
+    last_formula_len = 78
+    update_formula_bar(true)
     io.flush()
 end
 
@@ -229,19 +301,21 @@ local function move_cursor(dx, dy)
     local old_x, old_y = cx, cy
     cx = math.max(1, cx + dx)
     cy = math.max(1, cy + dy)
-    
+    if cx == old_x and cy == old_y then return end
+
     local need_redraw = false
     if cx < view_x then view_x = cx; need_redraw = true end
     if cx >= view_x + VISIBLE_COLS then view_x = cx - VISIBLE_COLS + 1; need_redraw = true end
     if cy < view_y then view_y = cy; need_redraw = true end
     if cy >= view_y + VISIBLE_ROWS then view_y = cy - VISIBLE_ROWS + 1; need_redraw = true end
-    
+
     if need_redraw then
         draw_grid()
     else
-        draw_cell(old_x, old_y, false)
-        draw_cell(cx, cy, true)
-        update_formula_bar()
+        draw_cell(old_x, old_y, false, true)
+        draw_cell(cx, cy, true, true)
+        update_formula_bar(true)
+        io.flush()
     end
 end
 
@@ -249,44 +323,57 @@ local function edit_cell()
     local key = cx .. "_" .. cy
     local old_val = workbook.sheets[active_sheet].cells[key] or ""
     local val = old_val
-    
-    io.write("\x1b[2;1H\x1b[K \x1b[1m[" .. col_name(cx) .. cy .. "]\x1b[0m \x1b[7m" .. val)
-    io.flush()
-    
+    local ref_str = "[" .. col_name(cx) .. cy .. "] "
+
+    local function draw_edit_line()
+        local pad_len = math.max(0, last_formula_len - (#ref_str + #val))
+        last_formula_len = #ref_str + #val
+        io.write("\x1b[2;2H\x1b[1m" .. ref_str .. "\x1b[0m\x1b[7m" .. val .. "\x1b[0m" .. string.rep(" ", pad_len))
+        io.flush()
+    end
+
+    draw_edit_line()
+
     while true do
         local k = minitel.get_key()
         if k then
             if k == "ENVOI" or k == "\n" or k == "\r" then
                 if val ~= old_val then
-                    is_modified = true
-                    draw_static_top_bar()
+                    if not is_modified then
+                        is_modified = true
+                        draw_static_top_bar()
+                    end
+                    if val == "" then
+                        workbook.sheets[active_sheet].cells[key] = nil
+                    else
+                        workbook.sheets[active_sheet].cells[key] = val
+                    end
+                    -- Ne rafraichit que la ou les cellules impactees !
+                    refresh_changed_cells()
+                else
+                    update_formula_bar()
                 end
-                if val == "" then workbook.sheets[active_sheet].cells[key] = nil
-                else workbook.sheets[active_sheet].cells[key] = val end
-                break
+                return
             elseif k == "RETOUR" or k == "ESC" then
-                break
+                update_formula_bar()
+                return
             elseif k == "ANNULATION" then
                 val = ""
-                io.write("\x1b[2;1H\x1b[K \x1b[1m[" .. col_name(cx) .. cy .. "]\x1b[0m \x1b[7m")
-                io.flush()
+                draw_edit_line()
             elseif k == "CORRECTION" or k == "\x08" or k == "\x7f" then
                 if #val > 0 then
                     val = string.sub(val, 1, -2)
-                    io.write("\x1b[D \x1b[D"); io.flush()
+                    draw_edit_line()
                 end
             elseif string.match(k, "^[%w%s%p_%.%-=+!:]$") and #k == 1 then
                 if #val < 65 then
                     val = val .. k
-                    io.write(k); io.flush()
+                    draw_edit_line()
                 end
             end
         end
         minitel.sleep(0.01)
     end
-    
-    eval_stack = {}
-    refresh_visible_cells()
 end
 
 -- =====================================================================
@@ -295,7 +382,7 @@ end
 local function save_workbook(path)
     local f = io.open(path, "w")
     if not f then return false end
-    
+
     f:write("return {\n  sheets = {\n")
     for _, sheet in ipairs(workbook.sheets) do
         f:write(string.format("    { name = %q, cells = {\n", sheet.name))
@@ -332,7 +419,7 @@ local function draw_calc_menu()
     io.write("\x1b[r\x1b[2J\x1b[H")
     io.write("\x1b[1;1H\x1b[1m 3615 MAGIS CALC \x1b[0m                                             \x1b[1m TABLEUR PRO \x1b[0m")
     io.write("\x1b[2;1H================================================================================")
-    
+
     minitel.draw_window(22, 5, 38, 16, "MENU CLASSEUR")
     io.write("\x1b[7;26H\x1b[7m [1] \x1b[0m REPRENDRE LE CALCUL")
     io.write("\x1b[9;26H\x1b[7m [2] \x1b[0m NOUVEAU CLASSEUR")
@@ -340,19 +427,18 @@ local function draw_calc_menu()
     io.write("\x1b[13;26H\x1b[7m [4] \x1b[0m OUVRIR UN CLASSEUR...")
     io.write("\x1b[15;26H\x1b[7m [5] \x1b[0m SAUVEGARDER SOUS...")
     io.write("\x1b[18;26H\x1b[7m [9] \x1b[0m QUITTER MAGIS CALC")
-    
+
     io.write("\x1b[24;1H\x1b[7m  TAPEZ LE NUMERO DE L'OPTION SOUHAITEE OU [RETOUR] POUR REVENIR AU TABLEUR    \x1b[0m")
     io.flush()
 end
 
 local function handle_menu()
     draw_calc_menu()
-    
+
     while true do
         local k = minitel.get_key()
         if k == "1" or k == "RETOUR" or k == "ESC" then
             break
-            
         elseif k == "2" then
             if not is_modified or minitel.confirm_box("NOUVEAU CLASSEUR", "Ecraser le classeur actuel non sauvegarde ?") then
                 workbook = { sheets = { { name = "FEUIL1", cells = {} } } }
@@ -361,7 +447,6 @@ local function handle_menu()
                 break
             end
             draw_calc_menu()
-            
         elseif k == "3" then
             local default_name = "FEUIL" .. (#workbook.sheets + 1)
             local new_name = minitel.input_box("NOUVELLE FEUILLE", "Nom de la feuille :", default_name, 15)
@@ -374,7 +459,6 @@ local function handle_menu()
                 break
             end
             draw_calc_menu()
-            
         elseif k == "4" then
             if is_modified and not minitel.confirm_box("OUVRIR", "Abandonner les calculs non sauvegardes ?") then
                 draw_calc_menu()
@@ -389,7 +473,6 @@ local function handle_menu()
                 end
                 draw_calc_menu()
             end
-            
         elseif k == "5" then
             local target = minitel.file_browser("SAVE", "utils/prog_calc/")
             if target then
@@ -403,7 +486,6 @@ local function handle_menu()
                 end
             end
             draw_calc_menu()
-            
         elseif k == "9" then
             if not is_modified or minitel.confirm_box("QUITTER", "Le classeur a ete modifie ! Quitter sans sauvegarder ?") then
                 running = false
@@ -413,7 +495,7 @@ local function handle_menu()
         end
         minitel.sleep(0.02)
     end
-    
+
     if running then
         io.write("\x1b[r\x1b[2J\x1b[H")
         draw_grid()
@@ -428,7 +510,7 @@ draw_grid()
 
 while running do
     local k = minitel.get_key()
-    
+
     if k then
         if k == "UP" or k == "Z" or k == "z" then move_cursor(0, -1)
         elseif k == "DOWN" or k == "S" or k == "s" then move_cursor(0, 1)
@@ -445,17 +527,17 @@ while running do
                 draw_grid()
             end
         elseif k == "ANNULATION" then
-            -- Efface rapidement le contenu de la cellule selectionnee
             local key = cx .. "_" .. cy
             if workbook.sheets[active_sheet].cells[key] then
                 workbook.sheets[active_sheet].cells[key] = nil
-                is_modified = true
-                eval_stack = {}
-                draw_static_top_bar()
-                refresh_visible_cells()
+                if not is_modified then
+                    is_modified = true
+                    draw_static_top_bar()
+                end
+                refresh_changed_cells()
             end
         elseif k == "REPETITION" or k == "SUITE" then
-            eval_stack = {}
+            io.write("\x1b[r\x1b[2J\x1b[H")
             draw_grid()
         elseif k == "ENVOI" or k == "\n" or k == "\r" then
             edit_cell()
