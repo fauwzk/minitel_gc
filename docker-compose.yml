@@ -1,4 +1,5 @@
 services:
+  # 1. Serveur Backend 3615 PICTO (Minitel + Client Web CRT)
   pictochat:
     image: python:3.12-alpine
     container_name: minitel-pictochat
@@ -11,4 +12,25 @@ services:
       - PYTHONUNBUFFERED=1
     ports:
       - "8085:8085"
-    command: [ "python3", "/app/server_pictochat.py" ]
+    command: ["python3", "/app/server_pictochat.py"]
+
+  # 2. Passerelle Bot Discord <-> Salon D du PictoChat
+  discord-bridge:
+    image: python:3.12-alpine
+    container_name: minitel-discord-bridge
+    restart: unless-stopped
+    depends_on:
+      - pictochat
+    working_dir: /app
+    volumes:
+      - ./discord_bridge.py:/app/discord_bridge.py:ro
+      - ./data:/data
+    environment:
+      - TZ=Europe/Paris
+      - PYTHONUNBUFFERED=1
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - PICTO_URL=http://pictochat:8085
+      - PICTO_ROOM=D
+      - BOT_PSEUDO=DISCORD
+    command: >
+      sh -c "pip install --no-cache-dir discord.py && python3 /app/discord_bridge.py"
