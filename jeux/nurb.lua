@@ -1,5 +1,5 @@
 -- @GENRE: COURSE / SIMULATION AUTO
--- @DESC: Domptez les 20,8 km de la Nordschleife en Touristenfahrten. Gerez freins, pneus, meteo et signez le record BTG !
+-- @DESC: Domptez les 20,8 km de la Nordschleife avec 8 autos (Twingo, 725tds, V8 US, Marbella...). Gerez freins, pneus et record BTG !
 
 local minitel = require("minitel")
 minitel.init()
@@ -8,30 +8,73 @@ math.randomseed(os.time())
 
 local REC_FILE = "jeux/nordschleife.rec"
 
+-- =====================================================================
+-- 1. LES 8 VEHICULES DU PADDOCK TOURISTENFAHRTEN
+-- =====================================================================
 local CARS = {
     {
         id = "MARBELLA",
-        name = "CITADINE 900CC (40 CH - 680 KG)",
-        short = "CITADINE 900CC",
-        base_btg = 670,
+        name = "SEAT MARBELLA 900CC (40 CH - 680 KG)",
+        short = "MARBELLA 900CC",
+        base_btg = 670, -- ~11m10s
+        power = 2, weight = 1, grip = 5,
+        desc = "Poids plume indestructible a lames arriere ! Freins inusables, mais interdit de freiner avant Ex-Muhle."
+    },
+    {
+        id = "TWINGO_1",
+        name = "RENAULT TWINGO 1 CLEON (55 CH - 790 KG)",
+        short = "TWINGO 1 1.2L",
+        base_btg = 635, -- ~10m35s
         power = 3, weight = 2, grip = 6,
-        desc = "Poids plume indestructible ! Freins inusables, mais chaque relance en cote demande une trajectoire parfaite."
+        desc = "Moteur Cleon-Fonte volontaire et empattement ultra-court : elle leve la patte arriere dans Hatzenbach !"
+    },
+    {
+        id = "E38_725TDS",
+        name = "BMW 725TDS E38 (143 CH - 1790 KG)",
+        short = "BMW 725TDS E38",
+        base_btg = 575, -- ~09m35s
+        power = 5, weight = 9, grip = 6,
+        desc = "Le paquebot autoroutier 6 cylindres Turbo Diesel M51 ! Confort royal mais ses 1,8 tonne martyrisent les freins."
+    },
+    {
+        id = "R25_V6T",
+        name = "RENAULT 25 V6 TURBO (205 CH - 1380 KG)",
+        short = "R25 V6 TURBO",
+        base_btg = 530, -- ~08m50s
+        power = 8, weight = 6, grip = 6,
+        desc = "Souffle violent du Garrett T3 sur les roues avant ! Grosse vitesse de pointe dans Kesselchen."
+    },
+    {
+        id = "V6_607",
+        name = "BERLINE ROUTIERE V6 3.0L (210 CH - 1580 KG)",
+        short = "BERLINE V6 24V",
+        base_btg = 535, -- ~08m55s
+        power = 8, weight = 8, grip = 7,
+        desc = "Feulement du V6 24 soupapes et grande stabilite dans Schwedenkreuz, mais attention a la chauffe des freins."
     },
     {
         id = "ZX_SWAP",
-        name = "COMPACTE SWAP 2.2L (170 CH - 1080 KG)",
-        short = "COMPACTE 2.2L",
-        base_btg = 515,
-        power = 7, weight = 5, grip = 8,
-        desc = "Preparation piste equilibree (gestion standalone). Redoutable dans Hatzenbach et Hohe Acht."
+        name = "COMPACTE SWAP 2.2L 16V (170 CH - 1080 KG)",
+        short = "ZX SWAP EW12",
+        base_btg = 505, -- ~08m25s
+        power = 7, weight = 4, grip = 9,
+        desc = "Train arriere autodirectionnel soude au bitume et gestion standalone : l'arme absolue dans le sinueux !"
     },
     {
-        id = "V6_GT",
-        name = "BERLINE ROUTIERE V6 (210 CH - 1580 KG)",
-        short = "BERLINE V6",
-        base_btg = 535,
-        power = 9, weight = 9, grip = 7,
-        desc = "Allonge impressionnante dans Kesselchen et Dottinger Hohe, mais attention au fading des freins !"
+        id = "CORVETTE_C4",
+        name = "CORVETTE C4 V8 5.7L TPI (300 CH - 1490 KG)",
+        short = "CORVETTE V8 US",
+        base_btg = 490, -- ~08m10s
+        power = 9, weight = 7, grip = 7,
+        desc = "Couple camionesque du Small-Block V8 americain ! Delicat sous la pluie de l'Eifel mais terrifiant en ligne droite."
+    },
+    {
+        id = "PORSCHE_964",
+        name = "COUPÉ FLAT-6 3.6L RS (260 CH - 1220 KG)",
+        short = "FLAT-6 3.6 RS",
+        base_btg = 472, -- ~07m52s
+        power = 9, weight = 4, grip = 9,
+        desc = "Moteur en porte-a-faux arriere et freinage inepuisable. Exigeante dans Flugplatz mais royale au chrono !"
     }
 }
 
@@ -148,17 +191,21 @@ local SECTORS = {
     }
 }
 
-local records = {
-    MARBELLA = { time = 665.4, driver = "FANTOME_52" },
-    ZX_SWAP  = { time = 508.2, driver = "FANTOME_52" },
-    V6_GT    = { time = 524.8, driver = "FANTOME_52" }
-}
+-- =====================================================================
+-- 2. GESTION DES RECORDS BTG SUR DISQUE
+-- =====================================================================
+local records = {}
+for _, c in ipairs(CARS) do
+    records[c.id] = { time = c.base_btg - 4.5, driver = "FANTOME_52" }
+end
 
 local function load_records()
     local f = loadfile(REC_FILE)
     if f then
         local ok, data = pcall(f)
-        if ok and type(data) == "table" then records = data end
+        if ok and type(data) == "table" then
+            for k, v in pairs(data) do records[k] = v end
+        end
     end
 end
 
@@ -182,16 +229,24 @@ local function format_btg(sec)
 end
 
 -- =====================================================================
--- SELECTION DU VEHICULE (DELTA-DRAWING ULTRA-LEGER)
+-- 3. SELECTION DU VEHICULE (LISTE DEFILANTE 8 VOITURES EN DELTA-DRAWING)
 -- =====================================================================
 local function choose_car_and_setup()
     local cur = 1
+    local offset = 0
+    local max_vis = 4
 
-    local function draw_car_row(idx)
+    local function draw_visible_slot(slot)
+        local idx = offset + slot
         local c = CARS[idx]
-        local y = 4 + (idx * 2)
-        local rec = records[c.id] and format_btg(records[c.id].time) or "AUCUN"
-        local line = string.format(" %d. %-38s | RECORD: %s (%s)", idx, c.name, rec, string.sub(records[c.id].driver, 1, 10))
+        local y = 4 + (slot * 2)
+        if not c then
+            io.write(string.format("\x1b[%d;3H%s", y, string.rep(" ", 76)))
+            return
+        end
+        local rec_obj = records[c.id] or { time = c.base_btg, driver = "AUCUN" }
+        local rec = format_btg(rec_obj.time)
+        local line = string.format(" %d. %-39s | BTG: %s (%s)", idx, c.name, rec, string.sub(rec_obj.driver, 1, 9))
         if idx == cur then
             io.write(string.format("\x1b[%d;3H\x1b[7m>%s<\x1b[0m", y, minitel.pad(line, 74)))
         else
@@ -201,8 +256,9 @@ local function choose_car_and_setup()
 
     local function update_specs()
         local sel = CARS[cur]
-        io.write(string.format("\x1b[17;4HVOITURE : \x1b[1m%-28s\x1b[0m | PUISSANCE: %d/10 | CHASSIS: %d/10",
-            sel.short, sel.power, sel.grip))
+        local leg = 11 - sel.weight
+        io.write(string.format("\x1b[17;4H\x1b[1m%-18s\x1b[0m | MOTEUR: %02d/10 | LEGERETE: %02d/10 | CHASSIS: %02d/10",
+            sel.short, sel.power, leg, sel.grip))
         local d_lines = minitel.wrap(sel.desc, 72, 2)
         io.write("\x1b[19;4H" .. minitel.pad(d_lines[1], 72))
         io.write("\x1b[20;4H" .. minitel.pad(d_lines[2], 72))
@@ -211,28 +267,43 @@ local function choose_car_and_setup()
 
     io.write("\x1b[r\x1b[2J\x1b[H")
     minitel.sleep(0.04)
-    io.write("\x1b[1;1H\x1b[7m" .. minitel.center("* * *  3615 NORDSCHLEIFE - PADDOCK TOURISTENFAHRTEN  * * *", 80) .. "\x1b[0m")
-    minitel.draw_window(2, 3, 78, 11, "CHOIX DU VEHICULE POUR LE TOUR BTG (20.8 KM)")
-    minitel.draw_window(2, 15, 78, 8, "FICHE TECHNIQUE DU VEHICULE SELECTIONNE")
-    io.write("\x1b[24;1H\x1b[7m  [Z/S] CHOISIR AUTO   |   [ENVOI] VALIDER & REGLER   |   [RETOUR] QUITTER      \x1b[0m")
+    io.write("\x1b[1;1H\x1b[7m" .. minitel.center("* * *  3615 NORDSCHLEIFE - PADDOCK TOURISTENFAHRTEN (8 AUTOS)  * * *", 80) .. "\x1b[0m")
+    minitel.draw_window(2, 3, 78, 11, "CHOIX DU VEHICULE POUR LE TOUR BTG (FLECHES Z/S POUR DEFILER)")
+    minitel.draw_window(2, 15, 78, 8, "FICHE TECHNIQUE & COMPORTEMENT SUR L'EIFEL")
+    io.write("\x1b[24;1H\x1b[7m  [Z/S] DEFILER LES 8 AUTOS  |  [ENVOI] VALIDER & PNEUS  |  [RETOUR] QUITTER    \x1b[0m")
 
-    for i = 1, #CARS do draw_car_row(i) end
+    for s = 1, max_vis do draw_visible_slot(s) end
     update_specs()
 
     while true do
         local k = minitel.get_key()
         if k == "RETOUR" or k == "ESC" then return nil, nil
-        elseif k == "UP" or k == "Z" or k == "z" then
-            local old = cur
-            cur = (cur > 1) and (cur - 1) or #CARS
-            draw_car_row(old)
-            draw_car_row(cur)
-            update_specs()
-        elseif k == "DOWN" or k == "S" or k == "s" then
-            local old = cur
-            cur = (cur < #CARS) and (cur + 1) or 1
-            draw_car_row(old)
-            draw_car_row(cur)
+        elseif k == "UP" or k == "Z" or k == "z" or k == "DOWN" or k == "S" or k == "s" then
+            local is_up = (k == "UP" or k == "Z" or k == "z")
+            local old_c, old_off = cur, offset
+            if is_up then
+                if cur > 1 then
+                    cur = cur - 1
+                    if cur <= offset then offset = cur - 1 end
+                else
+                    cur = #CARS
+                    offset = math.max(0, #CARS - max_vis)
+                end
+            else
+                if cur < #CARS then
+                    cur = cur + 1
+                    if cur > offset + max_vis then offset = cur - max_vis end
+                else
+                    cur = 1; offset = 0
+                end
+            end
+
+            if offset ~= old_off then
+                for s = 1, max_vis do draw_visible_slot(s) end
+            else
+                draw_visible_slot(old_c - offset)
+                draw_visible_slot(cur - offset)
+            end
             update_specs()
         elseif k == "ENVOI" or k == " " then
             minitel.play_sound("pickup")
@@ -250,7 +321,7 @@ local function choose_car_and_setup()
 end
 
 -- =====================================================================
--- MOTEUR DE COURSE SECTEUR PAR SECTEUR
+-- 4. MOTEUR DE COURSE SECTEUR PAR SECTEUR
 -- =====================================================================
 local function run_lap(car, semi_slick)
     local tire_hp   = 100

@@ -1,5 +1,5 @@
 -- @TYPE: TABLEUR / FINANCES
--- @DESC: Tableur dynamique multi-feuilles avec cache differentiel ultra-rapide et formules.
+-- @DESC: Tableur multi-feuilles adapte au clavier Minitel (Mots-cles CALC, PLUS, FOIS, SOMME A1 A B5, EQ, GT, LT sans symboles !).
 
 local minitel = require("minitel")
 minitel.init()
@@ -19,18 +19,16 @@ local filename = ""
 local is_modified = false
 local running = true
 
--- Navigation et Vue
-local cx, cy = 1, 1         -- Curseur absolu (A1 = 1,1)
-local view_x, view_y = 1, 1 -- Offset de l'ecran
+local cx, cy = 1, 1
+local view_x, view_y = 1, 1
 local COL_WIDTH = 9
-local VISIBLE_COLS = 7      -- A a G
+local VISIBLE_COLS = 7
 local VISIBLE_ROWS = 18
 
--- Caches memoire pour eviter les recalculs et les envois serie inutiles
 local eval_stack = {}
-local val_cache = {}        -- Cache des valeurs calculees
-local screen_cache = {}     -- Cache de ce qui est actuellement affiche a l'ecran
-local last_formula_len = 0  -- Longueur du dernier texte dans la barre de formule
+local val_cache = {}
+local screen_cache = {}
+local last_formula_len = 0
 
 local function invalidate_calc_cache()
     eval_stack = {}
@@ -38,7 +36,7 @@ local function invalidate_calc_cache()
 end
 
 -- =====================================================================
--- MOTEUR D'EVALUATION DES FORMULES (AVEC MEMOISATION)
+-- MOTEUR D'EVALUATION DES FORMULES (AVEC SYNTAXE CLAVIER MINITEL !)
 -- =====================================================================
 local col_name_cache = {}
 local function col_name(x)
@@ -64,6 +62,72 @@ local function parse_ref(ref)
     return x, tonumber(row_str)
 end
 
+-- Detecte si une chaine est une formule (commence par '=' ou 'CALC ' ou 'EQ ')
+local function is_formula_str(raw)
+    if not raw then return false end
+    local up = string.upper(raw)
+    return string.sub(up, 1, 1) == "=" or up:match("^CALC%s+") or up:match("^EQ%s+")
+end
+
+-- Traduit la syntaxe Minitel sans symboles en expression Lua valide !
+local function translate_minitel_formula(raw)
+    local f = string.upper(raw)
+    -- Retire le prefixe '=', 'CALC ' ou 'EQ '
+    f = f:gsub("^=", ""):gsub("^CALC%s+", ""):gsub("^EQ%s+", "")
+
+    -- 1. Fonctions de plages sans parentheses ni guillemets ni ':'
+    -- Ex: "SOMME A1 A B5" ou "SOMME(A1:B5)" ou "SOMME A1:B5" -> SOMME("A1:B5")
+    for _, fn in ipairs({"SOMME", "MOYENNE", "MIN", "MAX"}) do
+        f = f:gsub(fn .. "%s*%(?%s*\"?([A-Z]+%d+)%s+A%s+([A-Z]+%d+)\"?%s*%)?", fn .. "('%1:%2')")
+        f = f:gsub(fn .. "%s*%(?%s*\"?([A-Z]+%d+)%s*:%s*([A-Z]+%d+)\"?%s*%)?", fn .. "('%1:%2')")
+    end
+
+    -- 2. Reference inter-feuilles sans '!' : "FEUIL1 DE A1" -> "FEUIL1!A1"
+    f = f:gsub("([%w_]+)%s+DE%s+([A-Z]+%d+)", "%1!%2")
+
+    -- 3. Structure conditionnelle : "SI <cond> ALORS <vrai> SINON <faux>"
+    f = f:gsub("^SI%s+(.+)%s+ALORS%s+(.+)%s+SINON%s+(.+)$", "((%1) and (%2) or (%3))")
+
+    -- 4. Operateurs mathematiques et logiques en toutes lettres (entoures d'espaces)
+    f = " " .. f .. " "
+    f = f:gsub("%s+PLUS%s+", " + ")
+    f = f:gsub("%s+MOINS%s+", " - ")
+    f = f:gsub("%s+MINUS%s+", " - ")
+    f = f:gsub("%s+FOIS%s+", " * ")
+    f = f:gsub("%s+MUL%s+", " * ")
+    f = f:gsub("%s+DIV%s+", " / ")
+    f = f:gsub("%s+MOD%s+", " %% ")
+    f = f:gsub("%s+POW%s+", " ^ ")
+
+    f = f:gsub("%s+NEQ%s+", " ~= ")
+    f = f:gsub("<>", " ~= ")
+    f = f:gsub("%s+LE%s+", " <= ")
+    f = f:gsub("%s+GE%s+", " >= ")
+    f = f:gsub("%s+LT%s+", " < ")
+    f = f:gsub("%s+GT%s+", " > ")
+    f = f:gsub("%s+EQ%s+", " == ")
+    f = f:gsub("%s+ET%s+", " and ")
+    f = f:gsub("%s+AND%s+", " and ")
+    f = f:gsub("%s+OU%s+", " or ")
+    f = f:gsub("%s+OR%s+", " or ")
+
+    -- 5. Remplacement des cellules (en protégeant d'abord les plages 'A1:B5')
+    local saved_ranges = {}
+    f = f:gsub("'([A-Z]+%d+:[A-Z]+%d+)'", function(r)
+        table.insert(saved_ranges, r)
+        return "__RNG" .. #saved_ranges .. "__"
+    end)
+
+    f = f:gsub("([%w_]+)!([A-Z]+%d+)", "V('%2', '%1')")
+    f = f:gsub("([A-Z]+%d+)", "V('%1')")
+
+    f = f:gsub("__RNG(%d+)__", function(idx)
+        return "'" .. (saved_ranges[tonumber(idx)] or "") .. "'"
+    end)
+
+    return f
+end
+
 local eval_env = {}
 
 local function get_cell_val_by_xy(x, y, sheet_idx)
@@ -83,7 +147,7 @@ local function get_cell_val_by_xy(x, y, sheet_idx)
         return 0
     end
 
-    if string.sub(raw, 1, 1) ~= "=" then
+    if not is_formula_str(raw) then
         local v = tonumber(raw) or raw
         val_cache[cache_key] = v
         return v
@@ -92,15 +156,25 @@ local function get_cell_val_by_xy(x, y, sheet_idx)
     if eval_stack[cache_key] then return "#REF!" end
     eval_stack[cache_key] = true
 
-    local formula = string.sub(raw, 2)
-    formula = string.gsub(formula, "([%w_]+)!([A-Z]+%d+)", "V('%2', '%1')")
-    formula = string.gsub(formula, "([A-Z]+%d+)", "V('%1')")
-
-    local func = load("return " .. formula, "calc", "t", eval_env)
+    local lua_expr = translate_minitel_formula(raw)
+    local func = load("return " .. lua_expr, "calc", "t", eval_env)
     local result = "#ERR!"
     if func then
         local ok, val = pcall(func)
-        if ok then result = val end
+        if ok then
+            if type(val) == "boolean" then
+                result = val and "VRAI" or "FAUX"
+            elseif type(val) == "number" then
+                -- Arrondi propre a 2 decimales si flottant
+                if val % 1 ~= 0 then
+                    result = tonumber(string.format("%.2f", val))
+                else
+                    result = val
+                end
+            else
+                result = val
+            end
+        end
     end
 
     eval_stack[cache_key] = nil
@@ -122,9 +196,12 @@ end
 
 eval_env.V = get_cell_val
 eval_env.math = math
+eval_env.RACINE = math.sqrt
+eval_env.ABS = math.abs
+eval_env.ENT = math.floor
 
 eval_env.SOMME = function(range)
-    local start_ref, end_ref = string.match(range, "^([A-Z]+%d+):([A-Z]+%d+)$")
+    local start_ref, end_ref = string.match(tostring(range), "^([A-Z]+%d+):([A-Z]+%d+)$")
     if not start_ref then return 0 end
     local x1, y1 = parse_ref(start_ref)
     local x2, y2 = parse_ref(end_ref)
@@ -141,7 +218,7 @@ eval_env.SOMME = function(range)
 end
 
 eval_env.MOYENNE = function(range)
-    local start_ref, end_ref = string.match(range, "^([A-Z]+%d+):([A-Z]+%d+)$")
+    local start_ref, end_ref = string.match(tostring(range), "^([A-Z]+%d+):([A-Z]+%d+)$")
     if not start_ref then return 0 end
     local x1, y1 = parse_ref(start_ref)
     local x2, y2 = parse_ref(end_ref)
@@ -157,7 +234,41 @@ eval_env.MOYENNE = function(range)
             end
         end
     end
-    return count > 0 and (total / count) or 0
+    return count > 0 and tonumber(string.format("%.2f", total / count)) or 0
+end
+
+eval_env.MIN = function(range)
+    local start_ref, end_ref = string.match(tostring(range), "^([A-Z]+%d+):([A-Z]+%d+)$")
+    if not start_ref then return 0 end
+    local x1, y1 = parse_ref(start_ref)
+    local x2, y2 = parse_ref(end_ref)
+    if not x1 or not x2 then return 0 end
+
+    local m = nil
+    for y = math.min(y1, y2), math.max(y1, y2) do
+        for x = math.min(x1, x2), math.max(x1, x2) do
+            local val = get_cell_val_by_xy(x, y, active_sheet)
+            if type(val) == "number" and (m == nil or val < m) then m = val end
+        end
+    end
+    return m or 0
+end
+
+eval_env.MAX = function(range)
+    local start_ref, end_ref = string.match(tostring(range), "^([A-Z]+%d+):([A-Z]+%d+)$")
+    if not start_ref then return 0 end
+    local x1, y1 = parse_ref(start_ref)
+    local x2, y2 = parse_ref(end_ref)
+    if not x1 or not x2 then return 0 end
+
+    local m = nil
+    for y = math.min(y1, y2), math.max(y1, y2) do
+        for x = math.min(x1, x2), math.max(x1, x2) do
+            local val = get_cell_val_by_xy(x, y, active_sheet)
+            if type(val) == "number" and (m == nil or val > m) then m = val end
+        end
+    end
+    return m or 0
 end
 
 -- =====================================================================
@@ -171,7 +282,7 @@ local function get_formatted_cell_text(x, y)
     if not raw then return EMPTY_CELL_TEXT end
 
     local val
-    if string.sub(raw, 1, 1) == "=" then
+    if is_formula_str(raw) then
         val = get_cell_val_by_xy(x, y, active_sheet)
     else
         val = tonumber(raw) or raw
@@ -187,7 +298,6 @@ local function get_formatted_cell_text(x, y)
     end
 end
 
--- Dessine une seule cellule (sans flush systematique si batch=true)
 local function draw_cell(x, y, is_highlighted, no_flush)
     if x < view_x or x >= view_x + VISIBLE_COLS then return end
     if y < view_y or y >= view_y + VISIBLE_ROWS then return end
@@ -213,7 +323,6 @@ local function draw_static_top_bar()
     io.write("\x1b[1;1H\x1b[7m" .. minitel.pad(title, 80) .. "\x1b[0m")
 end
 
--- Barre de formule ultra-legere (n'utilise plus \x1b[K, efface juste les caracteres en trop !)
 local function update_formula_bar(no_flush)
     local key = cx .. "_" .. cy
     local raw = workbook.sheets[active_sheet].cells[key] or ""
@@ -231,7 +340,6 @@ local function update_formula_bar(no_flush)
     if not no_flush then io.flush() end
 end
 
--- Ne redessine QUE les cellules dont le resultat visuel a change !
 local function refresh_changed_cells()
     invalidate_calc_cache()
     for y = view_y, view_y + VISIBLE_ROWS - 1 do
@@ -248,7 +356,6 @@ local function refresh_changed_cells()
     io.flush()
 end
 
--- Rendu complet de la grille en UNE SEULE PASSE bufferisee (3x plus rapide !)
 local function draw_grid()
     invalidate_calc_cache()
     screen_cache = {}
@@ -259,7 +366,6 @@ local function draw_grid()
         fname, active_sheet, #workbook.sheets, workbook.sheets[active_sheet].name)
     table.insert(out, "\x1b[1;1H\x1b[7m" .. minitel.pad(title, 80) .. "\x1b[0m")
 
-    -- Entete des colonnes (Ligne 3)
     local col_hdr = {"\x1b[3;1H    |"}
     for i = 0, VISIBLE_COLS - 1 do
         local col_c = col_name(view_x + i)
@@ -268,7 +374,6 @@ local function draw_grid()
     table.insert(out, table.concat(col_hdr))
     table.insert(out, "\x1b[4;1H" .. string.rep("-", 79))
 
-    -- Lignes 5 a 22 : On assemble chaque ligne avec ses valeurs directement !
     for i = 0, VISIBLE_ROWS - 1 do
         local r = view_y + i
         local row_buf = { string.format("\x1b[%d;1H\x1b[7m %02d \x1b[0m|", 5 + i, r) }
@@ -285,13 +390,50 @@ local function draw_grid()
         table.insert(out, table.concat(row_buf))
     end
 
-    table.insert(out, "\x1b[24;1H\x1b[7m  [ENTREE] EDITER | [REPETITION] CALCULER | [< >] FEUILLES | [RETOUR] MENU    \x1b[0m")
+    table.insert(out, "\x1b[24;1H\x1b[7m [ENVOI] EDITER | [F] FORMULE | [H] AIDE SYNTAXE | [SUITE] FEUILLE | [RETOUR]   \x1b[0m")
 
-    -- Un seul io.write massif pour tout l'ecran !
     io.write(table.concat(out))
     last_formula_len = 78
     update_formula_bar(true)
     io.flush()
+end
+
+-- =====================================================================
+-- AIDE-MEMOIRE SYNTAXE CLAVIER MINITEL (TOUCHE H OU GUIDE)
+-- =====================================================================
+local function show_syntax_help()
+    io.write("\x1b[r\x1b[2J\x1b[H")
+    minitel.sleep(0.04)
+    minitel.draw_window(4, 2, 74, 21, "AIDE SYNTAXE CLAVIER MINITEL (SANS SYMBOLES !)")
+
+    io.write("\x1b[4;7H\x1b[1m1. DEMARRER UNE FORMULE :\x1b[0m")
+    io.write("\x1b[5;9HAppuyez sur \x1b[7m [F] \x1b[0m sur une case, ou commencez par \x1b[1mCALC \x1b[0m (ou \x1b[1m=\x1b[0m).")
+
+    io.write("\x1b[7;7H\x1b[1m2. OPERATEURS EN TOUTES LETTRES :\x1b[0m")
+    io.write("\x1b[8;9HAddition / Soustraction : \x1b[7m PLUS \x1b[0m / \x1b[7m MOINS \x1b[0m  (Ex: \x1b[1mCALC A1 PLUS B1\x1b[0m)")
+    io.write("\x1b[9;9HMultiplication / Divis. : \x1b[7m FOIS \x1b[0m / \x1b[7m DIV \x1b[0m    (Ex: \x1b[1mCALC A1 FOIS 1.2\x1b[0m)")
+    io.write("\x1b[10;9HComparaisons            : \x1b[7m EQ \x1b[0m(=) \x1b[7m NEQ \x1b[0m(<>) \x1b[7m LT \x1b[0m(<) \x1b[7m GT \x1b[0m(>) \x1b[7m LE \x1b[0m \x1b[7m GE \x1b[0m")
+
+    io.write("\x1b[12;7H\x1b[1m3. PLAGES DE CELLULES (SANS PARENTHESES NI GUILLEMETS) :\x1b[0m")
+    io.write("\x1b[13;9HSomme de A1 a A10   : \x1b[1mCALC SOMME A1 A A10\x1b[0m")
+    io.write("\x1b[14;9HMoyenne de B1 a B8  : \x1b[1mCALC MOYENNE B1 A B8\x1b[0m")
+    io.write("\x1b[15;9HMin / Max d'une zone: \x1b[1mCALC MIN A1 A A10\x1b[0m  ou  \x1b[1mCALC MAX A1 A A10\x1b[0m")
+
+    io.write("\x1b[17;7H\x1b[1m4. CONDITIONS & MULTI-FEUILLES :\x1b[0m")
+    io.write("\x1b[18;9HCondition SI : \x1b[1mCALC SI A1 GT 100 ALORS 50 SINON 0\x1b[0m")
+    io.write("\x1b[19;9HAutre feuille: \x1b[1mCALC FEUIL1 DE B4 FOIS 1.20\x1b[0m")
+    io.write("\x1b[20;9HChanger page : Touche \x1b[7m [SUITE] \x1b[0m (ou touche \x1b[1mN\x1b[0m = Suivante / \x1b[1mP\x1b[0m = Prec.)")
+
+    io.write("\x1b[24;1H\x1b[7m                    APPUYEZ SUR [ENVOI] OU [RETOUR] POUR FERMER                 \x1b[0m")
+    io.flush()
+
+    while true do
+        local k = minitel.get_key()
+        if k == "ENVOI" or k == "RETOUR" or k == "ESC" or k == " " then break end
+        minitel.sleep(0.02)
+    end
+    io.write("\x1b[r\x1b[2J\x1b[H")
+    draw_grid()
 end
 
 -- =====================================================================
@@ -319,10 +461,10 @@ local function move_cursor(dx, dy)
     end
 end
 
-local function edit_cell()
+local function edit_cell(start_prefix)
     local key = cx .. "_" .. cy
     local old_val = workbook.sheets[active_sheet].cells[key] or ""
-    local val = old_val
+    local val = start_prefix or old_val
     local ref_str = "[" .. col_name(cx) .. cy .. "] "
 
     local function draw_edit_line()
@@ -338,6 +480,8 @@ local function edit_cell()
         local k = minitel.get_key()
         if k then
             if k == "ENVOI" or k == "\n" or k == "\r" then
+                -- Convertit la virgule decimale francaise (ex: 12,5) en point (12.5)
+                val = val:gsub("(%d),(%d)", "%1.%2")
                 if val ~= old_val then
                     if not is_modified then
                         is_modified = true
@@ -348,7 +492,6 @@ local function edit_cell()
                     else
                         workbook.sheets[active_sheet].cells[key] = val
                     end
-                    -- Ne rafraichit que la ou les cellules impactees !
                     refresh_changed_cells()
                 else
                     update_formula_bar()
@@ -367,7 +510,7 @@ local function edit_cell()
                 end
             elseif string.match(k, "^[%w%s%p_%.%-=+!:]$") and #k == 1 then
                 if #val < 65 then
-                    val = val .. k
+                    val = val .. string.upper(k)
                     draw_edit_line()
                 end
             end
@@ -516,16 +659,29 @@ while running do
         elseif k == "DOWN" or k == "S" or k == "s" then move_cursor(0, 1)
         elseif k == "LEFT" or k == "Q" or k == "q" then move_cursor(-1, 0)
         elseif k == "RIGHT" or k == "D" or k == "d" then move_cursor(1, 0)
-        elseif k == "<" then
+
+        -- Changement de feuille sans '<' ni '>' : touche [SUITE] ou 'N' / 'P'
+        elseif k == "<" or k == "P" or k == "p" then
             if active_sheet > 1 then
                 active_sheet = active_sheet - 1
                 draw_grid()
             end
-        elseif k == ">" then
+        elseif k == ">" or k == "N" or k == "n" or k == "SUITE" then
             if active_sheet < #workbook.sheets then
                 active_sheet = active_sheet + 1
-                draw_grid()
+            else
+                active_sheet = 1
             end
+            draw_grid()
+
+        -- Raccourci [F] : Ouvre l'edition en pre-remplissant "CALC " (ou "=") !
+        elseif k == "F" or k == "f" then
+            edit_cell("CALC ")
+
+        -- Aide syntaxe Minitel : Touche [H] ou [GUIDE]
+        elseif k == "H" or k == "h" or k == "GUIDE" then
+            show_syntax_help()
+
         elseif k == "ANNULATION" then
             local key = cx .. "_" .. cy
             if workbook.sheets[active_sheet].cells[key] then
@@ -536,11 +692,11 @@ while running do
                 end
                 refresh_changed_cells()
             end
-        elseif k == "REPETITION" or k == "SUITE" then
+        elseif k == "REPETITION" then
             io.write("\x1b[r\x1b[2J\x1b[H")
             draw_grid()
         elseif k == "ENVOI" or k == "\n" or k == "\r" then
-            edit_cell()
+            edit_cell(nil)
         elseif k == "RETOUR" or k == "ESC" then
             handle_menu()
         end
