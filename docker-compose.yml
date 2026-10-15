@@ -1,0 +1,14 @@
+services:
+  pictochat:
+    image: python:3.12-alpine
+    container_name: minitel-pictochat
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./server.py:/app/server_pictochat.py:ro
+    environment:
+      - TZ=Europe/Paris
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8085:8085"
+    command: [ "python3", "/app/server_pictochat.py" ]
