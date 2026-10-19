@@ -1,5 +1,5 @@
 -- @TYPE: DEVELOPPEMENT / EXEC
--- @DESC: Interpreteur et environnement d'execution pour vos programmes ecrits en langage BASIC.
+-- @DESC: Interpreteur BASIC V6.0 avec GPIO, generateur PWM (0-100%), Frequence (Hz), lecture ADC analogique et moniteur temps reel.
 
 local minitel = require("minitel")
 minitel.init()
@@ -11,7 +11,258 @@ local program = {}
 local vars = {}
 local current_filename = nil
 local is_modified = false
-local key_buffer = nil -- Le tampon Minitel
+local key_buffer = nil
+
+-- =====================================================================
+-- 1. PILOTE MATERIEL GPIO, PWM, FREQUENCE & ADC (RASPBERRY PI)
+-- =====================================================================
+-- Broches protegees : GPIO 14 (UART TX) et GPIO 15 (UART RX) pour le Minitel
+local PROTECTED_PINS = { [14] = true, [15] = true }
+local pin_states = {}
+local pin_modes  = {}
+local pwm_duties = {} -- Stocke le % PWM actif par broche
+local pwm_freqs  = {} -- Stocke la frequence Hz par broche
+local sim_adc    = { [0] = 512, [1] = 256, [2] = 0, [3] = 1023 }
+
+local function detect_gpio_backend()
+    local f1 = io.popen("which pinctrl 2>/dev/null")
+    if f1 then
+        local r = f1:read("*l"); f1:close()
+        if r and r ~= "" then return "pinctrl" end
+    end
+    local f2 = io.popen("which raspi-gpio 2>/dev/null")
+    if f2 then
+        local r = f2:read("*l"); f2:close()
+        if r and r ~= "" then return "raspi-gpio" end
+    end
+    return "sysfs"
+end
+
+local function detect_pigpio()
+    local f = io.popen("pigs t 2>/dev/null")
+    if f then
+        local r = f:read("*l"); f:close()
+        if r and tonumber(r) then return true end
+    end
+    return false
+end
+
+local GPIO_BACKEND = detect_gpio_backend()
+local HAS_PIGPIO   = detect_pigpio()
+local sysfs_exported = {}
+
+local function sysfs_ensure_export(pin)
+    if sysfs_exported[pin] then return end
+    local check = io.open("/sys/class/gpio/gpio" .. pin .. "/value", "r")
+    if check then
+        check:close()
+        sysfs_exported[pin] = true
+        return
+    end
+    local f = io.open("/sys/class/gpio/export", "w")
+    if f then
+        f:write(tostring(pin))
+        f:close()
+        minitel.sleep(0.03)
+    end
+    sysfs_exported[pin] = true
+end
+
+-- Arrete proprement tout oscillateur PWM logiciel sur une broche
+local function stop_pin_pwm(pin)
+    pwm_duties[pin] = nil
+    pwm_freqs[pin]  = nil
+    local pid_file = "/tmp/minitel_pwm_" .. pin .. ".pid"
+    local f = io.open(pid_file, "r")
+    if f then
+        local pid = f:read("*l")
+        f:close()
+        if pid and pid ~= "" then
+            os.execute("kill -9 " .. pid .. " 2>/dev/null")
+        end
+        os.remove(pid_file)
+    end
+    if HAS_PIGPIO then
+        os.execute(string.format("pigs p %d 0 2>/dev/null", pin))
+    end
+end
+
+local function stop_all_pwm()
+    for p = 2, 27 do
+        if pwm_duties[p] or pwm_freqs[p] then
+            stop_pin_pwm(p)
+        end
+    end
+    os.execute("rm -f /tmp/minitel_pwm_*.pid 2>/dev/null")
+end
+
+local function gpio_mode(pin, mode_str)
+    pin = math.floor(tonumber(pin) or -1)
+    if pin < 2 or pin > 27 or PROTECTED_PINS[pin] then return false end
+    stop_pin_pwm(pin)
+
+    local m = tostring(mode_str):upper()
+    local is_out = (m == "1" or m == "OUT" or m == "OUTPUT")
+    local is_pu  = (m == "2" or m == "PU"  or m == "PULLUP")
+    local is_pd  = (m == "3" or m == "PD"  or m == "PULLDOWN")
+
+    pin_modes[pin] = is_out and "OUT" or "IN"
+
+    if GPIO_BACKEND == "pinctrl" then
+        local mode_arg = is_out and "op" or (is_pu and "ip pu" or (is_pd and "ip pd" or "ip pn"))
+        os.execute(string.format("pinctrl set %d %s >/dev/null 2>&1", pin, mode_arg))
+    elseif GPIO_BACKEND == "raspi-gpio" then
+        local mode_arg = is_out and "op" or (is_pu and "ip pu" or (is_pd and "ip pd" or "ip pn"))
+        os.execute(string.format("raspi-gpio set %d %s >/dev/null 2>&1", pin, mode_arg))
+    else
+        sysfs_ensure_export(pin)
+        local f = io.open("/sys/class/gpio/gpio" .. pin .. "/direction", "w")
+        if f then f:write(is_out and "out" or "in"); f:close() end
+    end
+    return true
+end
+
+local function gpio_write(pin, val)
+    pin = math.floor(tonumber(pin) or -1)
+    if pin < 2 or pin > 27 or PROTECTED_PINS[pin] then return false end
+    stop_pin_pwm(pin)
+
+    local high = (tonumber(val) or 0) ~= 0
+    pin_states[pin] = high and 1 or 0
+
+    if pin_modes[pin] ~= "OUT" then gpio_mode(pin, "OUT") end
+
+    if GPIO_BACKEND == "pinctrl" then
+        os.execute(string.format("pinctrl set %d op %s >/dev/null 2>&1", pin, high and "dh" or "dl"))
+    elseif GPIO_BACKEND == "raspi-gpio" then
+        os.execute(string.format("raspi-gpio set %d op %s >/dev/null 2>&1", pin, high and "dh" or "dl"))
+    else
+        sysfs_ensure_export(pin)
+        local f = io.open("/sys/class/gpio/gpio" .. pin .. "/value", "w")
+        if f then f:write(high and "1" or "0"); f:close() end
+    end
+    return true
+end
+
+local function gpio_read(pin)
+    pin = math.floor(tonumber(pin) or -1)
+    if pin < 0 or pin > 27 then return 0 end
+
+    if GPIO_BACKEND == "pinctrl" then
+        local f = io.popen(string.format("pinctrl get %d 2>/dev/null", pin))
+        if f then
+            local out = f:read("*a") or ""; f:close()
+            return out:find("| hi") and 1 or 0
+        end
+    elseif GPIO_BACKEND == "raspi-gpio" then
+        local f = io.popen(string.format("raspi-gpio get %d 2>/dev/null", pin))
+        if f then
+            local out = f:read("*a") or ""; f:close()
+            return tonumber(out:match("level=(%d)")) or 0
+        end
+    else
+        sysfs_ensure_export(pin)
+        local f = io.open("/sys/class/gpio/gpio" .. pin .. "/value", "r")
+        if f then
+            local v = f:read("*l"); f:close()
+            return tonumber(v) or 0
+        end
+    end
+    return 0
+end
+
+-- Demarre un signal PWM (duty = 0..100%) et/ou une frequence en Hz sur une broche
+local function gpio_pwm(pin, duty_pct, freq_hz)
+    pin = math.floor(tonumber(pin) or -1)
+    if pin < 2 or pin > 27 or PROTECTED_PINS[pin] then return false end
+
+    duty_pct = math.max(0, math.min(100, tonumber(duty_pct) or 0))
+    freq_hz  = math.max(1, math.min(2000, tonumber(freq_hz) or 100))
+
+    stop_pin_pwm(pin)
+
+    if duty_pct <= 0 then
+        gpio_write(pin, 0)
+        return true
+    elseif duty_pct >= 100 then
+        gpio_write(pin, 1)
+        pwm_duties[pin] = 100
+        return true
+    end
+
+    pwm_duties[pin] = math.floor(duty_pct)
+    pwm_freqs[pin]  = math.floor(freq_hz)
+
+    -- 1. Si le demon DMA pigpiod est actif, on l'utilise (precision microseconde !)
+    if HAS_PIGPIO then
+        local duty_255 = math.floor((duty_pct / 100.0) * 255)
+        os.execute(string.format("pigs pfs %d %d >/dev/null 2>&1 && pigs p %d %d >/dev/null 2>&1",
+            pin, math.floor(freq_hz), pin, duty_255))
+        return true
+    end
+
+    -- 2. Sinon, oscillateur PWM logiciel en tache de fond autonome
+    gpio_mode(pin, "OUT")
+    local period = 1.0 / freq_hz
+    local t_on   = string.format("%.4f", period * (duty_pct / 100.0))
+    local t_off  = string.format("%.4f", period * (1.0 - duty_pct / 100.0))
+    local pid_file = "/tmp/minitel_pwm_" .. pin .. ".pid"
+
+    local set_hi, set_lo
+    if GPIO_BACKEND == "pinctrl" then
+        set_hi = string.format("pinctrl set %d op dh", pin)
+        set_lo = string.format("pinctrl set %d op dl", pin)
+    elseif GPIO_BACKEND == "raspi-gpio" then
+        set_hi = string.format("raspi-gpio set %d op dh", pin)
+        set_lo = string.format("raspi-gpio set %d op dl", pin)
+    else
+        sysfs_ensure_export(pin)
+        set_hi = string.format("echo 1 > /sys/class/gpio/gpio%d/value", pin)
+        set_lo = string.format("echo 0 > /sys/class/gpio/gpio%d/value", pin)
+    end
+
+    local cmd = string.format(
+        "(while true; do %s; sleep %s; %s; sleep %s; done) >/dev/null 2>&1 & echo $! > %s",
+        set_hi, t_on, set_lo, t_off, pid_file
+    )
+    os.execute(cmd)
+    return true
+end
+
+-- Lecture Analogique ADC (Canal 0 a 7) :
+-- 1. Tente de lire un vrai ADC I2C/SPI via Linux IIO (/sys/bus/iio/devices/iio:device0/in_voltageX_raw)
+-- 2. Sinon tente de lire /tmp/adcX (injectable par un script externe / ESP32)
+-- 3. Sinon renvoie la valeur d'emulation SETADC
+local function adc_read(chan)
+    chan = math.floor(tonumber(chan) or 0)
+    local iio_path = string.format("/sys/bus/iio/devices/iio:device0/in_voltage%d_raw", chan)
+    local f1 = io.open(iio_path, "r")
+    if f1 then
+        local v = tonumber(f1:read("*l") or "0")
+        f1:close()
+        if v then return v end
+    end
+
+    local tmp_path = string.format("/tmp/adc%d", chan)
+    local f2 = io.open(tmp_path, "r")
+    if f2 then
+        local v = tonumber(f2:read("*l") or "0")
+        f2:close()
+        if v then return v end
+    end
+
+    return sim_adc[chan] or 0
+end
+
+local function read_cpu_temp()
+    local f = io.open("/sys/class/thermal/thermal_zone0/temp", "r")
+    if f then
+        local raw = tonumber(f:read("*l") or "0") or 0
+        f:close()
+        return math.floor((raw / 100.0) + 0.5) / 10.0
+    end
+    return 0
+end
 
 local function check_break()
     local k = minitel.get_key()
@@ -23,15 +274,32 @@ local function check_break()
 end
 
 -- =====================================================================
--- EVALUATEUR MATHEMATIQUE INTEGRE
+-- 2. EVALUATEUR MATHEMATIQUE & ENTREES (IN / ADC / TEMP / MKEY)
 -- =====================================================================
 local function eval_expr(expr)
     local e = string.upper(expr)
+
+    -- Support sans parentheses pour le clavier Minitel :
+    -- Ex: "IN 27" -> "IN(27)", "ADC 0" -> "ADC(0)", "ANALOG 1" -> "ADC(1)"
+    e = e:gsub("%f[%a]IN%s+(%d+)", "IN(%1)")
+    e = e:gsub("%f[%a]PEEK%s+(%d+)", "PEEK(%1)")
+    e = e:gsub("%f[%a]ADC%s+(%d+)", "ADC(%1)")
+    e = e:gsub("%f[%a]ANALOG%s+(%d+)", "ADC(%1)")
+    e = e:gsub("%f[%a]RND%s+(%d+)", "RND(%1)")
+    e = e:gsub("%f[%a]MKEY%f[%A]%s*([^(]?)", function(next_c)
+        if next_c == "(" then return "MKEY(" end
+        return "MKEY() " .. next_c
+    end)
+    e = e:gsub("%f[%a]TEMP%f[%A]%s*([^(]?)", function(next_c)
+        if next_c == "(" then return "TEMP(" end
+        return "TEMP() " .. next_c
+    end)
+
     e = string.gsub(e, "<>", "~=")
     e = string.gsub(e, "<=", "<=")
     e = string.gsub(e, ">=", ">=")
     e = string.gsub(e, "=", "==")
-    e = string.gsub(e, "====", "==") 
+    e = string.gsub(e, "====", "==")
 
     e = string.gsub(e, "%a+", function(w)
         if w == "EQ" then return "==" end
@@ -40,14 +308,17 @@ local function eval_expr(expr)
         if w == "GT" then return ">" end
         if w == "LE" then return "<=" end
         if w == "GE" then return ">=" end
-        if w == "PLUS" then return "+" end
-        if w == "MINUS" then return "-" end
+        if w == "PLUS" or w == "FOIS" then return (w == "PLUS" and "+" or "*") end
+        if w == "MINUS" or w == "MOINS" then return "-" end
         if w == "MUL" then return "*" end
         if w == "DIV" then return "/" end
         if w == "MOD" then return "%" end
-        
+        if w == "IN" or w == "PEEK" then return "gpio_in" end
+        if w == "ADC" or w == "ANALOG" then return "adc_in" end
+        if w == "TEMP" then return "cpu_temp" end
+
         local reserved = {
-            AND=1, OR=1, NOT=1, RND=1, MKEY=1, 
+            AND=1, OR=1, NOT=1, RND=1, MKEY=1,
             SIN=1, COS=1, TAN=1, ABS=1, SQR=1, INT=1, PI=1, EXP=1, LOG=1
         }
         if reserved[w] then return string.lower(w) end
@@ -56,9 +327,12 @@ local function eval_expr(expr)
 
     local env = {
         rnd = function(max) return math.random(1, math.floor(max or 10)) end,
+        gpio_in = function(pin) return gpio_read(pin) end,
+        adc_in  = function(ch)  return adc_read(ch) end,
+        cpu_temp = function() return read_cpu_temp() end,
         mkey = function()
             local k = key_buffer
-            key_buffer = nil 
+            key_buffer = nil
             if not k then k = minitel.get_key() end
             if not k then return 0 end
             if k == "UP" or k == "Z" or k == "z" then return 200 end
@@ -86,14 +360,14 @@ local function eval_expr(expr)
 end
 
 -- =====================================================================
--- LECTURE DU CLAVIER (AVEC GESTION DE CURSEUR ET EDITION)
+-- 3. LECTURE DU CLAVIER (AVEC GESTION DE CURSEUR ET EDITION)
 -- =====================================================================
 local function input_string(prompt, initial_text)
     io.write(prompt)
     local str = initial_text or ""
     if str ~= "" then io.write(str) end
     io.flush()
-    
+
     local pos = #str
 
     while true do
@@ -105,19 +379,26 @@ local function input_string(prompt, initial_text)
                 return string.upper(str)
             elseif k == "RETOUR" or k == "ESC" then
                 return "ABORT"
-            elseif k == "LEFT" or k == "Q" then
+            elseif k == "LEFT" then
                 if pos > 0 then
                     pos = pos - 1
                     io.write("\x1b[D")
                     io.flush()
                 end
-            elseif k == "RIGHT" or k == "D" then
+            elseif k == "RIGHT" then
                 if pos < #str then
                     pos = pos + 1
                     io.write("\x1b[C")
                     io.flush()
                 end
-            elseif k == "CORRECTION" or k == "ANNULATION" or k == "\x08" or k == "\x7f" then
+            elseif k == "ANNULATION" then
+                if #str > 0 then
+                    io.write(string.rep("\x1b[D", pos) .. string.rep(" ", #str) .. string.rep("\x1b[D", #str))
+                    str = ""
+                    pos = 0
+                    io.flush()
+                end
+            elseif k == "CORRECTION" or k == "\x08" or k == "\x7f" then
                 if pos > 0 then
                     local left = string.sub(str, 1, pos - 1)
                     local right = string.sub(str, pos + 1)
@@ -149,26 +430,116 @@ local function input_string(prompt, initial_text)
 end
 
 -- =====================================================================
--- MISE A JOUR DE L'INTERFACE
+-- 4. MISE A JOUR DE L'INTERFACE & MONITEUR GPIO / PWM / ADC ('GPIOMON')
 -- =====================================================================
 local function update_ui()
     io.write("\x1b7\x1b[s")
-    io.write("\x1b[3;24r") 
-    io.write("\x1b[1;1H\x1b[7m MICRO-BASIC TELETEL V4.0               [EXIT] OU [RETOUR] POUR QUITTER \x1b[K\x1b[0m")
+    io.write("\x1b[3;24r")
+    io.write("\x1b[1;1H\x1b[7m MICRO-BASIC TELETEL V6.0 (GPIO/PWM/ADC)   [EXIT] OU [RETOUR] QUITTER \x1b[K\x1b[0m")
     local count = 0
     for _ in pairs(program) do count = count + 1 end
     local fname = current_filename or "SANS NOM"
     local mod_star = is_modified and "*" or ""
-    local status_text = string.format(" LIGNES : %03d | FICHIER : %s%s | TAPEZ 'HELP' ", count, fname, mod_star)
-    status_text = string.sub(status_text, 1, 78)
-    io.write("\x1b[2;1H\x1b[7m" .. status_text .. "\x1b[K\x1b[0m")
+    local status_text = string.format(" LIGNES:%03d | FICHIER:%s%s | PILOTE:%s | 'HELP' / 'GPIOMON' ",
+        count, fname, mod_star, GPIO_BACKEND:upper())
+    io.write("\x1b[2;1H\x1b[7m" .. minitel.pad(status_text, 80) .. "\x1b[0m")
     io.write("\x1b8\x1b[u")
     io.flush()
 end
 
+local MONITORED_PINS = {2, 3, 4, 17, 27, 22, 10, 9, 11, 5, 6, 13, 19, 26, 18, 23, 24, 25, 8, 7, 12, 16, 20, 21}
+
+local function run_gpio_monitor()
+    local function draw_mon_static()
+        io.write("\x1b[r\x1b[2J\x1b[H")
+        minitel.sleep(0.04)
+        io.write("\x1b[1;1H\x1b[7m" .. minitel.center("* * *  MICRO-BASIC - MONITEUR GPIO, PWM & ENTREES ANALOGIQUES  * * *", 80) .. "\x1b[0m")
+        minitel.draw_window(2, 3, 78, 19, "ETAT DES BROCHES BCM & CONVERTISSEUR ADC (PILOTE: " .. GPIO_BACKEND:upper() .. ")")
+        io.write("\x1b[24;1H\x1b[7m [T] BASCULER 0/1 | [P] TESTER PWM % | [A] SIMULER ADC | [S] STOP PWM | [ESC]   \x1b[0m")
+    end
+
+    local function refresh_pins()
+        for idx, pin in ipairs(MONITORED_PINS) do
+            local col_group = math.floor((idx - 1) / 8)
+            local row_offset = ((idx - 1) % 8)
+            local x = 4 + col_group * 25
+            local y = 5 + row_offset
+            if row_offset >= 4 then y = y + 1 end
+
+            local badge
+            if pwm_duties[pin] then
+                badge = string.format("\x1b[7m[PWM %3d%% %dHz]\x1b[0m", pwm_duties[pin], pwm_freqs[pin] or 100)
+            else
+                local lvl = gpio_read(pin)
+                badge = (lvl == 1) and "\x1b[7m [ 1 / 3.3V ] \x1b[0m" or " [ 0 / GND  ] "
+            end
+            io.write(string.format("\x1b[%d;%dHGPIO %02d:%s", y, x, pin, badge))
+        end
+
+        io.write("\x1b[16;4H--------------------------------------------------------------------------")
+        io.write(string.format("\x1b[17;4HCANAUX ANALOGIQUES : ADC0=\x1b[1m%04d\x1b[0m | ADC1=\x1b[1m%04d\x1b[0m | ADC2=\x1b[1m%04d\x1b[0m | ADC3=\x1b[1m%04d\x1b[0m",
+            adc_read(0), adc_read(1), adc_read(2), adc_read(3)))
+        io.write(string.format("\x1b[19;4HTEMP. CPU RASPBERRY PI : \x1b[1m%.1f C\x1b[0m  | UART MINITEL : GPIO 14/15 PROTEGES", read_cpu_temp()))
+        io.flush()
+    end
+
+    draw_mon_static()
+    refresh_pins()
+    local last_t = os.time()
+
+    while true do
+        if os.time() - last_t >= 1 then
+            last_t = os.time()
+            refresh_pins()
+        end
+        local k = minitel.get_key()
+        if k then
+            local ku = string.upper(k)
+            if k == "RETOUR" or k == "ESC" then break
+            elseif k == " " then refresh_pins()
+            elseif ku == "S" then
+                stop_all_pwm()
+                minitel.play_sound("hit")
+                refresh_pins()
+            elseif ku == "T" then
+                local p_str = minitel.input_box("BASCULER BROCHE 0/1", "Numero BCM de la broche (ex: 17) :", "17", 4)
+                local p_num = tonumber(p_str)
+                if p_num and not PROTECTED_PINS[p_num] then
+                    local cur = gpio_read(p_num)
+                    gpio_write(p_num, (cur == 1) and 0 or 1)
+                end
+                draw_mon_static(); refresh_pins()
+            elseif ku == "P" then
+                local p_str = minitel.input_box("SIGNAL PWM SUR BROCHE", "Numero BCM de la broche (ex: 18) :", "18", 4)
+                local d_str = minitel.input_box("RAPPORT CYCLIQUE PWM", "Pourcentage de 0 a 100 % :", "50", 4)
+                local p_num, d_num = tonumber(p_str), tonumber(d_str)
+                if p_num and d_num and not PROTECTED_PINS[p_num] then
+                    gpio_pwm(p_num, d_num, 100)
+                end
+                draw_mon_static(); refresh_pins()
+            elseif ku == "A" then
+                local c_str = minitel.input_box("SIMULATION ENTREE ADC", "Canal ADC (0 a 3) :", "0", 2)
+                local v_str = minitel.input_box("VALEUR ANALOGIQUE", "Valeur (ex: 0 a 1023) :", "512", 6)
+                local c_num, v_num = tonumber(c_str), tonumber(v_str)
+                if c_num and v_num then sim_adc[c_num] = v_num end
+                draw_mon_static(); refresh_pins()
+            end
+        end
+        minitel.sleep(0.02)
+    end
+end
+
 -- =====================================================================
--- MOTEUR D'EXECUTION DES LIGNES
+-- 5. MOTEUR D'EXECUTION DES LIGNES BASIC
 -- =====================================================================
+local function parse_two_args(str)
+    local a, b = string.match(str, "^(.-)%s*,%s*(.*)$")
+    if not a then
+        a, b = string.match(str, "^(%S+)%s+(.+)$")
+    end
+    return a, b
+end
+
 local function execute_line(line)
     local outside_quotes = string.gsub(line, '([^"]*)', function(s) return string.upper(s) end)
     line = string.match(outside_quotes, "^%s*(.-)%s*$")
@@ -204,6 +575,82 @@ local function execute_line(line)
         io.flush()
         return "OK"
 
+    -- =================================================================
+    -- COMMANDES GPIO, PWM, FREQUENCE & ADC
+    -- =================================================================
+    elseif cmd == "PINMODE" then
+        local p_str, m_str = parse_two_args(rest)
+        if not p_str or not m_str then return "SYNTAX ERROR" end
+        local pin = math.floor(eval_expr(p_str))
+        local m_trim = string.match(m_str, "^%s*(%S+)%s*$") or "IN"
+        if m_trim ~= "IN" and m_trim ~= "OUT" and m_trim ~= "PU" and m_trim ~= "PD" then
+            m_trim = tostring(math.floor(eval_expr(m_str)))
+        end
+        gpio_mode(pin, m_trim)
+        return "OK"
+
+    elseif cmd == "OUT" or cmd == "POKE" or cmd == "GPIOOUT" then
+        local p_str, v_str = parse_two_args(rest)
+        if not p_str or not v_str then return "SYNTAX ERROR" end
+        gpio_write(math.floor(eval_expr(p_str)), math.floor(eval_expr(v_str)))
+        return "OK"
+
+    elseif cmd == "TOGGLE" then
+        local pin = math.floor(eval_expr(rest))
+        if pin >= 2 and pin <= 27 then
+            local cur = pin_states[pin]
+            if cur == nil then cur = gpio_read(pin) end
+            gpio_write(pin, (cur == 1) and 0 or 1)
+            return "OK"
+        end
+        return "SYNTAX ERROR"
+
+    elseif cmd == "PULSE" then
+        local p_str, d_str = parse_two_args(rest)
+        if not p_str or not d_str then return "SYNTAX ERROR" end
+        local pin = math.floor(eval_expr(p_str))
+        local dur = tonumber(eval_expr(d_str)) or 0.2
+        gpio_write(pin, 1)
+        minitel.sleep(math.max(0.01, math.min(10.0, dur)))
+        gpio_write(pin, 0)
+        return "OK"
+
+    elseif cmd == "PWM" then
+        -- Syntaxe : PWM 18 50 (Rapport cyclique 0 a 100% a 100 Hz)
+        local p_str, d_str = parse_two_args(rest)
+        if not p_str or not d_str then return "SYNTAX ERROR" end
+        local pin  = math.floor(eval_expr(p_str))
+        local duty = tonumber(eval_expr(d_str)) or 0
+        gpio_pwm(pin, duty, pwm_freqs[pin] or 100)
+        return "OK"
+
+    elseif cmd == "FREQ" then
+        -- Syntaxe : FREQ 18 250 (Signal carre 50% a 250 Hz, ou FREQ 18 0 pour couper)
+        local p_str, f_str = parse_two_args(rest)
+        if not p_str or not f_str then return "SYNTAX ERROR" end
+        local pin = math.floor(eval_expr(p_str))
+        local hz  = tonumber(eval_expr(f_str)) or 0
+        if hz <= 0 then
+            stop_pin_pwm(pin)
+            gpio_write(pin, 0)
+        else
+            gpio_pwm(pin, pwm_duties[pin] or 50, hz)
+        end
+        return "OK"
+
+    elseif cmd == "PWMSTOP" then
+        stop_all_pwm()
+        return "OK"
+
+    elseif cmd == "SETADC" then
+        -- Syntaxe : SETADC 0 512 (Definit une valeur d'emulation pour ADC 0)
+        local c_str, v_str = parse_two_args(rest)
+        if not c_str or not v_str then return "SYNTAX ERROR" end
+        local ch  = math.floor(eval_expr(c_str))
+        local val = tonumber(eval_expr(v_str)) or 0
+        sim_adc[ch] = val
+        return "OK"
+
     elseif cmd == "LET" then
         local v, val = string.match(rest, "^(%a+)%s*=%s*(.*)$")
         if not v then v, val = string.match(rest, "^(%a+)%s+EQ%s+(.*)$") end
@@ -211,7 +658,7 @@ local function execute_line(line)
         return "OK"
 
     elseif cmd == "INPUT" then
-        key_buffer = nil 
+        key_buffer = nil
         local v = string.match(rest, "^(%a+)$")
         if v then
             local res = input_string("? ")
@@ -223,11 +670,11 @@ local function execute_line(line)
     elseif cmd == "GOTO" then
         local target = tonumber(eval_expr(rest))
         if target then return "GOTO", target else return "SYNTAX ERROR" end
-        
+
     elseif cmd == "GOSUB" then
         local target = tonumber(eval_expr(rest))
         if target then return "GOSUB", target else return "SYNTAX ERROR" end
-        
+
     elseif cmd == "RETURN" then return "RETURN"
 
     elseif cmd == "IF" then
@@ -254,13 +701,14 @@ local function execute_line(line)
     elseif cmd == "WHILE" then return "WHILE", eval_expr(rest) ~= 0
     elseif cmd == "WEND" then return "WEND"
     elseif cmd == "CLEAR" then
+        stop_all_pwm()
         program = {}; vars = {}; current_filename = nil; is_modified = false; return "OK"
     elseif cmd == "CLS" then
         io.write("\x1b[2J"); update_ui(); io.write("\x1b[3;1H"); io.flush(); return "OK"
     elseif cmd == "BEEP" then minitel.play_sound("hit"); return "OK"
 
     elseif cmd == "LOCATE" then
-        local str_x, str_y = string.match(rest, "^(.-)%s*,%s*(.*)$")
+        local str_x, str_y = parse_two_args(rest)
         if str_x and str_y then
             local x = math.max(1, math.min(80, math.floor(eval_expr(str_x))))
             local y = math.max(1, math.min(24, math.floor(eval_expr(str_y))))
@@ -284,7 +732,7 @@ local function execute_line(line)
             end
         else return "SYNTAX ERROR" end
         return "OK"
-        
+
     elseif cmd == "END" then return "END"
     elseif cmd == "STOP" then return "STOP"
     elseif cmd == "REM" then return "OK" end
@@ -297,7 +745,7 @@ local function execute_line(line)
 end
 
 -- =====================================================================
--- BOUCLE D'EXECUTION GLOBALE
+-- 6. BOUCLE D'EXECUTION GLOBALE
 -- =====================================================================
 local function run_program()
     local sorted_lines = {}
@@ -305,7 +753,7 @@ local function run_program()
     table.sort(sorted_lines)
 
     local pc = 1
-    local loop_stack = {} 
+    local loop_stack = {}
     local gosub_stack = {}
 
     while pc <= #sorted_lines do
@@ -350,7 +798,7 @@ local function run_program()
                 while wend_pc <= #sorted_lines do
                     local wline = string.match(string.upper(program[sorted_lines[wend_pc]]), "^%s*(.-)%s*$")
                     if string.match(wline, "^WHILE") then nest = nest + 1 end
-                    if string.match(wline, "^WEND") then 
+                    if string.match(wline, "^WEND") then
                         nest = nest - 1; if nest == 0 then found = true; break end
                     end
                     wend_pc = wend_pc + 1
@@ -367,62 +815,63 @@ local function run_program()
 end
 
 -- =====================================================================
--- ECRAN D'AIDE (LE GUIDE COMPLET)
+-- 7. ECRAN D'AIDE COMPLET (SYSTEME, GPIO, PWM, ADC, SYNTAXE MINITEL)
 -- =====================================================================
 local function show_help()
     io.write("\x1b[r\x1b[2J\x1b[H")
     local help_lines = {
-        "\x1b[1m === SYSTEME ========================== \x1b[0m", 
-        " RUN        : Execute le code        NEW/CLEAR  : Efface la memoire",
-        " LIST       : Affiche le code        DIR        : Fichiers locaux", 
-        " EDIT X     : Edite la ligne X       SAVE \"N\"   : Sauvegarde (ex: SAVE \"JEU\")", 
-        " STOP / END : Arrete l'execution     LOAD \"N\"   : Charge un fichier",
+        "\x1b[1m === 1. COMMANDES DU SHELL ============= \x1b[0m",
+        " RUN        : Execute le programme   NEW / CLEAR: Efface code + coupe PWM",
+        " LIST       : Affiche le code        DIR        : Liste les fichiers .bas",
+        " EDIT X     : Edite la ligne X       SAVE NOM   : Sauvegarde (sans \"\")",
+        " STOP / END : Arrete l'execution     LOAD NOM   : Charge un programme",
+        " GPIOMON    : Moniteur visuel temps reel (GPIO, PWM % et Canaux ADC) !",
         "",
-        "\x1b[1m === INSTRUCTIONS ET VARIABLES ======== \x1b[0m", 
-        " PRINT      : Affiche texte/var. (Ex: PRINT \"X=\" ; X)",
-        "              (Terminer par ';' empeche le saut de ligne)",
-        " INPUT X    : Met en pause et demande de taper une valeur", 
-        " LET X = 5  : Assigne une valeur (ou juste X = 5)",
-        " PAUSE X    : Met le programme en pause X secondes",
-        " REM        : Ligne de commentaire (ignoree par le systeme)",
+        "\x1b[1m === 2. GPIO NUMERIQUE (BROCHES BCM) === \x1b[0m",
+        " PINMODE P M: Mode de la broche P -> OUT (Sortie), IN, PU (PullUp), PD",
+        "              Ex: PINMODE 17 OUT   ou   PINMODE 27 PU",
+        " OUT P V    : Met la broche P a 1 (3.3V) ou 0 (GND). Alias: POKE P V",
+        "              Ex: OUT 17 1   (Allume LED/Relais sur GPIO 17)",
+        " TOGGLE P   : Inverse l'etat logique 0/1 de la broche P (Ex: TOGGLE 17)",
+        " PULSE P D  : Impulsion a 1 sur la broche P pendant D sec (Ex: PULSE 17 0.5)",
+        " IN P       : Lit l'etat (0 ou 1) de la broche P (Aussi: IN(P) ou PEEK P)",
+        "              Ex: IF IN 27 EQ 0 THEN PRINT \"BOUTON PRESSE\"",
         "",
-        "\x1b[1m === CONDITIONS ET BOUCLES ============ \x1b[0m", 
-        " IF..THEN   : Ex: IF X >= 5 THEN PRINT \"GAGNE\" ELSE GOTO 10", 
-        " Operateurs : = (ou EQ), <> (ou NEQ), < (LT), > (GT), <= (LE), >= (GE)",
-        " Logique    : AND, OR, NOT",
-        " GOTO X     : Saute directement a la ligne X",
-        " GOSUB X    : Saute a la ligne X, et revient avec RETURN", 
-        " FOR..NEXT  : Ex: FOR I=1 TO 5 (puis) NEXT I",
-        " WHILE..WEND: Ex: WHILE X < 10 (puis) WEND",
+        "\x1b[1m === 3. PWM, FREQUENCE & ANALOGIQUE ==== \x1b[0m",
+        " PWM P R    : Signal PWM sur broche P avec rapport cyclique R (0 a 100 %)",
+        "              Ex: PWM 18 75  (Module la broche 18 a 75%) | PWM 18 0 (Stop)",
+        " FREQ P HZ  : Signal carre continu sur broche P en Hertz (Compteur/Buzzer)",
+        "              Ex: FREQ 18 150 (150 Hz continu) | FREQ 18 0 (Coupe signal)",
+        " PWMSTOP    : Coupe immediatement tous les signaux PWM et FREQ actifs",
+        " ADC C      : Lit le canal analogique C (0-7) via I2C IIO ou /tmp/adcC",
+        "              Ex: V EQ ADC 0   (Aussi ecrit : V = ANALOG(0))",
+        " SETADC C V : Simule la valeur V sur le canal ADC C pour tester son code",
+        " TEMP       : Renvoie la temperature du processeur Raspberry Pi en C",
         "",
-        "\x1b[1m === ECRAN MINITEL ET CLAVIER ========= \x1b[0m", 
-        " CLS        : Efface l'ecran et replace le curseur",
-        " LOCATE X,Y : Place le curseur (Colonnes 1-80, Lignes 3-24)",
-        " INVERT/NORM: Bascule en texte inverse (Noir sur Blanc)",
-        " BEEP       : Emet un bip sonore",
-        " MKEY()     : Lit la touche pressee SANS bloquer le programme.",
-        "              (Haut:200, Bas:201, Gauche:202, Droite:203, Envoi:13)",
+        "\x1b[1m === 4. SYNTAXE SANS SYMBOLES MINITEL == \x1b[0m",
+        " Affectation: X EQ 10 (remplace X = 10) | FOR I EQ 1 TO 10",
+        " Comparaison: EQ (=), NEQ (<>), LT (<), GT (>), LE (<=), GE (>=)",
+        " Calculs    : PLUS (+), MOINS (-), FOIS ou MUL (*), DIV (/), MOD (%)",
+        " Logique    : AND, OR, NOT | Conditions : IF ... THEN ... ELSE ...",
+        " Boucles    : FOR..NEXT, WHILE..WEND, GOTO X, GOSUB X / RETURN",
         "",
-        "\x1b[1m === MATHEMATIQUES ==================== \x1b[0m", 
-        " RND(X)     : Tire un nombre au hasard entre 1 et X",
-        " SIN,COS,TAN: Trigonometrie classique (en radians)",
-        " SQR(X)     : Racine carree      ABS(X) : Valeur absolue",
-        " INT(X)     : Partie entiere     X MOD Y: Reste de division",
-        " EXP(X)     : Exponentielle      LOG(X) : Logarithme",
-        " PI         : 3.14159..."
+        "\x1b[1m === 5. AFFICHAGE MINITEL & CLAVIER ==== \x1b[0m",
+        " CLS        : Efface l'ecran         LOCATE X Y : Place le curseur (sans ,)",
+        " INVERT/NORM: Video inverse          BEEP / PAUSE X : Bip / Pause en sec",
+        " MKEY       : Code touche pressee sans bloquer (Haut:200 Bas:201 G:202 D:203)"
     }
 
     local offset = 1; local max_visible = 20
     local max_offset = math.max(1, #help_lines - max_visible + 1)
 
     local function draw_help_screen()
-        io.write("\x1b[1;1H\x1b[7m MICRO-BASIC : LE GUIDE COMPLET     [FLECHES] DEFILER  [RETOUR] QUITTER \x1b[K\x1b[0m\r\n")
+        io.write("\x1b[1;1H\x1b[7m MICRO-BASIC V6.0 : MANUEL COMPLET   [Z/S/FLECHES] DEFILER [RETOUR] FERMER\x1b[K\x1b[0m\r\n")
         for i = 1, max_visible do
             local line_idx = offset + i - 1
             io.write("\x1b[" .. (i + 2) .. ";1H\x1b[K")
             if help_lines[line_idx] then io.write(" " .. help_lines[line_idx]) end
         end
-        io.write("\x1b[24;1H\x1b[7m APPUYEZ SUR [RETOUR] POUR FERMER \x1b[K\x1b[0m")
+        io.write("\x1b[24;1H\x1b[7m LIGNE " .. string.format("%02d/%02d", offset, max_offset) .. " - UTILISEZ LES FLECHES HAUT/BAS OU [RETOUR] POUR QUITTER \x1b[K\x1b[0m")
         io.flush()
     end
 
@@ -433,16 +882,16 @@ local function show_help()
         elseif k == "UP" or k == "Z" or k == "z" then if offset > 1 then offset = offset - 1; draw_help_screen() end
         elseif k == "DOWN" or k == "S" or k == "s" then if offset < max_offset then offset = offset + 1; draw_help_screen() end
         end
-        minitel.sleep(0.05)
+        minitel.sleep(0.03)
     end
 end
 
 -- =====================================================================
--- INVITE DE COMMANDE SHELL
+-- 8. INVITE DE COMMANDE SHELL
 -- =====================================================================
 local function shell()
     io.write("\x1b[2J\x1b[H\x1b[3;24r\x1b[3;1H")
-    io.write("\x1b[7m INITIALISATION DU SYSTEME \x1b[0m\r\nREADY.\r\n")
+    io.write("\x1b[7m MICRO-BASIC V6.0 - GPIO / PWM / FREQ / ADC (" .. GPIO_BACKEND:upper() .. ") \x1b[0m\r\nREADY.\r\n")
     io.flush()
 
     while true do
@@ -451,8 +900,15 @@ local function shell()
 
         if line == "ABORT" then io.write("\r\n")
         elseif line == "" then -- Rien
-        elseif line == "HELP" then show_help(); io.write("\x1b[2J\x1b[3;24r\x1b[3;1HREADY.\r\n"); io.flush()
-        elseif line == "EXIT" or line == "QUIT" then break
+        elseif line == "HELP" or line == "GUIDE" then
+            show_help()
+            io.write("\x1b[2J\x1b[3;24r\x1b[3;1HREADY.\r\n"); io.flush()
+        elseif line == "GPIOMON" then
+            run_gpio_monitor()
+            io.write("\x1b[2J\x1b[3;24r\x1b[3;1HREADY.\r\n"); io.flush()
+        elseif line == "EXIT" or line == "QUIT" then
+            stop_all_pwm()
+            break
         elseif string.match(line, "^EDIT%s+(%d+)") then
             local lnum = tonumber(string.match(line, "^EDIT%s+(%d+)"))
             if program[lnum] then
@@ -471,32 +927,38 @@ local function shell()
             io.flush()
         elseif line == "RUN" then io.write("\x1b[3;24r"); run_program(); io.write("\x1b[KREADY.\r\n"); io.flush()
         elseif line == "NEW" or line == "CLEAR" then
+            stop_all_pwm()
             program = {}; vars = {}; current_filename = nil; is_modified = false; io.write("READY.\r\n"); io.flush()
         elseif line == "DIR" then
             local f = io.popen("ls -1 utils/prog_basic/*.bas 2>/dev/null")
             if f then for file in f:lines() do io.write(string.gsub(file, "utils/prog_basic/", "") .. "\r\n") end; f:close() end
             io.write("READY.\r\n"); io.flush()
-        elseif string.match(line, '^SAVE%s+"(.-)"') then
-            local filename = string.match(line, '^SAVE%s+"(.-)"')
-            local f = io.open("utils/prog_basic/" .. filename .. ".bas", "w")
-            if f then
-                local sl = {}
-                for k in pairs(program) do table.insert(sl, k) end
-                table.sort(sl)
-                for _, l in ipairs(sl) do f:write(l .. " " .. program[l] .. "\n") end
-                f:close(); current_filename = filename; is_modified = false; io.write("SAVED " .. filename .. "\r\n")
+        elseif string.match(line, '^SAVE%s+"?(.-)"?$') then
+            local filename = string.match(line, '^SAVE%s+"?(.-)"?$'):gsub("%s+$", "")
+            if filename ~= "" then
+                local f = io.open("utils/prog_basic/" .. filename .. ".bas", "w")
+                if f then
+                    local sl = {}
+                    for k in pairs(program) do table.insert(sl, k) end
+                    table.sort(sl)
+                    for _, l in ipairs(sl) do f:write(l .. " " .. program[l] .. "\n") end
+                    f:close(); current_filename = filename; is_modified = false; io.write("SAVED " .. filename .. "\r\n")
+                end
             end
             io.flush()
-        elseif string.match(line, '^LOAD%s+"(.-)"') then
-            local filename = string.match(line, '^LOAD%s+"(.-)"')
+        elseif string.match(line, '^LOAD%s+"?(.-)"?$') then
+            local filename = string.match(line, '^LOAD%s+"?(.-)"?$'):gsub("%s+$", "")
             local f = io.open("utils/prog_basic/" .. filename .. ".bas", "r")
             if f then
+                stop_all_pwm()
                 program = {}; vars = {}
                 for fline in f:lines() do
                     local lnum, rest = string.match(fline, "^(%d+)%s*(.*)$")
                     if lnum then program[tonumber(lnum)] = rest end
                 end
                 f:close(); current_filename = filename; is_modified = false; io.write("LOADED " .. filename .. "\r\n")
+            else
+                io.write("FILE NOT FOUND\r\n")
             end
             io.flush()
         else
@@ -515,6 +977,7 @@ end
 
 math.randomseed(os.time())
 shell()
+stop_all_pwm()
 io.write("\x1b[r")
 io.flush()
 minitel.cleanup()
