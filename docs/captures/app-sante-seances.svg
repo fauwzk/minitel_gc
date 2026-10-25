@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="3615 SANTE - seances">
+<rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
+<rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
+<g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
+<rect x="18.0" y="19.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<rect x="18.0" y="38.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="37.2" y="52.0" fill="rgb(18,22,17)" textLength="739.2" lengthAdjust="spacingAndGlyphs">[SYS]         * * *  3615 SANTE - CARNET APPLE HEALTH  * * *         9600 BDS</text>
+<rect x="18.0" y="57.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="286.8" y="71.0" fill="rgb(18,22,17)" textLength="220.8" lengthAdjust="spacingAndGlyphs">41 SEANCES ENREGISTREES</text>
+<text x="37.2" y="90.0" fill="rgb(183,196,177)" textLength="240.0" lengthAdjust="spacingAndGlyphs">[1] JOURNEE   [2] COURBES</text>
+<rect x="296.4" y="76.0" width="124.8" height="19.0" fill="rgb(232,240,228)"/>
+<text x="306.0" y="90.0" fill="rgb(18,22,17)" textLength="105.6" lengthAdjust="spacingAndGlyphs">[3] SEANCES</text>
+<text x="440.4" y="90.0" fill="rgb(183,196,177)" textLength="96.0" lengthAdjust="spacingAndGlyphs">[4] IMPORT</text>
+<text x="603.6" y="90.0" fill="rgb(232,240,228)" font-weight="bold" textLength="172.8" lengthAdjust="spacingAndGlyphs">CARNET : 120 JOURS</text>
+<text x="27.6" y="109.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
+<rect x="37.2" y="95.0" width="729.6" height="19.0" fill="rgb(232,240,228)"/>
+<text x="238.8" y="109.0" fill="rgb(18,22,17)" textLength="326.4" lengthAdjust="spacingAndGlyphs">JOURNAL DES SEANCES D&#x27;ENTRAINEMENT</text>
+<text x="766.8" y="109.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
+<text x="27.6" y="128.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="56.4" y="128.0" fill="rgb(232,240,228)" font-weight="bold" textLength="652.8" lengthAdjust="spacingAndGlyphs">DATE        HEURE  ACTIVITE              DUREE   DISTANCE    ENERGIE</text>
+<text x="766.8" y="128.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="147.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="37.2" y="147.0" fill="rgb(183,196,177)" textLength="729.6" lengthAdjust="spacingAndGlyphs">----------------------------------------------------------------------------</text>
+<text x="766.8" y="147.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<rect x="46.8" y="152.0" width="700.8" height="19.0" fill="rgb(232,240,228)"/>
+<text x="56.4" y="166.0" fill="rgb(18,22,17)" textLength="652.8" lengthAdjust="spacingAndGlyphs">25/10/2026  18:47  COURSE A PIED          0h59   10.17 km   469 kcal</text>
+<text x="757.2" y="166.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">^</text>
+<text x="766.8" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="56.4" y="185.0" fill="rgb(183,196,177)" textLength="652.8" lengthAdjust="spacingAndGlyphs">23/10/2026  16:57  MUSCULATION            0h23         --   248 kcal</text>
+<rect x="757.2" y="171.0" width="9.6" height="19.0" fill="rgb(232,240,228)"/>
+<text x="757.2" y="185.0" fill="rgb(18,22,17)" textLength="9.6" lengthAdjust="spacingAndGlyphs">#</text>
+<text x="766.8" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="56.4" y="204.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">22/10/2026  18:53  YOGA                   1h15         --   651 kcal     :</text>
+<text x="766.8" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="56.4" y="223.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">19/10/2026  15:25  YOGA                   1h05         --   524 kcal     :</text>
+<text x="766.8" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="56.4" y="242.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">17/10/2026  16:02  VELO                   0h58   24.17 km   494 kcal     :</text>
+<text x="766.8" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="56.4" y="261.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">15/10/2026  19:28  NATATION               1h15    2.50 km   667 kcal     :</text>
+<text x="766.8" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="56.4" y="280.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">13/10/2026  07:19  VELO                   1h13   30.42 km   676 kcal     :</text>
+<text x="766.8" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="299.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="56.4" y="299.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">12/10/2026  07:20  YOGA                   0h20         --   211 kcal     :</text>
+<text x="766.8" y="299.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="318.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="56.4" y="318.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">09/10/2026  10:46  NATATION               0h30    1.00 km   210 kcal     :</text>
+<text x="766.8" y="318.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="56.4" y="337.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">07/10/2026  14:35  NATATION               1h03    2.10 km   630 kcal     :</text>
+<text x="766.8" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="356.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="56.4" y="356.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">04/10/2026  11:51  MUSCULATION            1h06         --   593 kcal     v</text>
+<text x="766.8" y="356.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="375.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="37.2" y="375.0" fill="rgb(183,196,177)" textLength="729.6" lengthAdjust="spacingAndGlyphs">----------------------------------------------------------------------------</text>
+<text x="766.8" y="375.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="394.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="123.6" y="394.0" fill="rgb(232,240,228)" font-weight="bold" textLength="556.8" lengthAdjust="spacingAndGlyphs">SEANCE 1/41  |  CUMUL : 35h37  |  258.0 km  |  17 585 kcal</text>
+<text x="766.8" y="394.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="413.0" fill="rgb(232,240,228)" font-weight="bold" textLength="748.8" lengthAdjust="spacingAndGlyphs">+----------------------------------------------------------------------------+</text>
+<rect x="18.0" y="456.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="470.0" fill="rgb(18,22,17)" textLength="748.8" lengthAdjust="spacingAndGlyphs">[Z/S] CHOIX | [ENVOI] VOIR LE JOUR | [1-4] ONGLETS | [SUITE] ONGLET | [RETOUR]</text>
+</g></svg>

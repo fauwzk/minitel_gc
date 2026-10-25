@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="Explorateur de fichiers du SDK">
+<rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
+<rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
+<g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
+<text x="27.6" y="33.0" fill="rgb(232,240,228)" font-weight="bold" textLength="144.0" lengthAdjust="spacingAndGlyphs">3615 MAGIS EDIT</text>
+<text x="622.8" y="33.0" fill="rgb(232,240,228)" font-weight="bold" textLength="124.8" lengthAdjust="spacingAndGlyphs">EDITEUR TEXTE</text>
+<text x="18.0" y="52.0" fill="rgb(183,196,177)" textLength="768.0" lengthAdjust="spacingAndGlyphs">================================================================================</text>
+<text x="152.4" y="90.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
+<rect x="162.0" y="76.0" width="480.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="315.6" y="90.0" fill="rgb(18,22,17)" textLength="163.2" lengthAdjust="spacingAndGlyphs">OUVRIR UN FICHIER</text>
+<text x="642.0" y="90.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
+<text x="152.4" y="109.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="181.2" y="109.0" fill="rgb(183,196,177)" textLength="76.8" lengthAdjust="spacingAndGlyphs">CHEMIN :</text>
+<text x="267.6" y="109.0" fill="rgb(232,240,228)" font-weight="bold" textLength="163.2" lengthAdjust="spacingAndGlyphs">utils/prog_basic/</text>
+<text x="642.0" y="109.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="128.0" fill="rgb(232,240,228)" font-weight="bold" textLength="499.2" lengthAdjust="spacingAndGlyphs">+--------------------------------------------------+</text>
+<text x="152.4" y="147.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<rect x="171.6" y="133.0" width="451.2" height="19.0" fill="rgb(232,240,228)"/>
+<text x="181.2" y="147.0" fill="rgb(18,22,17)" textLength="201.6" lengthAdjust="spacingAndGlyphs">&gt; .. (Dossier Parent)</text>
+<text x="642.0" y="147.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="200.4" y="166.0" fill="rgb(183,196,177)" textLength="86.4" lengthAdjust="spacingAndGlyphs">GRAPH.bas</text>
+<text x="642.0" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="200.4" y="185.0" fill="rgb(183,196,177)" textLength="96.0" lengthAdjust="spacingAndGlyphs">GRAPH2.bas</text>
+<text x="642.0" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="200.4" y="204.0" fill="rgb(183,196,177)" textLength="67.2" lengthAdjust="spacingAndGlyphs">JEU.bas</text>
+<text x="642.0" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="200.4" y="223.0" fill="rgb(183,196,177)" textLength="115.2" lengthAdjust="spacingAndGlyphs">RANDTEST.bas</text>
+<text x="642.0" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="642.0" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="642.0" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="642.0" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="299.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="642.0" y="299.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="318.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="642.0" y="318.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="642.0" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="356.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="642.0" y="356.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="375.0" fill="rgb(232,240,228)" font-weight="bold" textLength="499.2" lengthAdjust="spacingAndGlyphs">+--------------------------------------------------+</text>
+<text x="152.4" y="394.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="181.2" y="394.0" fill="rgb(183,196,177)" textLength="451.2" lengthAdjust="spacingAndGlyphs">[ENVOI] SELECTIONNER     |     [RETOUR] ANNULER</text>
+<text x="642.0" y="394.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="413.0" fill="rgb(232,240,228)" font-weight="bold" textLength="499.2" lengthAdjust="spacingAndGlyphs">+--------------------------------------------------+</text>
+<rect x="18.0" y="456.0" width="758.4" height="19.0" fill="rgb(232,240,228)"/>
+<text x="37.2" y="470.0" fill="rgb(18,22,17)" textLength="681.6" lengthAdjust="spacingAndGlyphs">TAPEZ LE NUMERO DE L&#x27;OPTION SOUHAITEE OU [RETOUR] POUR REVENIR AU TEXTE</text>
+</g></svg>

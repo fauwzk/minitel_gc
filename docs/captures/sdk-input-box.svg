@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="Boite de saisie du SDK">
+<rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
+<rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
+<g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
+<rect x="18.0" y="19.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="152.4" y="33.0" fill="rgb(18,22,17)" textLength="499.2" lengthAdjust="spacingAndGlyphs">* * *  3615 CARBURANT - OBSERVATOIRE DES PRIX  * * *</text>
+<text x="152.4" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
+<rect x="162.0" y="152.0" width="480.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="277.2" y="166.0" fill="rgb(18,22,17)" textLength="240.0" lengthAdjust="spacingAndGlyphs">RECHERCHE PAR CODE POSTAL</text>
+<text x="642.0" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
+<text x="152.4" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="642.0" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="181.2" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="345.6" lengthAdjust="spacingAndGlyphs">Entrez un code postal a 5 chiffres :</text>
+<text x="642.0" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="642.0" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="171.6" y="242.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">&gt;</text>
+<rect x="190.8" y="228.0" width="441.6" height="19.0" fill="rgb(232,240,228)"/>
+<text x="200.4" y="242.0" fill="rgb(18,22,17)" textLength="48.0" lengthAdjust="spacingAndGlyphs">52300</text>
+<text x="642.0" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="642.0" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="162.0" y="280.0" fill="rgb(183,196,177)" textLength="489.6" lengthAdjust="spacingAndGlyphs">[ENVOI] VALIDER  |  [ANNUL.] VIDER  |  [RETOUR] ESC</text>
+<text x="152.4" y="299.0" fill="rgb(232,240,228)" font-weight="bold" textLength="499.2" lengthAdjust="spacingAndGlyphs">+--------------------------------------------------+</text>
+</g></svg>

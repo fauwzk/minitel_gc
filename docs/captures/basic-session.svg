@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="MICRO-BASIC - premiere session">
+<rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
+<rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
+<g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
+<rect x="18.0" y="19.0" width="672.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="33.0" fill="rgb(18,22,17)" textLength="652.8" lengthAdjust="spacingAndGlyphs">MICRO-BASIC TELETEL V6.0 (GPIO/PWM/ADC)   [EXIT] OU [RETOUR] QUITTER</text>
+<rect x="18.0" y="38.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="52.0" fill="rgb(18,22,17)" textLength="633.6" lengthAdjust="spacingAndGlyphs">LIGNES:004 | FICHIER:SANS NOM* | PILOTE:SYSFS | &#x27;HELP&#x27; / &#x27;GPIOMON&#x27;</text>
+<rect x="18.0" y="57.0" width="499.2" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="71.0" fill="rgb(18,22,17)" textLength="480.0" lengthAdjust="spacingAndGlyphs">MICRO-BASIC V6.0 - GPIO / PWM / FREQ / ADC (SYSFS)</text>
+<text x="18.0" y="90.0" fill="rgb(183,196,177)" textLength="57.6" lengthAdjust="spacingAndGlyphs">READY.</text>
+<text x="18.0" y="109.0" fill="rgb(183,196,177)" textLength="240.0" lengthAdjust="spacingAndGlyphs">&gt; PRINT &quot;BONJOUR MINITEL&quot;</text>
+<text x="18.0" y="128.0" fill="rgb(183,196,177)" textLength="144.0" lengthAdjust="spacingAndGlyphs">BONJOUR MINITEL</text>
+<text x="18.0" y="147.0" fill="rgb(183,196,177)" textLength="172.8" lengthAdjust="spacingAndGlyphs">&gt; PRINT 2 + 2 * 10</text>
+<text x="18.0" y="166.0" fill="rgb(183,196,177)" textLength="19.2" lengthAdjust="spacingAndGlyphs">22</text>
+<text x="18.0" y="185.0" fill="rgb(183,196,177)" textLength="67.2" lengthAdjust="spacingAndGlyphs">&gt; X = 7</text>
+<text x="18.0" y="204.0" fill="rgb(183,196,177)" textLength="297.6" lengthAdjust="spacingAndGlyphs">&gt; PRINT &quot;X AU CARRE = &quot; ; X * X</text>
+<text x="18.0" y="223.0" fill="rgb(183,196,177)" textLength="144.0" lengthAdjust="spacingAndGlyphs">X AU CARRE = 49</text>
+<text x="18.0" y="242.0" fill="rgb(183,196,177)" textLength="76.8" lengthAdjust="spacingAndGlyphs">&gt; 10 CLS</text>
+<text x="18.0" y="261.0" fill="rgb(183,196,177)" textLength="182.4" lengthAdjust="spacingAndGlyphs">&gt; 20 FOR I = 1 TO 3</text>
+<text x="18.0" y="280.0" fill="rgb(183,196,177)" textLength="288.0" lengthAdjust="spacingAndGlyphs">&gt; 30 PRINT &quot;LIGNE NUMERO &quot; ; I</text>
+<text x="18.0" y="299.0" fill="rgb(183,196,177)" textLength="105.6" lengthAdjust="spacingAndGlyphs">&gt; 40 NEXT I</text>
+<text x="18.0" y="318.0" fill="rgb(183,196,177)" textLength="57.6" lengthAdjust="spacingAndGlyphs">&gt; LIST</text>
+<text x="18.0" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="19.2" lengthAdjust="spacingAndGlyphs">10</text>
+<text x="46.8" y="337.0" fill="rgb(183,196,177)" textLength="28.8" lengthAdjust="spacingAndGlyphs">CLS</text>
+<text x="18.0" y="356.0" fill="rgb(232,240,228)" font-weight="bold" textLength="19.2" lengthAdjust="spacingAndGlyphs">20</text>
+<text x="46.8" y="356.0" fill="rgb(183,196,177)" textLength="134.4" lengthAdjust="spacingAndGlyphs">FOR I = 1 TO 3</text>
+<text x="18.0" y="375.0" fill="rgb(232,240,228)" font-weight="bold" textLength="19.2" lengthAdjust="spacingAndGlyphs">30</text>
+<text x="46.8" y="375.0" fill="rgb(183,196,177)" textLength="240.0" lengthAdjust="spacingAndGlyphs">PRINT &quot;LIGNE NUMERO &quot; ; I</text>
+<text x="18.0" y="394.0" fill="rgb(232,240,228)" font-weight="bold" textLength="19.2" lengthAdjust="spacingAndGlyphs">40</text>
+<text x="46.8" y="394.0" fill="rgb(183,196,177)" textLength="57.6" lengthAdjust="spacingAndGlyphs">NEXT I</text>
+<text x="18.0" y="413.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">&gt;</text>
+</g></svg>

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="Lanceur 3615 OUTILS">
+<rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
+<rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
+<g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
+<rect x="18.0" y="19.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<rect x="18.0" y="38.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="37.2" y="52.0" fill="rgb(18,22,17)" textLength="739.2" lengthAdjust="spacingAndGlyphs">[SYS]        * * *  3615 MAGIS PRO - POSTE DE TRAVAIL  * * *         9600 BDS</text>
+<rect x="18.0" y="57.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="109.0" fill="rgb(183,196,177)" textLength="748.8" lengthAdjust="spacingAndGlyphs">.----------------------------------.  .--------------------------------------.</text>
+<text x="27.6" y="128.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<rect x="37.2" y="114.0" width="326.4" height="19.0" fill="rgb(232,240,228)"/>
+<text x="94.8" y="128.0" fill="rgb(18,22,17)" textLength="201.6" lengthAdjust="spacingAndGlyphs">REPERTOIRE DES OUTILS</text>
+<text x="363.6" y="128.0" fill="rgb(183,196,177)" textLength="38.4" lengthAdjust="spacingAndGlyphs">|  |</text>
+<rect x="402.0" y="114.0" width="364.8" height="19.0" fill="rgb(232,240,228)"/>
+<text x="478.8" y="128.0" fill="rgb(18,22,17)" textLength="201.6" lengthAdjust="spacingAndGlyphs">FICHE [H: TURBO 1.5S]</text>
+<text x="766.8" y="128.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="147.0" fill="rgb(183,196,177)" textLength="748.8" lengthAdjust="spacingAndGlyphs">|----------------------------------|  |--------------------------------------|</text>
+<text x="27.6" y="166.0" fill="rgb(183,196,177)" textLength="374.4" lengthAdjust="spacingAndGlyphs">|   01. BASIC                     ^|  |</text>
+<text x="488.4" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="211.2" lengthAdjust="spacingAndGlyphs">.--------------------.</text>
+<text x="766.8" y="166.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="185.0" fill="rgb(183,196,177)" textLength="374.4" lengthAdjust="spacingAndGlyphs">|   02. CALC                      :|  |</text>
+<text x="488.4" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="211.2" lengthAdjust="spacingAndGlyphs">| READY.             |</text>
+<text x="766.8" y="185.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="204.0" fill="rgb(183,196,177)" textLength="374.4" lengthAdjust="spacingAndGlyphs">|   03. CAPTURES                  :|  |</text>
+<text x="488.4" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="211.2" lengthAdjust="spacingAndGlyphs">| 10 PRINT &quot;MAGIS&quot;   |</text>
+<text x="766.8" y="204.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="223.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<rect x="37.2" y="209.0" width="326.4" height="19.0" fill="rgb(232,240,228)"/>
+<text x="46.8" y="223.0" fill="rgb(18,22,17)" textLength="316.8" lengthAdjust="spacingAndGlyphs">&gt; 04. CARBURANTS               &lt;#</text>
+<text x="363.6" y="223.0" fill="rgb(183,196,177)" textLength="38.4" lengthAdjust="spacingAndGlyphs">|  |</text>
+<text x="488.4" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="211.2" lengthAdjust="spacingAndGlyphs">| 20 GOTO 10         |</text>
+<text x="766.8" y="223.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="242.0" fill="rgb(183,196,177)" textLength="374.4" lengthAdjust="spacingAndGlyphs">|   05. COMPTA                    :|  |</text>
+<text x="488.4" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="211.2" lengthAdjust="spacingAndGlyphs">&#x27;--------------------&#x27;</text>
+<text x="766.8" y="242.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="261.0" fill="rgb(183,196,177)" textLength="748.8" lengthAdjust="spacingAndGlyphs">|   06. EDIT                      :|  |--------------------------------------|</text>
+<text x="27.6" y="280.0" fill="rgb(183,196,177)" textLength="374.4" lengthAdjust="spacingAndGlyphs">|   07. INFO                      :|  |</text>
+<text x="411.6" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="172.8" lengthAdjust="spacingAndGlyphs">MODULE : BASIC.LUA</text>
+<text x="766.8" y="280.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="299.0" fill="rgb(183,196,177)" textLength="748.8" lengthAdjust="spacingAndGlyphs">|   08. ITINIRAIRE                :|  | FONCT. : DEVELOPPEMENT / EXEC        |</text>
+<text x="27.6" y="318.0" fill="rgb(183,196,177)" textLength="748.8" lengthAdjust="spacingAndGlyphs">|   09. METEO                     :|  |                                      |</text>
+<text x="27.6" y="337.0" fill="rgb(183,196,177)" textLength="748.8" lengthAdjust="spacingAndGlyphs">|   10. PICTO                     :|  | Interpreteur BASIC V6.0 avec GPIO,   |</text>
+<text x="27.6" y="356.0" fill="rgb(183,196,177)" textLength="748.8" lengthAdjust="spacingAndGlyphs">|   11. SANTE                     :|  | generateur PWM (0-100%), Frequence   |</text>
+<text x="27.6" y="375.0" fill="rgb(183,196,177)" textLength="748.8" lengthAdjust="spacingAndGlyphs">|   12. TRACKER                   v|  | (Hz), lecture ADC analogique et      |</text>
+<text x="27.6" y="394.0" fill="rgb(183,196,177)" textLength="748.8" lengthAdjust="spacingAndGlyphs">|----------------------------------|  |--------------------------------------|</text>
+<text x="27.6" y="413.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="114.0" y="413.0" fill="rgb(232,240,228)" font-weight="bold" textLength="144.0" lengthAdjust="spacingAndGlyphs">OUTIL : 04 / 13</text>
+<text x="363.6" y="413.0" fill="rgb(183,196,177)" textLength="412.8" lengthAdjust="spacingAndGlyphs">|  | SELECTION : CARBURANTS.LUA ...       |</text>
+<text x="27.6" y="432.0" fill="rgb(183,196,177)" textLength="748.8" lengthAdjust="spacingAndGlyphs">&#x27;----------------------------------&#x27;  &#x27;--------------------------------------&#x27;</text>
+<rect x="18.0" y="456.0" width="748.8" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="470.0" fill="rgb(18,22,17)" textLength="691.2" lengthAdjust="spacingAndGlyphs">[Z/S] CHOIX | [ENVOI] LANCER | [H] MODE TURBO | [R] SCAN | [RETOUR] MENU</text>
+</g></svg>

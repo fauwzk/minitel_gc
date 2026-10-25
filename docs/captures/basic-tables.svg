@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="Programme TABLES">
+<rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
+<rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
+<g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
+<rect x="18.0" y="19.0" width="672.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="33.0" fill="rgb(18,22,17)" textLength="652.8" lengthAdjust="spacingAndGlyphs">MICRO-BASIC TELETEL V6.0 (GPIO/PWM/ADC)   [EXIT] OU [RETOUR] QUITTER</text>
+<rect x="18.0" y="38.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="52.0" fill="rgb(18,22,17)" textLength="604.8" lengthAdjust="spacingAndGlyphs">LIGNES:012 | FICHIER:TABLES | PILOTE:SYSFS | &#x27;HELP&#x27; / &#x27;GPIOMON&#x27;</text>
+<text x="85.2" y="71.0" fill="rgb(183,196,177)" textLength="172.8" lengthAdjust="spacingAndGlyphs">TABLE DE PYTHAGORE</text>
+<text x="46.8" y="109.0" fill="rgb(183,196,177)" textLength="316.8" lengthAdjust="spacingAndGlyphs">1   2   3   4   5   6   7   8   9</text>
+<text x="46.8" y="128.0" fill="rgb(183,196,177)" textLength="316.8" lengthAdjust="spacingAndGlyphs">2   4   6   8  10  12  14  16  18</text>
+<text x="46.8" y="147.0" fill="rgb(183,196,177)" textLength="316.8" lengthAdjust="spacingAndGlyphs">3   6   9  12  15  18  21  24  27</text>
+<text x="46.8" y="166.0" fill="rgb(183,196,177)" textLength="316.8" lengthAdjust="spacingAndGlyphs">4   8  12  16  20  24  28  32  36</text>
+<text x="46.8" y="185.0" fill="rgb(183,196,177)" textLength="316.8" lengthAdjust="spacingAndGlyphs">5  10  15  20  25  30  35  40  45</text>
+<text x="46.8" y="204.0" fill="rgb(183,196,177)" textLength="316.8" lengthAdjust="spacingAndGlyphs">6  12  18  24  30  36  42  48  54</text>
+<text x="46.8" y="223.0" fill="rgb(183,196,177)" textLength="316.8" lengthAdjust="spacingAndGlyphs">7  14  21  28  35  42  49  56  63</text>
+<text x="46.8" y="242.0" fill="rgb(183,196,177)" textLength="316.8" lengthAdjust="spacingAndGlyphs">8  16  24  32  40  48  56  64  72</text>
+<text x="46.8" y="261.0" fill="rgb(183,196,177)" textLength="316.8" lengthAdjust="spacingAndGlyphs">9  18  27  36  45  54  63  72  81</text>
+<text x="18.0" y="280.0" fill="rgb(183,196,177)" textLength="57.6" lengthAdjust="spacingAndGlyphs">READY.</text>
+<text x="18.0" y="299.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">&gt;</text>
+</g></svg>

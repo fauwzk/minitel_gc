@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="MICRO-BASIC - moniteur GPIO">
+<rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
+<rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
+<g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
+<rect x="18.0" y="19.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="75.6" y="33.0" fill="rgb(18,22,17)" textLength="652.8" lengthAdjust="spacingAndGlyphs">* * *  MICRO-BASIC - MONITEUR GPIO, PWM &amp; ENTREES ANALOGIQUES  * * *</text>
+<text x="27.6" y="71.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
+<rect x="37.2" y="57.0" width="729.6" height="19.0" fill="rgb(232,240,228)"/>
+<text x="133.2" y="71.0" fill="rgb(18,22,17)" textLength="537.6" lengthAdjust="spacingAndGlyphs">ETAT DES BROCHES BCM &amp; CONVERTISSEUR ADC (PILOTE: SYSFS)</text>
+<text x="766.8" y="71.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
+<text x="27.6" y="90.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="766.8" y="90.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="109.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="46.8" y="109.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">GPIO 02: [ 0 / GND  ]    GPIO 11: [ 0 / GND  ]    GPIO 24: [ 0 / GND  ]</text>
+<text x="766.8" y="109.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="128.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="46.8" y="128.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">GPIO 03: [ 0 / GND  ]    GPIO 05: [ 0 / GND  ]    GPIO 25: [ 0 / GND  ]</text>
+<text x="766.8" y="128.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="147.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="46.8" y="147.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">GPIO 04: [ 0 / GND  ]    GPIO 06: [ 0 / GND  ]    GPIO 08: [ 0 / GND  ]</text>
+<text x="766.8" y="147.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="46.8" y="166.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">GPIO 17: [ 0 / GND  ]    GPIO 13: [ 0 / GND  ]    GPIO 07: [ 0 / GND  ]</text>
+<text x="766.8" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="766.8" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="46.8" y="204.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">GPIO 27: [ 0 / GND  ]    GPIO 19: [ 0 / GND  ]    GPIO 12: [ 0 / GND  ]</text>
+<text x="766.8" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="46.8" y="223.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">GPIO 22: [ 0 / GND  ]    GPIO 26: [ 0 / GND  ]    GPIO 16: [ 0 / GND  ]</text>
+<text x="766.8" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="46.8" y="242.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">GPIO 10: [ 0 / GND  ]    GPIO 18: [ 0 / GND  ]    GPIO 20: [ 0 / GND  ]</text>
+<text x="766.8" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="46.8" y="261.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">GPIO 09: [ 0 / GND  ]    GPIO 23: [ 0 / GND  ]    GPIO 21: [ 0 / GND  ]</text>
+<text x="766.8" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="766.8" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="299.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="766.8" y="299.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="318.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="46.8" y="318.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">--------------------------------------------------------------------------</text>
+<text x="766.8" y="318.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="46.8" y="337.0" fill="rgb(183,196,177)" textLength="249.6" lengthAdjust="spacingAndGlyphs">CANAUX ANALOGIQUES : ADC0=</text>
+<text x="296.4" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="38.4" lengthAdjust="spacingAndGlyphs">0780</text>
+<text x="344.4" y="337.0" fill="rgb(183,196,177)" textLength="67.2" lengthAdjust="spacingAndGlyphs">| ADC1=</text>
+<text x="411.6" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="38.4" lengthAdjust="spacingAndGlyphs">0120</text>
+<text x="459.6" y="337.0" fill="rgb(183,196,177)" textLength="67.2" lengthAdjust="spacingAndGlyphs">| ADC2=</text>
+<text x="526.8" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="38.4" lengthAdjust="spacingAndGlyphs">0000</text>
+<text x="574.8" y="337.0" fill="rgb(183,196,177)" textLength="67.2" lengthAdjust="spacingAndGlyphs">| ADC3=</text>
+<text x="642.0" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="38.4" lengthAdjust="spacingAndGlyphs">1023</text>
+<text x="766.8" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="356.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="766.8" y="356.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="375.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="46.8" y="375.0" fill="rgb(183,196,177)" textLength="230.4" lengthAdjust="spacingAndGlyphs">TEMP. CPU RASPBERRY PI :</text>
+<text x="286.8" y="375.0" fill="rgb(232,240,228)" font-weight="bold" textLength="48.0" lengthAdjust="spacingAndGlyphs">0.0 C</text>
+<text x="354.0" y="375.0" fill="rgb(183,196,177)" textLength="345.6" lengthAdjust="spacingAndGlyphs">| UART MINITEL : GPIO 14/15 PROTEGES</text>
+<text x="766.8" y="375.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="394.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="766.8" y="394.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="27.6" y="413.0" fill="rgb(232,240,228)" font-weight="bold" textLength="748.8" lengthAdjust="spacingAndGlyphs">+----------------------------------------------------------------------------+</text>
+<rect x="18.0" y="456.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="470.0" fill="rgb(18,22,17)" textLength="729.6" lengthAdjust="spacingAndGlyphs">[T] BASCULER 0/1 | [P] TESTER PWM % | [A] SIMULER ADC | [S] STOP PWM | [ESC]</text>
+</g></svg>

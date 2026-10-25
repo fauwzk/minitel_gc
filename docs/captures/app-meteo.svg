@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="3615 METEO">
+<rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
+<rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
+<g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
+<text x="18.0" y="33.0" fill="rgb(232,240,228)" font-weight="bold" textLength="240.0" lengthAdjust="spacingAndGlyphs">BULLETIN METEOROLOGIQUE :</text>
+<text x="75.6" y="71.0" fill="rgb(183,196,177)" textLength="230.4" lengthAdjust="spacingAndGlyphs">Weather report: CHAUMONT</text>
+<text x="142.8" y="90.0" fill="rgb(183,196,177)" textLength="211.2" lengthAdjust="spacingAndGlyphs">.-.      Light drizzle</text>
+<text x="133.2" y="109.0" fill="rgb(183,196,177)" textLength="182.4" lengthAdjust="spacingAndGlyphs">(   ).    +10(6) ?C</text>
+<text x="123.6" y="128.0" fill="rgb(183,196,177)" textLength="192.0" lengthAdjust="spacingAndGlyphs">(___(__)   ? 24 km/h</text>
+<text x="133.2" y="147.0" fill="rgb(183,196,177)" textLength="134.4" lengthAdjust="spacingAndGlyphs">? ? ? ?   2 km</text>
+<text x="123.6" y="166.0" fill="rgb(183,196,177)" textLength="163.2" lengthAdjust="spacingAndGlyphs">? ? ? ?    0.4 mm</text>
+<rect x="18.0" y="190.0" width="374.4" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="204.0" fill="rgb(18,22,17)" textLength="355.2" lengthAdjust="spacingAndGlyphs">APPUYEZ SUR UNE TOUCHE POUR CONTINUER</text>
+</g></svg>

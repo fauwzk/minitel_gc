@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="MINITEL SWEEPER">
+<rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
+<rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
+<g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
+<rect x="18.0" y="38.0" width="211.2" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="52.0" fill="rgb(18,22,17)" textLength="192.0" lengthAdjust="spacingAndGlyphs">MINES RESTANTES : 10</text>
+<text x="354.0" y="52.0" fill="rgb(183,196,177)" textLength="96.0" lengthAdjust="spacingAndGlyphs">ETAT : MAP</text>
+<text x="267.6" y="109.0" fill="rgb(183,196,177)" textLength="240.0" lengthAdjust="spacingAndGlyphs">.  .  .  .  .  .  .  .  .</text>
+<text x="267.6" y="128.0" fill="rgb(183,196,177)" textLength="240.0" lengthAdjust="spacingAndGlyphs">.  .  .  .  .  .  .  .  .</text>
+<text x="267.6" y="147.0" fill="rgb(183,196,177)" textLength="240.0" lengthAdjust="spacingAndGlyphs">.  .  .  .  .  .  .  .  .</text>
+<text x="267.6" y="166.0" fill="rgb(183,196,177)" textLength="67.2" lengthAdjust="spacingAndGlyphs">.  .  .</text>
+<rect x="344.4" y="152.0" width="28.8" height="19.0" fill="rgb(232,240,228)"/>
+<text x="354.0" y="166.0" fill="rgb(18,22,17)" textLength="9.6" lengthAdjust="spacingAndGlyphs">.</text>
+<text x="382.8" y="166.0" fill="rgb(183,196,177)" textLength="124.8" lengthAdjust="spacingAndGlyphs">.  .  .  .  .</text>
+<text x="267.6" y="185.0" fill="rgb(183,196,177)" textLength="240.0" lengthAdjust="spacingAndGlyphs">.  .  .  .  .  .  .  .  .</text>
+<text x="267.6" y="204.0" fill="rgb(183,196,177)" textLength="240.0" lengthAdjust="spacingAndGlyphs">.  .  .  .  .  .  .  .  .</text>
+<text x="267.6" y="223.0" fill="rgb(183,196,177)" textLength="240.0" lengthAdjust="spacingAndGlyphs">.  .  .  .  .  .  .  .  .</text>
+<text x="267.6" y="242.0" fill="rgb(183,196,177)" textLength="240.0" lengthAdjust="spacingAndGlyphs">.  .  .  .  .  .  .  .  .</text>
+<text x="267.6" y="261.0" fill="rgb(183,196,177)" textLength="240.0" lengthAdjust="spacingAndGlyphs">.  .  .  .  .  .  .  .  .</text>
+<text x="37.2" y="413.0" fill="rgb(183,196,177)" textLength="355.2" lengthAdjust="spacingAndGlyphs">ZONE HOSTILE. PROCEDEZ AVEC PRUDENCE.</text>
+<text x="27.6" y="451.0" fill="rgb(183,196,177)" textLength="576.0" lengthAdjust="spacingAndGlyphs">ZQSD/FL: BOUGER | ENVOI: CREUSER | F: DRAPEAU | RETOUR: MENU</text>
+</g></svg>

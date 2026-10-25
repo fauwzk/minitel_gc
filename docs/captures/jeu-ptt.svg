@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="3615 CENTRAL PTT">
+<rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
+<rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
+<g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
+<rect x="18.0" y="19.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="75.6" y="33.0" fill="rgb(18,22,17)" textLength="643.2" lengthAdjust="spacingAndGlyphs">* * *  3615 CENTRAL PTT (1994) - SUPERVISION E10B &amp; TRANSPAC  * * *</text>
+<text x="123.6" y="109.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
+<rect x="133.2" y="95.0" width="537.6" height="19.0" fill="rgb(232,240,228)"/>
+<text x="190.8" y="109.0" fill="rgb(18,22,17)" textLength="412.8" lengthAdjust="spacingAndGlyphs">MANUEL DE L&#x27;INGENIEUR FRANCE TELECOM (1994)</text>
+<text x="670.8" y="109.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
+<text x="123.6" y="128.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="670.8" y="128.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="123.6" y="147.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="147.0" fill="rgb(183,196,177)" textLength="537.6" lengthAdjust="spacingAndGlyphs">Vous supervisez le centre de commutation departemental :</text>
+<text x="123.6" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="166.0" fill="rgb(183,196,177)" textLength="556.8" lengthAdjust="spacingAndGlyphs">Alcatel E10B, PABX Matracom RNIS, Frontal 3615 &amp; Transpac.</text>
+<text x="123.6" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="670.8" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="123.6" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="204.0" fill="rgb(183,196,177)" textLength="115.2" lengthAdjust="spacingAndGlyphs">- Au-dela de</text>
+<rect x="277.2" y="190.0" width="48.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="286.8" y="204.0" fill="rgb(18,22,17)" textLength="28.8" lengthAdjust="spacingAndGlyphs">92%</text>
+<text x="334.8" y="204.0" fill="rgb(183,196,177)" textLength="364.8" lengthAdjust="spacingAndGlyphs">de charge, les abonnes ont la tonalite</text>
+<text x="123.6" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="171.6" y="223.0" fill="rgb(183,196,177)" textLength="489.6" lengthAdjust="spacingAndGlyphs">d&#x27;occupation et la Qualite de Service (QoS) chute !</text>
+<text x="670.8" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="123.6" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="242.0" fill="rgb(183,196,177)" textLength="76.8" lengthAdjust="spacingAndGlyphs">- Touche</text>
+<text x="238.8" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="28.8" lengthAdjust="spacingAndGlyphs">[D]</text>
+<text x="277.2" y="242.0" fill="rgb(183,196,177)" textLength="432.0" lengthAdjust="spacingAndGlyphs">: Brasser le trafic vers une baie disponible.</text>
+<text x="123.6" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="261.0" fill="rgb(183,196,177)" textLength="76.8" lengthAdjust="spacingAndGlyphs">- Touche</text>
+<text x="238.8" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="28.8" lengthAdjust="spacingAndGlyphs">[P]</text>
+<text x="277.2" y="261.0" fill="rgb(183,196,177)" textLength="451.2" lengthAdjust="spacingAndGlyphs">: Rearmer une carte en alarme (MIC, V.23, X25).</text>
+<text x="123.6" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="152.4" y="280.0" fill="rgb(183,196,177)" textLength="76.8" lengthAdjust="spacingAndGlyphs">- Touche</text>
+<text x="238.8" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="28.8" lengthAdjust="spacingAndGlyphs">[B]</text>
+<text x="277.2" y="280.0" fill="rgb(183,196,177)" textLength="403.2" lengthAdjust="spacingAndGlyphs">: Activer le Faisceau Hertzien de secours.</text>
+<text x="123.6" y="299.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="670.8" y="299.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="123.6" y="318.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<rect x="219.6" y="304.0" width="393.6" height="19.0" fill="rgb(232,240,228)"/>
+<text x="229.2" y="318.0" fill="rgb(18,22,17)" textLength="374.4" lengthAdjust="spacingAndGlyphs">[ENVOI] PRENDRE SON QUART DE NUIT (90S)</text>
+<text x="670.8" y="318.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="123.6" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="670.8" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="123.6" y="356.0" fill="rgb(232,240,228)" font-weight="bold" textLength="556.8" lengthAdjust="spacingAndGlyphs">+--------------------------------------------------------+</text>
+<rect x="18.0" y="456.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="37.2" y="470.0" fill="rgb(18,22,17)" textLength="681.6" lengthAdjust="spacingAndGlyphs">[ENVOI] PRENDRE LE SERVICE   |   [RETOUR] QUITTER VERS LE PORTAIL MAGIS</text>
+</g></svg>
