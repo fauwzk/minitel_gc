@@ -465,6 +465,158 @@ local function update_ui()
     io.flush()
 end
 
+-- =====================================================================
+-- 4 BIS. ECRAN VIRTUEL DES PROGRAMMES (AFFICHAGE DIFFERENTIEL)
+-- =====================================================================
+-- Pendant un RUN, des que le programme fait CLS ou LOCATE, ses affichages
+-- sont ecrits dans un ecran virtuel. present() n'envoie ensuite au Minitel
+-- que les caracteres qui ont reellement change : un programme qui efface et
+-- redessine tout a chaque image (CLS ... PAUSE ... GOTO) ne fait plus
+-- clignoter l'ecran, et la liaison a 9600 bauds n'est plus saturee.
+-- L'image est envoyee a chaque CLS (l'image precedente est alors complete),
+-- PAUSE, INPUT, fin de programme, et au moins toutes les 50 lignes executees.
+local scr_running = false   -- true pendant RUN
+local scr_active = false    -- true quand l'ecran virtuel a pris le relais
+local want, shown = {}, {}  -- cellules voulues / affichees (nil = inconnue)
+local vx, vy, vinv, vwrap = 1, 3, false, false
+local px, py, pinv          -- curseur et attribut reels du Minitel
+local present_count = 0
+
+local function cell(c) return vinv and ("!" .. c) or c end
+
+local function scr_activate()
+    if scr_active then return end
+    scr_active = true
+    want, shown = {}, {}
+    for r = 1, 24 do want[r], shown[r] = {}, {} end
+    px, py, pinv = nil, nil, nil
+end
+
+local function present(avec_curseur)
+    if not scr_active then return end
+    present_count = 0
+    -- Beaucoup de cases a effacer : un effacement materiel coute moins cher
+    local blanks = 0
+    for r = 3, 24 do
+        local w, s = want[r], shown[r]
+        for c = 1, 80 do
+            if w[c] == " " and s[c] ~= " " then blanks = blanks + 1 end
+        end
+    end
+    if blanks > 160 then
+        io.write("\x1b[0m\x1b[3;1H\x1b[J")
+        pinv, py, px = false, nil, nil
+        for r = 3, 24 do for c = 1, 80 do shown[r][c] = " " end end
+    end
+
+    local out = {}
+    for r = 1, 24 do
+        local w, s = want[r], shown[r]
+        local c = 1
+        while c <= 80 do
+            if w[c] ~= nil and w[c] ~= s[c] then
+                out[#out + 1] = "\x1b[" .. r .. ";" .. c .. "H"
+                while c <= 80 and w[c] ~= nil do
+                    if w[c] == s[c] then
+                        -- On enjambe quelques cases identiques plutot que de
+                        -- repositionner le curseur (7 octets)
+                        local nxt = c
+                        while nxt <= 80 and nxt < c + 5 and w[nxt] ~= nil and w[nxt] == s[nxt] do nxt = nxt + 1 end
+                        if nxt > 80 or nxt >= c + 5 or w[nxt] == nil then break end
+                    end
+                    local inv = #w[c] == 2
+                    if inv ~= pinv then out[#out + 1] = inv and "\x1b[7m" or "\x1b[0m"; pinv = inv end
+                    out[#out + 1] = string.sub(w[c], -1)
+                    s[c] = w[c]
+                    c = c + 1
+                end
+                py, px = r, nil -- le curseur reel est reste sur cette ligne
+            else
+                c = c + 1
+            end
+        end
+    end
+
+    -- Le curseur n'est replace qu'avant un INPUT et en fin de programme :
+    -- chaque trace le repositionne de toute facon
+    if avec_curseur then
+        local cx = vwrap and 80 or vx
+        if py ~= vy or px ~= cx then out[#out + 1] = "\x1b[" .. vy .. ";" .. cx .. "H"; py, px = vy, cx end
+        if pinv ~= vinv then out[#out + 1] = vinv and "\x1b[7m" or "\x1b[0m"; pinv = vinv end
+    end
+    if #out > 0 then io.write(table.concat(out)); io.flush() end
+end
+
+-- Saut de ligne ; deja_fait = le Minitel a deja fait defiler son ecran
+local function scr_linefeed(deja_fait)
+    if vy < 24 then vy = vy + 1; return end
+    if not deja_fait then
+        -- Le Minitel fait defiler lui-meme sa zone 3-24 : un simple saut de
+        -- ligne depuis la ligne 24, au lieu de tout reecrire
+        present()
+        io.write((pinv ~= false and "\x1b[0m" or "") .. (py ~= 24 and "\x1b[24;1H" or "") .. "\n")
+        pinv, py, px = false, 24, nil
+    end
+    for r = 3, 23 do want[r], shown[r] = want[r + 1], shown[r + 1] end
+    want[24], shown[24] = {}, {}
+    for c = 1, 80 do want[24][c], shown[24][c] = " ", " " end
+end
+
+-- Ecrit du texte dans l'ecran virtuel (memes regles de retour a la ligne
+-- automatique que le VT100) ; deja_fait = texte deja affiche par le Minitel
+local function scr_text(s, deja_fait)
+    for i = 1, #s do
+        local ch = string.sub(s, i, i)
+        if ch == "\r" then vx, vwrap = 1, false
+        elseif ch == "\n" then scr_linefeed(deja_fait)
+        elseif string.byte(ch) >= 32 then
+            if vwrap then vx, vwrap = 1, false; scr_linefeed(deja_fait) end
+            want[vy][vx] = cell(ch)
+            if deja_fait then shown[vy][vx] = want[vy][vx] end
+            if vx == 80 then vwrap = true else vx = vx + 1 end
+        end
+    end
+    if deja_fait then py, px = vy, (vwrap and 80 or vx) end
+end
+
+local function scr_write(s)
+    if scr_active then scr_text(s) else io.write(s) end
+end
+
+local function scr_cls()
+    if not scr_running then
+        io.write("\x1b[2J"); update_ui(); io.write("\x1b[3;1H"); io.flush(); return
+    end
+    scr_activate()
+    present()
+    -- Le programme avait ecrit sur les barres d'etat : on les redessine
+    local touched = next(want[1]) or next(want[2])
+    if touched then
+        update_ui()
+        want[1], shown[1], want[2], shown[2] = {}, {}, {}, {}
+        pinv, py, px = false, nil, nil
+    end
+    for r = 3, 24 do for c = 1, 80 do want[r][c] = " " end end
+    vx, vy, vwrap = 1, 3, false
+end
+
+local function scr_locate(x, y)
+    if not scr_running then io.write("\x1b[" .. y .. ";" .. x .. "H"); io.flush(); return end
+    scr_activate()
+    vx, vy, vwrap = x, y, false
+end
+
+local function scr_attr(inv)
+    vinv = inv
+    if not scr_active then io.write(inv and "\x1b[7m" or "\x1b[0m"); io.flush() end
+end
+
+-- Fin du programme : le Minitel rattrape l'ecran virtuel, on rend la main
+local function scr_finish()
+    present(true)
+    scr_active = false
+end
+
 local MONITORED_PINS = {2, 3, 4, 17, 27, 22, 10, 9, 11, 5, 6, 13, 19, 26, 18, 23, 24, 25, 8, 7, 12, 16, 20, 21}
 
 local function run_gpio_monitor()
@@ -573,10 +725,10 @@ local function execute_line(line)
             if c == '"' then
                 local end_idx = string.find(content, '"', idx + 1)
                 if end_idx then
-                    io.write(string.sub(content, idx + 1, end_idx - 1))
+                    scr_write(string.sub(content, idx + 1, end_idx - 1))
                     idx = end_idx + 1
                 else
-                    io.write(string.sub(content, idx + 1))
+                    scr_write(string.sub(content, idx + 1))
                     break
                 end
             elseif c == ';' then idx = idx + 1
@@ -587,14 +739,14 @@ local function execute_line(line)
                 if string.match(sub_expr, "%S") then
                     local v = eval_expr(sub_expr)
                     if expr_error then return "SYNTAX ERROR" end
-                    io.write(fmt_num(v))
+                    scr_write(fmt_num(v))
                 end
             else idx = idx + 1 end
         end
         if not string.match(content, ";%s*$") then
-            io.write("\r\n")
+            scr_write("\r\n")
         end
-        io.flush()
+        if not scr_active then io.flush() end
         return "OK"
 
     -- =================================================================
@@ -683,8 +835,11 @@ local function execute_line(line)
         key_buffer = nil
         local v = string.match(rest, "^(%a+)$")
         if v then
+            present(true)
             local res = input_string("? ")
             if res == "ABORT" then return "BREAK" end
+            -- Le Minitel a deja affiche la saisie : l'ecran virtuel la note
+            if scr_active then scr_text("? " .. res .. "\r\n", true) end
             vars[v] = tonumber(res) or 0
         else return "SYNTAX ERROR" end
         return "OK"
@@ -725,8 +880,7 @@ local function execute_line(line)
     elseif cmd == "CLEAR" then
         stop_all_pwm()
         program = {}; vars = {}; current_filename = nil; is_modified = false; return "OK"
-    elseif cmd == "CLS" then
-        io.write("\x1b[2J"); update_ui(); io.write("\x1b[3;1H"); io.flush(); return "OK"
+    elseif cmd == "CLS" then scr_cls(); return "OK"
     elseif cmd == "BEEP" then minitel.play_sound("hit"); return "OK"
 
     elseif cmd == "LOCATE" then
@@ -734,15 +888,16 @@ local function execute_line(line)
         if str_x and str_y then
             local x = math.max(1, math.min(80, math.floor(eval_expr(str_x))))
             local y = math.max(1, math.min(24, math.floor(eval_expr(str_y))))
-            io.write("\x1b[" .. y .. ";" .. x .. "H"); io.flush()
+            scr_locate(x, y)
         else return "SYNTAX ERROR" end
         return "OK"
 
-    elseif cmd == "INVERT" then io.write("\x1b[7m"); io.flush(); return "OK"
-    elseif cmd == "NORMAL" then io.write("\x1b[0m"); io.flush(); return "OK"
+    elseif cmd == "INVERT" then scr_attr(true); return "OK"
+    elseif cmd == "NORMAL" then scr_attr(false); return "OK"
     elseif cmd == "PAUSE" then
         local sec = tonumber(eval_expr(rest))
         if sec then
+            present()
             if sec < 0.1 then minitel.sleep(sec)
             else
                 for i=1, math.floor(sec*10) do
@@ -769,7 +924,22 @@ end
 -- =====================================================================
 -- 6. BOUCLE D'EXECUTION GLOBALE
 -- =====================================================================
+-- Message de l'interpreteur : l'ecran virtuel est d'abord rattrape
+local function report(msg)
+    scr_finish()
+    io.write(msg); io.flush()
+end
+
+local run_lines
+
 local function run_program()
+    scr_running, vinv = true, false
+    run_lines()
+    scr_finish()
+    scr_running = false
+end
+
+run_lines = function()
     local sorted_lines = {}
     for k in pairs(program) do table.insert(sorted_lines, k) end
     table.sort(sorted_lines)
@@ -780,7 +950,7 @@ local function run_program()
 
     while pc <= #sorted_lines do
         if check_break() then
-            io.write("\r\n\x1b[K\x1b[7m BREAK IN " .. sorted_lines[pc] .. " \x1b[0m\r\n"); io.flush(); break
+            report("\r\n\x1b[K\x1b[7m BREAK IN " .. sorted_lines[pc] .. " \x1b[0m\r\n"); io.flush(); break
         end
 
         local line_num = sorted_lines[pc]
@@ -789,11 +959,11 @@ local function run_program()
         if expr_error and stat ~= "BREAK" then stat = "SYNTAX ERROR" end
 
         if stat == "BREAK" then
-            io.write("\r\n\x1b[K\x1b[7m BREAK IN " .. line_num .. " \x1b[0m\r\n"); io.flush(); break
+            report("\r\n\x1b[K\x1b[7m BREAK IN " .. line_num .. " \x1b[0m\r\n"); io.flush(); break
         elseif stat == "STOP" then
-            io.write("\r\n\x1b[K\x1b[7m PROGRAM STOPPED AT LINE " .. line_num .. " \x1b[0m\r\n"); io.flush(); break
+            report("\r\n\x1b[K\x1b[7m PROGRAM STOPPED AT LINE " .. line_num .. " \x1b[0m\r\n"); io.flush(); break
         elseif stat == "SYNTAX ERROR" then
-            io.write("\r\n\x1b[K SYNTAX ERROR IN " .. line_num .. "\r\n"); io.flush(); break
+            report("\r\n\x1b[K SYNTAX ERROR IN " .. line_num .. "\r\n"); io.flush(); break
         elseif stat == "END" then break
         elseif stat == "GOTO" or stat == "GOSUB" then
             local found = false
@@ -803,10 +973,10 @@ local function run_program()
                     pc = i; found = true; break
                 end
             end
-            if not found then io.write("\r\n\x1b[K UNDEFINED LINE " .. arg .. " IN " .. line_num .. "\r\n"); io.flush(); break end
+            if not found then report("\r\n\x1b[K UNDEFINED LINE " .. arg .. " IN " .. line_num .. "\r\n"); io.flush(); break end
         elseif stat == "RETURN" then
             if #gosub_stack > 0 then pc = table.remove(gosub_stack) + 1
-            else io.write("\r\n\x1b[K RETURN WITHOUT GOSUB IN " .. line_num .. "\r\n"); io.flush(); break end
+            else report("\r\n\x1b[K RETURN WITHOUT GOSUB IN " .. line_num .. "\r\n"); io.flush(); break end
         elseif stat == "FOR" then
             table.insert(loop_stack, {type="FOR", var=arg.var, limit=arg.limit, start_pc=pc}); pc = pc + 1
         elseif stat == "NEXT" then
@@ -814,7 +984,7 @@ local function run_program()
             if top and top.type == "FOR" and top.var == arg then
                 vars[top.var] = vars[top.var] + 1
                 if vars[top.var] <= top.limit then pc = top.start_pc + 1 else table.remove(loop_stack); pc = pc + 1 end
-            else io.write("\r\n\x1b[K NEXT WITHOUT FOR IN " .. line_num .. "\r\n"); break end
+            else report("\r\n\x1b[K NEXT WITHOUT FOR IN " .. line_num .. "\r\n"); break end
         elseif stat == "WHILE" then
             if arg then table.insert(loop_stack, {type="WHILE", start_pc=pc}); pc = pc + 1
             else
@@ -827,13 +997,16 @@ local function run_program()
                     end
                     wend_pc = wend_pc + 1
                 end
-                if found then pc = wend_pc + 1 else io.write("\r\n\x1b[K WHILE WITHOUT WEND IN " .. line_num .. "\r\n"); break end
+                if found then pc = wend_pc + 1 else report("\r\n\x1b[K WHILE WITHOUT WEND IN " .. line_num .. "\r\n"); break end
             end
         elseif stat == "WEND" then
             local top = loop_stack[#loop_stack]
             if top and top.type == "WHILE" then pc = top.start_pc; table.remove(loop_stack)
-            else io.write("\r\n\x1b[K WEND WITHOUT WHILE IN " .. line_num .. "\r\n"); break end
+            else report("\r\n\x1b[K WEND WITHOUT WHILE IN " .. line_num .. "\r\n"); break end
         else pc = pc + 1 end
+        -- Un programme qui calcule longtemps sans CLS ni PAUSE s'affiche quand meme
+        present_count = present_count + 1
+        if present_count >= 50 then present() end
         minitel.sleep(0.005)
     end
 end

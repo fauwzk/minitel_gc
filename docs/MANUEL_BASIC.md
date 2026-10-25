@@ -278,7 +278,7 @@ Une expression mal formée (`2 + * 3`, parenthèse manquante, mot réservé empl
 > * `MKEY()` avec parenthèses renvoyait toujours 0 (seule la forme `MKEY` fonctionnait) : les deux formes marchent désormais ;
 > * une expression incorrecte valait 0 sans prévenir : elle provoque désormais un `SYNTAX ERROR`.
 >
-> La V6.1 affiche aussi `4 / 2` comme `2` au lieu de `2.0`. Elle n'écrit plus par-dessus la barre d'état au lancement d'un programme sans `CLS`. Enfin, `[RETOUR]` à une invite vide quitte le BASIC, comme l'annonce le bandeau.
+> La V6.1 affiche aussi `4 / 2` comme `2` au lieu de `2.0`. Elle n'écrit plus par-dessus la barre d'état au lancement d'un programme sans `CLS`. `[RETOUR]` à une invite vide quitte le BASIC, comme l'annonce le bandeau. Enfin, les programmes s'affichent à travers un écran virtuel qui n'envoie au Minitel que ce qui change : un `CLS` à chaque image ne fait plus clignoter l'écran (§ 4.3).
 
 <div style="page-break-after: always;"></div>
 
@@ -327,7 +327,9 @@ Affiche des textes entre guillemets et des valeurs d'expressions, **séparés pa
 
 #### `CLS` — effacer l'écran
 
-Efface l'écran, redessine la barre d'état et place le curseur en haut de la zone de travail (colonne 1, ligne 3). Un programme qui commence par `CLS` démarre sur un écran propre.
+Efface la zone de travail (lignes 3 à 24) et place le curseur en haut de celle-ci (colonne 1, ligne 3). Un programme qui commence par `CLS` démarre sur un écran propre.
+
+Dans un programme, `CLS` n'efface pas l'écran du Minitel sur-le-champ : il vide l'**écran virtuel** de l'interpréteur, et seuls les caractères qui ont réellement changé sont ensuite envoyés (§ 4.3). Un programme peut donc effacer et redessiner tout son écran à chaque image sans le faire clignoter. En mode direct, `CLS` efface l'écran immédiatement et redessine la barre d'état.
 
 #### `LOCATE x, y` — positionner le curseur
 
@@ -472,7 +474,7 @@ Répète les lignes comprises entre `WHILE` et `WEND` **tant que** la condition 
  ligne 24    +---------------------------------------------------------------+
 ```
 
-`LOCATE x, y` : **x d'abord (la colonne, de gauche à droite), y ensuite (la ligne, de haut en bas)**. Les lignes 1 et 2 sont accessibles, mais la barre d'état y est redessinée à chaque `CLS` et à chaque retour à l'invite.
+`LOCATE x, y` : **x d'abord (la colonne, de gauche à droite), y ensuite (la ligne, de haut en bas)**. Les lignes 1 et 2 sont accessibles, mais la barre d'état y est redessinée à chaque retour à l'invite, et au `CLS` suivant si le programme a écrit dessus.
 
 ### 4.2 Le défilement
 
@@ -482,7 +484,34 @@ La zone de travail (lignes 3 à 24) est une **zone de défilement** : quand un `
 
 ### 4.3 Animer sans clignoter
 
-Une liaison à 9600 bauds transmet environ 960 caractères par seconde. Pour qu'une animation soit fluide, n'effacez jamais l'écran entier entre deux images : **effacez seulement l'ancien dessin** (en réécrivant un espace par-dessus) et **dessinez le nouveau**. C'est exactement ce que fait le programme REBOND :
+Une liaison à 9600 bauds transmet environ 960 caractères par seconde : effacer et redessiner les 22 lignes de la zone de travail prend près de 2 secondes. L'interpréteur s'en charge donc à votre place grâce à un **écran virtuel**.
+
+Dès qu'un programme utilise `CLS` ou `LOCATE`, ses `PRINT` ne partent plus directement vers le Minitel : ils sont écrits dans une copie de l'écran gardée en mémoire. Au moment de l'affichage, l'interpréteur compare cette copie avec ce que le Minitel montre déjà, et **n'envoie que les caractères qui ont changé**. L'affichage a lieu :
+
+* à chaque `CLS` (l'image précédente est alors complète) ;
+* à chaque `PAUSE` et avant chaque `INPUT` ;
+* à la fin du programme, ou quand il s'arrête (`BREAK`, `STOP`, erreur) ;
+* au moins toutes les 50 lignes exécutées, pour qu'un long calcul s'affiche quand même au fur et à mesure.
+
+La boucle la plus simple, « j'efface tout, je redessine tout, j'attends », est donc parfaitement fluide. C'est celle du programme JEU, fourni avec le système, qui déplace un `X` avec les flèches :
+
+```basic
+40 LOCATE X, Y
+50 INVERT
+60 PRINT "X"
+70 NORMAL
+80 K EQ MKEY()
+   ...
+140 PAUSE 0.05
+150 CLS
+160 GOTO 40
+```
+
+À chaque image, seuls l'ancien `X` (remplacé par un espace) et le nouveau sont transmis, soit une vingtaine de caractères. Avec un vrai effacement, il en aurait fallu plus de 200, et l'écran aurait clignoté.
+
+> **Comparaison.** Mesuré en émulation sur la même partie de JEU (quelques déplacements, environ 4 secondes) : 8 680 caractères envoyés par la version précédente, contre 145 avec l'écran virtuel.
+
+Pour aller encore plus vite, vous pouvez aussi faire ce travail vous-même : **effacez seulement l'ancien dessin** (en réécrivant un espace par-dessus) et **dessinez le nouveau**, sans `CLS`. C'est ce que fait le programme REBOND :
 
 ```basic
 110 LOCATE X, Y
