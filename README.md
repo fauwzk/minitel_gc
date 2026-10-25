@@ -522,7 +522,17 @@ Le lanceur calcule aussi la **taille** du fichier et son **nombre de lignes**. S
 
 **Le logo automatique.** Le genre (et le nom du fichier) est comparé à une liste de mots-clés : `CASINO` ou `POKER` donnent des cartes à jouer, `BOURSE` un graphique boursier, `RPG` un donjon, `TABLEUR` une grille, `TRAIN` une locomotive, `CARBURANT` une pompe, `SANTE` un cœur, `METEO` des nuages, etc.
 
-**Le mode turbo `[H]`.** Redessiner la fiche de droite coûte plusieurs centaines d'octets, soit près d'une demi-seconde à 9600 bauds. En mode turbo (actif par défaut), faire défiler la liste ne déplace que le curseur, et la fiche n'est redessinée qu'**1,5 seconde après le dernier mouvement**. En mode direct, elle suit chaque mouvement.
+**Le mode turbo `[H]`.** En mode turbo (actif par défaut), faire défiler la liste ne déplace que le curseur, et la fiche de droite n'est mise à jour que **0,3 seconde après le dernier mouvement**. En mode direct, elle suit chaque mouvement.
+
+**Un affichage économe.** Comme le portail, les lanceurs gardent en mémoire ce qui est affiché, et n'envoient au Minitel que les caractères qui changent : dans la fiche, dans la liste quand elle défile, dans la barre de défilement (en général deux cases sur douze) et dans le compteur. Plusieurs flèches reçues d'affilée (touche maintenue) sont regroupées en un seul déplacement, et le dessin complet n'envoie que les bordures des panneaux. Mesuré en émulation sur le lanceur de jeux :
+
+| Action | Avant | Maintenant |
+| :----- | :---: | :---: |
+| Un appui, fiche comprise | 831 caractères (0,9 s) | 474 (0,5 s) |
+| Six appuis rapides (touche maintenue) | 2 297 (2,4 s) | 1 111 (1,2 s) |
+| Retour d'un jeu (écran complet) | 3 353 (3,5 s) | 2 609 (2,7 s) |
+
+Le délai du mode turbo a pu passer de 1,5 à 0,3 seconde, parce que mettre la fiche à jour coûte maintenant beaucoup moins cher : en parcourant la liste tranquillement, on voit la fiche de chaque cartouche, pour à peu près le même volume d'affichage qu'avant sans la voir.
 
 <p align="center"><img src="docs/captures/sys-lanceur-outils.svg" width="640" alt="Lanceur 3615 OUTILS"><br><sub><b>Fig. 3.4</b> — Le lanceur d'outils, même mécanique sur le dossier <code>utils/</code>.</sub></p>
 

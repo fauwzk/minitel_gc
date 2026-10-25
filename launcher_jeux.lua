@@ -213,8 +213,10 @@ local offset = 0
 local max_visible = 12
 local list_start_y = 8
 
--- Mode Turbo [H] : Si actif, l'aperçu de droite ne se rafraichit qu'au bout de 1.5s d'inactivite
+-- Mode Turbo [H] : si actif, la fiche de droite ne suit le curseur qu'apres
+-- 0,3 s d'immobilite ; en mode direct, elle suit chaque mouvement
 local fast_mode = true
+local TURBO_DELAY = 0.3
 local details_dirty = false
 local last_move_ts = 0
 
@@ -230,15 +232,38 @@ local function get_mono_time()
 end
 
 -- =====================================================================
+-- MEMOIRE DE L'ECRAN : SEULES LES DIFFERENCES PARTENT VERS LE MINITEL
+-- =====================================================================
+-- shown[cle] = texte affiche (et son attribut) ; vide apres un effacement
+local shown = {}
+
+-- Ecrit un texte de largeur fixe en n'envoyant que la portion qui differe de
+-- ce qui est deja affiche. attr : nil, "\x1b[1m" (gras) ou "\x1b[7m" (inverse).
+-- Un changement d'attribut oblige a reecrire tout le texte.
+local function put_diff(key, y, x, text, attr)
+    local old = shown[key]
+    if old and old.text == text and old.attr == attr then return end
+    local i, j = 1, #text
+    if old and old.attr == attr and #old.text == #text then
+        while string.byte(old.text, i) == string.byte(text, i) do i = i + 1 end
+        while string.byte(old.text, j) == string.byte(text, j) do j = j - 1 end
+    end
+    io.write(string.format("\x1b[%d;%dH", y, x + i - 1)
+        .. (attr or "") .. string.sub(text, i, j) .. (attr and "\x1b[0m" or ""))
+    shown[key] = { text = text, attr = attr }
+end
+
+-- =====================================================================
 -- AFFICHAGE DU SQUELETTE STATIQUE (CADRES & BANDEAUX)
 -- =====================================================================
 local function draw_right_header_badge()
-    local badge = fast_mode and "APERCU [H: TURBO 1.5S]" or "APERCU [H: DIRECT]"
+    local badge = fast_mode and "APERCU [H: TURBO 0.3S]" or "APERCU [H: DIRECT]"
     io.write("\x1b[6;40H|\x1b[7m" .. minitel.center(badge, 38) .. "\x1b[0m|")
 end
 
 local function draw_static_portal()
     io.write("\x1b[r\x1b[2J\x1b[H")
+    shown = {}
     minitel.sleep(0.04)
 
     io.write("\x1b[1;1H\x1b[7m" .. string.rep(" ", 80) .. "\x1b[0m")
@@ -254,16 +279,15 @@ local function draw_static_portal()
     io.write("\x1b[7;2H|----------------------------------|")
     io.write("\x1b[7;40H|--------------------------------------|")
 
+    -- L'ecran vient d'etre efface : seules les bordures sont envoyees
     for y = 8, 19 do
-        io.write(string.format("\x1b[%d;2H|                                  |", y))
-        io.write(string.format("\x1b[%d;40H|                                      |", y))
+        io.write(string.format("\x1b[%d;2H|\x1b[%d;37H|\x1b[%d;40H|\x1b[%d;79H|", y, y, y, y))
     end
 
     io.write("\x1b[13;40H|--------------------------------------|")
     io.write("\x1b[20;2H|----------------------------------|")
     io.write("\x1b[20;40H|--------------------------------------|")
-    io.write("\x1b[21;2H|                                  |")
-    io.write("\x1b[21;40H|                                      |")
+    io.write("\x1b[21;2H|\x1b[21;37H|\x1b[21;40H|\x1b[21;79H|")
     io.write("\x1b[22;2H'----------------------------------'")
     io.write("\x1b[22;40H'--------------------------------------'")
 
@@ -272,7 +296,7 @@ local function draw_static_portal()
 end
 
 -- =====================================================================
--- AFFICHAGE DU PANNEAU DE DROITE (FICHE DU JEU SELECTIONNE)
+-- AFFICHAGE DU PANNEAU DE DROITE (FICHE DE L'ELEMENT SELECTIONNE)
 -- =====================================================================
 local function draw_details_panel()
     local item = items[cursor]
@@ -280,57 +304,58 @@ local function draw_details_panel()
     local m = item.meta
 
     for i = 1, 5 do
-        local art_line = m.art[i] or ""
-        io.write(string.format("\x1b[%d;41H\x1b[1m%s\x1b[0m", 7 + i, minitel.center(art_line, 38)))
+        put_diff("art" .. i, 7 + i, 41, minitel.center(m.art[i] or "", 38), "\x1b[1m")
     end
 
-    local title_line = "TITRE : " .. item.display
-    local genre_line = "GENRE : " .. m.genre
-    io.write(string.format("\x1b[14;42H\x1b[1m%s\x1b[0m", minitel.pad(title_line, 36)))
-    io.write(string.format("\x1b[15;42H%s", minitel.pad(genre_line, 36)))
+    put_diff("titre", 14, 42, minitel.pad("TITRE : " .. item.display, 36), "\x1b[1m")
+    put_diff("sous", 15, 42, minitel.pad("GENRE : " .. m.genre, 36))
 
     local desc_lines = minitel.wrap(m.desc, 36, 3)
     for i = 1, 3 do
-        io.write(string.format("\x1b[%d;42H%s", 16 + i, desc_lines[i]))
+        put_diff("desc" .. i, 16 + i, 42, minitel.pad(desc_lines[i], 36))
     end
 
     local footer_right = string.format("TAILLE: %-8s | CODE: %d LIGNES", m.size, m.lines)
-    io.write(string.format("\x1b[21;42H%s", minitel.pad(footer_right, 36)))
+    put_diff("pied", 21, 42, minitel.pad(footer_right, 36))
     details_dirty = false
 end
 
 -- =====================================================================
 -- AFFICHAGE DE LA LISTE GAUCHE ET SCROLLBAR (DELTA-DRAWING)
 -- =====================================================================
-local function format_list_entry(idx, is_selected)
+-- Une ligne de la liste occupe les colonnes 3 a 35 : la colonne 36 appartient
+-- a la barre de defilement, qui n'est redessinee que lorsqu'elle change
+local function draw_list_row(i)
+    local idx = offset + i
     local item = items[idx]
-    if not item then return string.rep(" ", 32) end
-    local num_str = item.filepath and string.format("%02d.", idx) or "   "
-    local label = num_str .. " " .. minitel.pad(item.display, 24)
-    if is_selected then
-        return "\x1b[7m > " .. label .. " < \x1b[0m"
+    local text, attr
+    if not item then
+        text = string.rep(" ", 33)
     else
-        return "   " .. label .. "   "
+        local num_str = item.filepath and string.format("%02d.", idx) or "   "
+        local label = num_str .. " " .. minitel.pad(item.display, 24)
+        if idx == cursor then text, attr = " > " .. label .. " <", "\x1b[7m"
+        else text = "   " .. label .. "  " end
     end
+    put_diff("liste" .. i, list_start_y + i - 1, 3, text, attr)
 end
 
 local function draw_scrollbar_and_counter()
     local count_total = (items[1] and items[1].filepath) and #items or 0
     local count_cur = (count_total > 0) and cursor or 0
     local status_left = string.format("CARTOUCHE : %02d / %02d", count_cur, count_total)
-    io.write(string.format("\x1b[21;4H\x1b[1m%s\x1b[0m", minitel.center(status_left, 30)))
+    put_diff("compteur", 21, 4, minitel.center(status_left, 30), "\x1b[1m")
 
-    if #items > max_visible then
-        local thumb_pos = math.floor(((cursor - 1) / math.max(1, #items - 1)) * (max_visible - 3)) + 2
-        for i = 1, max_visible do
-            local y = list_start_y + i - 1
-            local char = (i == 1 and "^") or (i == max_visible and "v") or (i == thumb_pos and "\x1b[7m#\x1b[0m") or ":"
-            io.write(string.format("\x1b[%d;36H%s", y, char))
+    local thumb_pos = math.floor(((cursor - 1) / math.max(1, #items - 1)) * (max_visible - 3)) + 2
+    for i = 1, max_visible do
+        local char, attr = " ", nil
+        if #items > max_visible then
+            if i == 1 then char = "^"
+            elseif i == max_visible then char = "v"
+            elseif i == thumb_pos then char, attr = "#", "\x1b[7m"
+            else char = ":" end
         end
-    else
-        for i = 1, max_visible do
-            io.write(string.format("\x1b[%d;36H ", list_start_y + i - 1))
-        end
+        put_diff("barre" .. i, list_start_y + i - 1, 36, char, attr)
     end
 end
 
@@ -340,46 +365,50 @@ local function trigger_details_update(force_now)
     else
         details_dirty = true
         last_move_ts = get_mono_time()
-        -- Petit indicateur discret en bas a droite pendant le defilement rapide
-        local item = items[cursor]
-        if item then
-            io.write(string.format("\x1b[21;42H%-36s", "SELECTION : " .. item.display .. " ..."))
-        end
     end
 end
 
+-- Toute la liste ; seules les lignes qui ont change partent reellement
 local function draw_full_list(force_details)
-    for i = 1, max_visible do
-        local idx = offset + i
-        local y = list_start_y + i - 1
-        io.write(string.format("\x1b[%d;3H%s", y, format_list_entry(idx, idx == cursor)))
-    end
+    for i = 1, max_visible do draw_list_row(i) end
     draw_scrollbar_and_counter()
     trigger_details_update(force_details)
     io.flush()
 end
 
-local function update_cursor(old_index, new_index)
-    local old_y = list_start_y + (old_index - offset) - 1
-    local new_y = list_start_y + (new_index - offset) - 1
-
-    if old_y >= list_start_y and old_y < list_start_y + max_visible then
-        io.write(string.format("\x1b[%d;3H%s", old_y, format_list_entry(old_index, false)))
-    end
-    if new_y >= list_start_y and new_y < list_start_y + max_visible then
-        io.write(string.format("\x1b[%d;3H%s", new_y, format_list_entry(new_index, true)))
-    end
-
-    draw_scrollbar_and_counter()
-    trigger_details_update(false)
-    io.flush()
-end
-
-local function play_launch_effect(game_name)
-    io.write("\x1b[21;41H\x1b[7m" .. minitel.center("CHARGEMENT : " .. game_name, 38) .. "\x1b[0m")
+local function play_launch_effect(name)
+    io.write("\x1b[21;41H\x1b[7m" .. minitel.center("CHARGEMENT : " .. name, 38) .. "\x1b[0m")
+    shown["pied"] = nil
     io.flush()
     minitel.play_sound("hit")
     minitel.sleep(0.25)
+end
+
+-- Deplacement d'un cran, sans rien afficher (la liste boucle)
+local function move_cursor(dir)
+    if dir < 0 then
+        if cursor > 1 then
+            cursor = cursor - 1
+            if cursor <= offset then offset = cursor - 1 end
+        else
+            cursor = #items
+            offset = math.max(0, #items - max_visible)
+        end
+    else
+        if cursor < #items then
+            cursor = cursor + 1
+            if cursor > offset + max_visible then offset = cursor - max_visible end
+        else
+            cursor = 1
+            offset = 0
+        end
+    end
+end
+
+local function nav_dir(k)
+    if k == "z" or k == "Z" or k == "UP" then return -1 end
+    if k == "s" or k == "S" or k == "DOWN" then return 1 end
+    return nil
 end
 
 -- =====================================================================
@@ -388,12 +417,14 @@ end
 draw_static_portal()
 draw_full_list(true)
 
-while true do
-    local key = minitel.get_key()
-    local old_cursor = cursor
+local pending_key = nil
 
-    -- Si le mode Turbo est actif et que 1.5s s'est ecoulee depuis le dernier mouvement, on affiche l'art !
-    if details_dirty and (get_mono_time() - last_move_ts >= 1.5) then
+while true do
+    local key = pending_key or minitel.get_key()
+    pending_key = nil
+
+    -- Curseur immobile depuis TURBO_DELAY : la fiche de droite le rattrape
+    if details_dirty and (get_mono_time() - last_move_ts >= TURBO_DELAY) then
         draw_details_panel()
         io.flush()
     end
@@ -411,35 +442,16 @@ while true do
         draw_static_portal()
         draw_full_list(true)
 
-    elseif key == "z" or key == "Z" or key == "UP" then
-        if cursor > 1 then
-            cursor = cursor - 1
-            if cursor <= offset then
-                offset = cursor - 1
-                draw_full_list(false)
-            else
-                update_cursor(old_cursor, cursor)
-            end
-        else
-            cursor = #items
-            offset = math.max(0, #items - max_visible)
-            draw_full_list(false)
+    elseif nav_dir(key) then
+        -- Toutes les fleches deja recues sont cumulees en un seul deplacement :
+        -- une touche maintenue ne fait pas d'embouteillage a 9600 bauds
+        local k = key
+        while k do
+            move_cursor(nav_dir(k))
+            k = minitel.get_key()
+            if k and not nav_dir(k) then pending_key = k; k = nil end
         end
-
-    elseif key == "s" or key == "S" or key == "DOWN" then
-        if cursor < #items then
-            cursor = cursor + 1
-            if cursor > offset + max_visible then
-                offset = cursor - max_visible
-                draw_full_list(false)
-            else
-                update_cursor(old_cursor, cursor)
-            end
-        else
-            cursor = 1
-            offset = 0
-            draw_full_list(false)
-        end
+        draw_full_list(false)
 
     elseif key == " " or key == "\n" or key == "\r" or key == "ENVOI" then
         local selected = items[cursor]
@@ -464,5 +476,3 @@ while true do
 
     minitel.sleep(0.01)
 end
-
-minitel.cleanup()
