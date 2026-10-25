@@ -476,13 +476,20 @@ Le portail est l'écran d'accueil. Il est organisé en **double panneau** : à g
 
 **La télémétrie.** Le pied gauche affiche la température du processeur (lue dans `/sys/class/thermal/thermal_zone0/temp`) et la durée de fonctionnement (lue dans `/proc/uptime`). Le pied droit affiche l'état du réseau et l'adresse IP locale. L'état du réseau est retesté **toutes les 30 secondes** ; s'il change, le menu est reconstruit (l'entrée MISE À JOUR apparaît ou disparaît).
 
-**L'écran de veille.** Après **90 secondes** sans frappe, le portail efface l'écran et fait rebondir un petit bandeau `MAGIS CLUB SYS`. Pour un vieil écran cathodique, c'est une vraie protection contre le marquage du tube. N'importe quelle touche réveille le portail.
+**L'écran de veille.** Après **90 secondes** sans frappe, le portail laisse place à une **grande horloge** en chiffres de blocs, avec la date en toutes lettres en dessous, au milieu d'un ciel d'étoiles qui scintillent. N'importe quelle touche réveille le portail.
+
+* **Les deux-points** battent la seconde ; les chiffres changent à chaque minute.
+* **Les étoiles** naissent une par une, passent par `.`, `+`, `*`, `+`, `.`, puis s'éteignent et renaissent ailleurs, jamais sur l'horloge.
+* **Toutes les 20 secondes**, l'horloge change de place au hasard et le ciel se renouvelle. Aucun point de l'écran ne reste allumé longtemps : pour un vieil écran cathodique, c'est une vraie protection contre le marquage du tube.
+* **Économe** : chaque image n'envoie que ce qui change (une ou deux étoiles, les deux-points). En moyenne, l'écran de veille occupe environ 200 caractères par seconde, le cinquième de la liaison à 9600 bauds.
+
+<p align="center"><img src="docs/captures/sys-veille.svg" width="640" alt="Écran de veille"><br><sub><b>Fig. 3.2</b> — L'écran de veille : l'horloge, la date et le ciel étoilé. L'ensemble change de place toutes les 20 secondes.</sub></p>
 
 ### 3.4 Les lanceurs à détection automatique
 
 `3615 JEUX` (`launcher_jeux.lua`) et `3615 OUTILS` (`launcher_utils.lua`) sont deux lanceurs identiques dans leur principe. Aucune liste n'est écrite en dur : à chaque ouverture, ils **scannent** respectivement les dossiers `jeux/` et `utils/`, et chaque fichier `.lua` trouvé devient une cartouche.
 
-<p align="center"><img src="docs/captures/sys-lanceur-jeux.svg" width="640" alt="Lanceur 3615 JEUX"><br><sub><b>Fig. 3.2</b> — Le lanceur de jeux. La fiche de droite attend que le curseur s'arrête pour se mettre à jour.</sub></p>
+<p align="center"><img src="docs/captures/sys-lanceur-jeux.svg" width="640" alt="Lanceur 3615 JEUX"><br><sub><b>Fig. 3.3</b> — Le lanceur de jeux. La fiche de droite attend que le curseur s'arrête pour se mettre à jour.</sub></p>
 
 **Les métadonnées.** Le lanceur lit les 15 premières lignes de chaque fichier et y cherche des balises en commentaire :
 
@@ -508,7 +515,7 @@ Le lanceur calcule aussi la **taille** du fichier et son **nombre de lignes**. S
 
 **Le mode turbo `[H]`.** Redessiner la fiche de droite coûte plusieurs centaines d'octets, soit près d'une demi-seconde à 9600 bauds. En mode turbo (actif par défaut), faire défiler la liste ne déplace que le curseur, et la fiche n'est redessinée qu'**1,5 seconde après le dernier mouvement**. En mode direct, elle suit chaque mouvement.
 
-<p align="center"><img src="docs/captures/sys-lanceur-outils.svg" width="640" alt="Lanceur 3615 OUTILS"><br><sub><b>Fig. 3.3</b> — Le lanceur d'outils, même mécanique sur le dossier <code>utils/</code>.</sub></p>
+<p align="center"><img src="docs/captures/sys-lanceur-outils.svg" width="640" alt="Lanceur 3615 OUTILS"><br><sub><b>Fig. 3.4</b> — Le lanceur d'outils, même mécanique sur le dossier <code>utils/</code>.</sub></p>
 
 | Touche | Fonction |
 | :----- | :------- |

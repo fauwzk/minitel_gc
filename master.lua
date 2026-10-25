@@ -389,26 +389,126 @@ end
 -- =====================================================================
 -- GESTION DE L'ECRAN DE VEILLE (SCREENSAVER)
 -- =====================================================================
-local ss_x, ss_y = 30, 12
-local ss_dx, ss_dy = 1, 1
-local ss_text = " \x1b[7m MAGIS CLUB SYS \x1b[0m "
-local ss_len = 16 
+-- Une grande horloge en chiffres de blocs (video inverse), la date dessous,
+-- et un ciel d'etoiles qui scintillent. L'horloge change de place toutes les
+-- 20 secondes pour ne jamais marquer le tube. Chaque image n'envoie que les
+-- quelques caracteres qui changent : etoiles, deux-points, minute.
+
+-- Police 3 x 5 : chaque pixel allume devient deux espaces en video inverse
+local SS_FONT = {
+    ["0"] = {"111", "101", "101", "101", "111"},
+    ["1"] = {"010", "110", "010", "010", "111"},
+    ["2"] = {"111", "001", "111", "100", "111"},
+    ["3"] = {"111", "001", "111", "001", "111"},
+    ["4"] = {"101", "101", "111", "001", "001"},
+    ["5"] = {"111", "100", "111", "001", "111"},
+    ["6"] = {"111", "100", "111", "101", "111"},
+    ["7"] = {"111", "001", "001", "010", "010"},
+    ["8"] = {"111", "101", "111", "101", "111"},
+    ["9"] = {"111", "101", "111", "001", "111"},
+}
+local SS_JOURS = {"DIMANCHE", "LUNDI", "MARDI", "MERCREDI", "JEUDI", "VENDREDI", "SAMEDI"}
+local SS_MOIS = {"JANVIER", "FEVRIER", "MARS", "AVRIL", "MAI", "JUIN", "JUILLET",
+                 "AOUT", "SEPTEMBRE", "OCTOBRE", "NOVEMBRE", "DECEMBRE"}
+local SS_W, SS_H = 32, 7          -- horloge (5 lignes) + ligne vide + date
+local SS_COLON_X = 15             -- decalage des deux-points dans l'horloge
+local SS_TWINKLE = {".", "+", "*", "+", "."}
+local SS_NB_STARS = 22
+
+local ss = { x = 24, y = 8, hhmm = nil, colon = nil, moved = 0, stars = {} }
+
+-- Une ligne de l'horloge, codee par plages pour economiser les sequences
+local function ss_clock_row(hhmm, row)
+    local cells = {}
+    local function put(col, on) cells[col] = on; cells[col + 1] = on end
+    local digits = { hhmm:sub(1, 1), hhmm:sub(2, 2), hhmm:sub(3, 3), hhmm:sub(4, 4) }
+    local starts = { 1, 9, 19, 27 }
+    for d = 1, 4 do
+        local bits = SS_FONT[digits[d]][row]
+        for b = 1, 3 do put(starts[d] + (b - 1) * 2, bits:sub(b, b) == "1") end
+    end
+    local out, inv = {}, false
+    for col = 1, SS_W do
+        local on = cells[col] == true
+        if on ~= inv then out[#out + 1] = on and "\x1b[7m" or "\x1b[0m"; inv = on end
+        out[#out + 1] = " "
+    end
+    if inv then out[#out + 1] = "\x1b[0m" end
+    return table.concat(out)
+end
+
+local function ss_draw_colon(visible)
+    local seq = visible and "\x1b[7m  \x1b[0m" or "  "
+    io.write(string.format("\x1b[%d;%dH%s\x1b[%d;%dH%s",
+        ss.y + 1, ss.x + SS_COLON_X, seq, ss.y + 3, ss.x + SS_COLON_X, seq))
+end
+
+local function ss_draw_clock(t)
+    local hhmm = string.format("%02d%02d", t.hour, t.min)
+    for row = 1, 5 do
+        io.write(string.format("\x1b[%d;%dH", ss.y + row - 1, ss.x) .. ss_clock_row(hhmm, row))
+    end
+    local date = string.format("%s %d %s %d", SS_JOURS[t.wday], t.day, SS_MOIS[t.month], t.year)
+    local pad = math.floor((SS_W - #date) / 2)
+    io.write(string.format("\x1b[%d;%dH%s", ss.y + 6, ss.x, string.rep(" ", pad) .. date .. string.rep(" ", SS_W - pad - #date)))
+    ss.hhmm, ss.colon = hhmm, nil
+end
+
+-- Une etoile ne doit jamais tomber sur l'horloge (marge d'une case)
+local function ss_new_star()
+    while true do
+        local x, y = math.random(1, 79), math.random(1, 24)
+        if x < ss.x - 1 or x > ss.x + SS_W or y < ss.y - 1 or y > ss.y + SS_H then
+            return { x = x, y = y, phase = -math.random(0, 8) }
+        end
+    end
+end
+
+-- Nouvelle position de l'horloge, ecran efface, nouveau ciel
+local function ss_relocate(t)
+    ss.x = math.random(2, 80 - SS_W)
+    ss.y = math.random(1, 25 - SS_H)
+    io.write("\x1b[0m\x1b[2J")
+    ss.stars = {}
+    for i = 1, SS_NB_STARS do ss.stars[i] = ss_new_star() end
+    ss_draw_clock(t)
+    ss.moved = os.time()
+end
+
+local function start_screensaver()
+    math.randomseed(os.time())
+    ss_relocate(os.date("*t"))
+    io.flush()
+end
 
 local function run_screensaver_frame()
-    io.write("\x1b["..ss_y..";"..ss_x.."H" .. string.rep(" ", ss_len))
-    ss_x = ss_x + ss_dx
-    ss_y = ss_y + ss_dy
-    
-    if ss_x <= 1 or ss_x + ss_len >= 81 then
-        ss_dx = -ss_dx
-        ss_x = ss_x + ss_dx * 2
+    local now = os.time()
+    local t = os.date("*t", now)
+
+    if now - ss.moved >= 20 then ss_relocate(t)
+    elseif string.format("%02d%02d", t.hour, t.min) ~= ss.hhmm then ss_draw_clock(t) end
+
+    -- Les deux-points battent la seconde
+    local colon = (t.sec % 2 == 0)
+    if colon ~= ss.colon then ss_draw_colon(colon); ss.colon = colon end
+
+    -- Chaque etoile parcourt . + * + . puis s'eteint et renait ailleurs
+    for i = 1, 2 do
+        local s = ss.stars[math.random(1, #ss.stars)]
+        s.phase = s.phase + 1
+        if s.phase >= 1 then
+            local ch = SS_TWINKLE[s.phase]
+            if ch then
+                io.write(string.format("\x1b[%d;%dH%s", s.y, s.x, ch))
+            else
+                io.write(string.format("\x1b[%d;%dH ", s.y, s.x))
+                local n = ss_new_star()
+                s.x, s.y, s.phase = n.x, n.y, n.phase
+            end
+        end
     end
-    if ss_y <= 1 or ss_y >= 25 then
-        ss_dy = -ss_dy
-        ss_y = ss_y + ss_dy * 2
-    end
-    
-    io.write("\x1b["..ss_y..";"..ss_x.."H" .. ss_text)
+    -- Curseur range dans le coin, loin de l'horloge
+    io.write("\x1b[24;80H")
     io.flush()
 end
 
@@ -473,8 +573,7 @@ while true do
     elseif state == "MENU" then
         if now - last_input_time > INACTIVITY_TIMEOUT then
             state = "SCREENSAVER"
-            io.write("\x1b[2J\x1b[H") 
-            io.flush()
+            start_screensaver()
         else
             if now - last_net_update >= 30 then
                 local old_status = net_info.connected
