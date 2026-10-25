@@ -277,23 +277,45 @@ end
 -- =====================================================================
 -- 2. EVALUATEUR MATHEMATIQUE & ENTREES (IN / ADC / TEMP / MKEY)
 -- =====================================================================
--- Valeur d'une variable recopiee dans l'expression Lua. Les negatifs sont
--- mis entre parentheses : sinon "5-N" deviendrait "5--2", un commentaire Lua.
-local function num_literal(v)
-    if v ~= v then return "(0/0)" end
-    if v == math.huge then return "(1/0)" end
-    if v == -math.huge then return "(-1/0)" end
-    if v < 0 then return "(" .. tostring(v) .. ")" end
-    return tostring(v)
-end
-
 -- Affichage a la BASIC : 4/2 affiche 2 et non 2.0
 local function fmt_num(v)
     if v == math.floor(v) and math.abs(v) < 1e15 then return string.format("%d", v) end
     return tostring(v)
 end
 
-local function eval_expr(expr)
+-- Fonctions accessibles depuis les expressions (V = table des variables,
+-- mise a jour avant chaque calcul car NEW et LOAD la remplacent)
+local expr_env = {
+    rnd = function(max) return math.random(1, math.floor(max or 10)) end,
+    gpio_in = function(pin) return gpio_read(pin) end,
+    adc_in  = function(ch)  return adc_read(ch) end,
+    cpu_temp = function() return read_cpu_temp() end,
+    mkey = function()
+        local k = key_buffer
+        key_buffer = nil
+        if not k then k = minitel.get_key() end
+        if not k then return 0 end
+        if k == "UP" or k == "Z" or k == "z" then return 200 end
+        if k == "DOWN" or k == "S" or k == "s" then return 201 end
+        if k == "LEFT" or k == "Q" or k == "q" then return 202 end
+        if k == "RIGHT" or k == "D" or k == "d" then return 203 end
+        if k == "ENVOI" or k == "\r" or k == "\n" then return 13 end
+        if k == "RETOUR" or k == "ESC" then return 27 end
+        return string.byte(k) or 0
+    end,
+    sin = math.sin, cos = math.cos, tan = math.tan,
+    abs = math.abs, sqr = math.sqrt, int = math.floor,
+    pi = math.pi, exp = math.exp, log = math.log
+}
+
+local EXPR_RESERVED = {
+    AND=1, OR=1, NOT=1, RND=1, MKEY=1,
+    SIN=1, COS=1, TAN=1, ABS=1, SQR=1, INT=1, PI=1, EXP=1, LOG=1
+}
+
+-- Traduit une expression BASIC en fonction Lua. La traduction n'a lieu qu'une
+-- fois par texte d'expression : une boucle reutilise la fonction deja compilee.
+local function compile_expr(expr)
     local e = string.upper(expr)
 
     -- Support sans parentheses pour le clavier Minitel :
@@ -333,40 +355,24 @@ local function eval_expr(expr)
         if w == "IN" or w == "PEEK" then return "gpio_in" end
         if w == "ADC" or w == "ANALOG" then return "adc_in" end
         if w == "TEMP" then return "cpu_temp" end
-
-        local reserved = {
-            AND=1, OR=1, NOT=1, RND=1, MKEY=1,
-            SIN=1, COS=1, TAN=1, ABS=1, SQR=1, INT=1, PI=1, EXP=1, LOG=1
-        }
-        if reserved[w] then return string.lower(w) end
-        return num_literal(vars[w] or 0)
+        if EXPR_RESERVED[w] then return string.lower(w) end
+        -- Variable : lue a l'execution (0 si elle n'existe pas encore)
+        return "(V." .. w .. " or 0)"
     end)
 
-    local env = {
-        rnd = function(max) return math.random(1, math.floor(max or 10)) end,
-        gpio_in = function(pin) return gpio_read(pin) end,
-        adc_in  = function(ch)  return adc_read(ch) end,
-        cpu_temp = function() return read_cpu_temp() end,
-        mkey = function()
-            local k = key_buffer
-            key_buffer = nil
-            if not k then k = minitel.get_key() end
-            if not k then return 0 end
-            if k == "UP" or k == "Z" or k == "z" then return 200 end
-            if k == "DOWN" or k == "S" or k == "s" then return 201 end
-            if k == "LEFT" or k == "Q" or k == "q" then return 202 end
-            if k == "RIGHT" or k == "D" or k == "d" then return 203 end
-            if k == "ENVOI" or k == "\r" or k == "\n" then return 13 end
-            if k == "RETOUR" or k == "ESC" then return 27 end
-            return string.byte(k) or 0
-        end,
-        sin = math.sin, cos = math.cos, tan = math.tan,
-        abs = math.abs, sqr = math.sqrt, int = math.floor,
-        pi = math.pi, exp = math.exp, log = math.log
-    }
+    return load("return " .. e, "eval", "t", expr_env) or false
+end
 
-    local func = load("return " .. e, "eval", "t", env)
+local expr_cache = {}
+
+local function eval_expr(expr)
+    local func = expr_cache[expr]
+    if func == nil then
+        func = compile_expr(expr)
+        expr_cache[expr] = func
+    end
     if func then
+        expr_env.V = vars
         local ok, val = pcall(func)
         if ok then
             if type(val) == "boolean" then return val and 1 or 0 end
@@ -474,13 +480,14 @@ end
 -- redessine tout a chaque image (CLS ... PAUSE ... GOTO) ne fait plus
 -- clignoter l'ecran, et la liaison a 9600 bauds n'est plus saturee.
 -- L'image est envoyee a chaque CLS (l'image precedente est alors complete),
--- PAUSE, INPUT, fin de programme, et au moins toutes les 50 lignes executees.
+-- PAUSE, INPUT, fin de programme, et environ toutes les 50 ms de calcul.
 local scr_running = false   -- true pendant RUN
 local scr_active = false    -- true quand l'ecran virtuel a pris le relais
 local want, shown = {}, {}  -- cellules voulues / affichees (nil = inconnue)
 local vx, vy, vinv, vwrap = 1, 3, false, false
 local px, py, pinv          -- curseur et attribut reels du Minitel
-local present_count = 0
+local present_count, present_clock = 0, 0
+local dirty = {}             -- lignes de want modifiees depuis le dernier envoi
 
 local function cell(c) return vinv and ("!" .. c) or c end
 
@@ -489,28 +496,36 @@ local function scr_activate()
     scr_active = true
     want, shown = {}, {}
     for r = 1, 24 do want[r], shown[r] = {}, {} end
+    dirty = {}
     px, py, pinv = nil, nil, nil
 end
 
 local function present(avec_curseur)
     if not scr_active then return end
-    present_count = 0
+    present_count, present_clock = 0, os.clock()
     -- Beaucoup de cases a effacer : un effacement materiel coute moins cher
     local blanks = 0
     for r = 3, 24 do
-        local w, s = want[r], shown[r]
-        for c = 1, 80 do
-            if w[c] == " " and s[c] ~= " " then blanks = blanks + 1 end
+        if dirty[r] then
+            local w, s = want[r], shown[r]
+            for c = 1, 80 do
+                if w[c] == " " and s[c] ~= " " then blanks = blanks + 1 end
+            end
         end
     end
     if blanks > 160 then
         io.write("\x1b[0m\x1b[3;1H\x1b[J")
         pinv, py, px = false, nil, nil
-        for r = 3, 24 do for c = 1, 80 do shown[r][c] = " " end end
+        for r = 3, 24 do
+            for c = 1, 80 do shown[r][c] = " " end
+            dirty[r] = true
+        end
     end
 
     local out = {}
     for r = 1, 24 do
+      if dirty[r] then
+        dirty[r] = nil
         local w, s = want[r], shown[r]
         local c = 1
         while c <= 80 do
@@ -535,6 +550,7 @@ local function present(avec_curseur)
                 c = c + 1
             end
         end
+      end
     end
 
     -- Le curseur n'est replace qu'avant un INPUT et en fin de programme :
@@ -572,6 +588,7 @@ local function scr_text(s, deja_fait)
         elseif string.byte(ch) >= 32 then
             if vwrap then vx, vwrap = 1, false; scr_linefeed(deja_fait) end
             want[vy][vx] = cell(ch)
+            dirty[vy] = true
             if deja_fait then shown[vy][vx] = want[vy][vx] end
             if vx == 80 then vwrap = true else vx = vx + 1 end
         end
@@ -596,7 +613,11 @@ local function scr_cls()
         want[1], shown[1], want[2], shown[2] = {}, {}, {}, {}
         pinv, py, px = false, nil, nil
     end
-    for r = 3, 24 do for c = 1, 80 do want[r][c] = " " end end
+    for r = 3, 24 do
+        local w = want[r]
+        for c = 1, 80 do w[c] = " " end
+        dirty[r] = true
+    end
     vx, vy, vwrap = 1, 3, false
 end
 
@@ -710,12 +731,20 @@ local function parse_two_args(str)
     return a, b
 end
 
-local function execute_line(line)
-    local outside_quotes = string.gsub(line, '([^"]*)', function(s) return string.upper(s) end)
-    line = string.match(outside_quotes, "^%s*(.-)%s*$")
-    if line == "" then return "OK" end
+-- Texte de ligne -> { ligne normalisee, commande, reste }, calcule une seule fois
+local line_cache = {}
 
-    local cmd, rest = string.match(line, "^(%a+)%s*(.*)$")
+local function execute_line(raw)
+    local parsed = line_cache[raw]
+    if not parsed then
+        local outside_quotes = string.gsub(raw, '([^"]*)', function(s) return string.upper(s) end)
+        local norm = string.match(outside_quotes, "^%s*(.-)%s*$")
+        local c, r = string.match(norm, "^(%a+)%s*(.*)$")
+        parsed = { norm, c, r }
+        line_cache[raw] = parsed
+    end
+    local line, cmd, rest = parsed[1], parsed[2], parsed[3]
+    if line == "" then return "OK" end
 
     if cmd == "PRINT" then
         local content = string.match(rest, "^%s*%((.*)%)%s*$") or rest
@@ -898,14 +927,21 @@ local function execute_line(line)
         local sec = tonumber(eval_expr(rest))
         if sec then
             present()
-            if sec < 0.1 then minitel.sleep(sec)
-            else
-                for i=1, math.floor(sec*10) do
-                    local k = minitel.get_key()
-                    if k == "RETOUR" or k == "ESC" then return "BREAK" end
-                    if k then key_buffer = k end
-                    minitel.sleep(0.1)
-                end
+            -- Les dixiemes entiers sont dormis avec "sleep" (le processeur se
+            -- repose), le reste en attente active : lancer "sleep" pour une
+            -- pause plus courte couterait plus cher que la pause elle-meme.
+            local tenths = math.floor(math.max(0, sec) * 10)
+            for i = 1, tenths do
+                local k = minitel.get_key()
+                if k == "RETOUR" or k == "ESC" then return "BREAK" end
+                if k then key_buffer = k end
+                minitel.sleep(0.1)
+            end
+            local t0, rest_sec = os.clock(), sec - tenths / 10
+            while os.clock() - t0 < rest_sec do
+                local k = minitel.get_key()
+                if k == "RETOUR" or k == "ESC" then return "BREAK" end
+                if k then key_buffer = k end
             end
         else return "SYNTAX ERROR" end
         return "OK"
@@ -914,9 +950,13 @@ local function execute_line(line)
     elseif cmd == "STOP" then return "STOP"
     elseif cmd == "REM" then return "OK" end
 
-    local v, val = string.match(line, "^(%a+)%s*=%s*(.*)$")
-    if not v then v, val = string.match(line, "^(%a+)%s+EQ%s+(.*)$") end
-    if v then vars[v] = eval_expr(val); return "OK" end
+    -- Affectation (X = ... ou X EQ ...), analysee une seule fois par ligne
+    if parsed[4] == nil then
+        local v, val = string.match(line, "^(%a+)%s*=%s*(.*)$")
+        if not v then v, val = string.match(line, "^(%a+)%s+EQ%s+(.*)$") end
+        parsed[4], parsed[5] = v or false, val
+    end
+    if parsed[4] then vars[parsed[4]] = eval_expr(parsed[5]); return "OK" end
 
     return "SYNTAX ERROR"
 end
@@ -943,6 +983,9 @@ run_lines = function()
     local sorted_lines = {}
     for k in pairs(program) do table.insert(sorted_lines, k) end
     table.sort(sorted_lines)
+    -- Numero de ligne -> position : GOTO et GOSUB trouvent leur cible d'un coup
+    local line_index = {}
+    for i, num in ipairs(sorted_lines) do line_index[num] = i end
 
     local pc = 1
     local loop_stack = {}
@@ -966,14 +1009,11 @@ run_lines = function()
             report("\r\n\x1b[K SYNTAX ERROR IN " .. line_num .. "\r\n"); io.flush(); break
         elseif stat == "END" then break
         elseif stat == "GOTO" or stat == "GOSUB" then
-            local found = false
-            for i, v in ipairs(sorted_lines) do
-                if v == arg then
-                    if stat == "GOSUB" then table.insert(gosub_stack, pc) end
-                    pc = i; found = true; break
-                end
-            end
-            if not found then report("\r\n\x1b[K UNDEFINED LINE " .. arg .. " IN " .. line_num .. "\r\n"); io.flush(); break end
+            local target = line_index[arg]
+            if target then
+                if stat == "GOSUB" then table.insert(gosub_stack, pc) end
+                pc = target
+            else report("\r\n\x1b[K UNDEFINED LINE " .. arg .. " IN " .. line_num .. "\r\n"); io.flush(); break end
         elseif stat == "RETURN" then
             if #gosub_stack > 0 then pc = table.remove(gosub_stack) + 1
             else report("\r\n\x1b[K RETURN WITHOUT GOSUB IN " .. line_num .. "\r\n"); io.flush(); break end
@@ -1004,10 +1044,13 @@ run_lines = function()
             if top and top.type == "WHILE" then pc = top.start_pc; table.remove(loop_stack)
             else report("\r\n\x1b[K WEND WITHOUT WHILE IN " .. line_num .. "\r\n"); break end
         else pc = pc + 1 end
-        -- Un programme qui calcule longtemps sans CLS ni PAUSE s'affiche quand meme
+        -- Un programme qui calcule longtemps sans CLS ni PAUSE s'affiche quand
+        -- meme : l'ecran est rattrape toutes les 50 ms environ
         present_count = present_count + 1
-        if present_count >= 50 then present() end
-        minitel.sleep(0.005)
+        if present_count >= 64 then
+            present_count = 0
+            if os.clock() - present_clock >= 0.05 then present() end
+        end
     end
 end
 

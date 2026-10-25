@@ -278,7 +278,7 @@ Une expression mal formée (`2 + * 3`, parenthèse manquante, mot réservé empl
 > * `MKEY()` avec parenthèses renvoyait toujours 0 (seule la forme `MKEY` fonctionnait) : les deux formes marchent désormais ;
 > * une expression incorrecte valait 0 sans prévenir : elle provoque désormais un `SYNTAX ERROR`.
 >
-> La V6.1 affiche aussi `4 / 2` comme `2` au lieu de `2.0`. Elle n'écrit plus par-dessus la barre d'état au lancement d'un programme sans `CLS`. `[RETOUR]` à une invite vide quitte le BASIC, comme l'annonce le bandeau. Enfin, les programmes s'affichent à travers un écran virtuel qui n'envoie au Minitel que ce qui change : un `CLS` à chaque image ne fait plus clignoter l'écran (§ 4.3).
+> La V6.1 affiche aussi `4 / 2` comme `2` au lieu de `2.0`. Elle n'écrit plus par-dessus la barre d'état au lancement d'un programme sans `CLS`. `[RETOUR]` à une invite vide quitte le BASIC, comme l'annonce le bandeau. Enfin, les programmes s'affichent à travers un écran virtuel qui n'envoie au Minitel que ce qui change : un `CLS` à chaque image ne fait plus clignoter l'écran (§ 4.3). L'interpréteur est aussi des centaines de fois plus rapide (§ 5.4) : **un jeu sans `PAUSE` dans sa boucle principale tournera trop vite**, ajoutez-en une.
 
 <div style="page-break-after: always;"></div>
 
@@ -367,7 +367,7 @@ Le mot `LET` est facultatif. `X = X + 1` augmente `X` de 1.
 
 #### `REM` — remarque
 
-Tout ce qui suit `REM` est ignoré. Servez-vous-en pour titrer votre programme et expliquer les passages délicats. `REM` coûte un peu de temps à l'exécution : évitez d'en placer au cœur d'une boucle rapide.
+Tout ce qui suit `REM` est ignoré. Servez-vous-en pour titrer votre programme et expliquer les passages délicats. Une ligne `REM` ne coûte pratiquement rien à l'exécution.
 
 ### 3.4 Clavier et temps
 
@@ -387,7 +387,9 @@ Fonction (et non instruction) : `K = MKEY()`, ou `K = MKEY`, range dans `K` le c
 
 #### `PAUSE secondes` — attendre
 
-Suspend le programme. Les décimales sont permises (`PAUSE 0.05`). À partir d'un dixième de seconde, la pause peut être interrompue par `[RETOUR]`, et une autre touche frappée pendant l'attente est gardée pour le prochain `MKEY()`.
+Suspend le programme. Les décimales sont permises (`PAUSE 0.05`). La pause peut toujours être interrompue par `[RETOUR]`, et une autre touche frappée pendant l'attente est gardée pour le prochain `MKEY()`.
+
+`PAUSE` est **le** moyen de régler la vitesse d'un jeu ou d'une animation. L'interpréteur exécute les autres lignes presque instantanément : sans `PAUSE`, une boucle de jeu tourne aussi vite que la liaison avec le Minitel le permet.
 
 ### 3.5 Contrôle du déroulement
 
@@ -491,7 +493,7 @@ Dès qu'un programme utilise `CLS` ou `LOCATE`, ses `PRINT` ne partent plus dire
 * à chaque `CLS` (l'image précédente est alors complète) ;
 * à chaque `PAUSE` et avant chaque `INPUT` ;
 * à la fin du programme, ou quand il s'arrête (`BREAK`, `STOP`, erreur) ;
-* au moins toutes les 50 lignes exécutées, pour qu'un long calcul s'affiche quand même au fur et à mesure.
+* environ toutes les 50 millisecondes de calcul, pour qu'un long calcul s'affiche quand même au fur et à mesure.
 
 La boucle la plus simple, « j'efface tout, je redessine tout, j'attends », est donc parfaitement fluide. C'est celle du programme JEU, fourni avec le système, qui déplace un `X` avec les flèches :
 
@@ -580,7 +582,7 @@ Taper une ligne numérotée l'ajoute ou la remplace ; taper un numéro seul la s
 
 ### 5.2 Le cycle d'exécution
 
-Au `RUN`, l'interpréteur trie les numéros de ligne dans une liste, puis fait avancer un **compteur ordinal** (`pc`) qui désigne la prochaine ligne à exécuter :
+Au `RUN`, l'interpréteur trie les numéros de ligne dans une liste, construit un **index** qui donne la position de chaque numéro dans cette liste, puis fait avancer un **compteur ordinal** (`pc`) qui désigne la prochaine ligne à exécuter :
 
 ```text
    +--> le joueur a-t-il appuye sur [RETOUR] ?  -- oui -->  "BREAK IN n", fin
@@ -591,12 +593,12 @@ Au `RUN`, l'interpréteur trie les numéros de ligne dans une liste, puis fait a
    |              v
    |    selon le resultat :
    |      "OK"            -> pc = pc + 1
-   |      "GOTO" / "GOSUB"-> chercher la ligne cible dans la liste triee
+   |      "GOTO" / "GOSUB"-> position de la ligne cible, lue dans un index
    |      "FOR" / "NEXT"  -> gerer la pile des boucles
    |      "RETURN"        -> depiler l'adresse de retour
    |      "END" / erreur  -> fin
    |              |
-   |    petite pause de 5 millisecondes
+   |    toutes les 50 ms : envoi de l'ecran virtuel (§ 4.3)
    +--------------+
 ```
 
@@ -609,7 +611,7 @@ Un `NEXT I` augmente `I` de 1, compare à la borne, et selon le cas revient à l
 
 ### 5.3 L'évaluation des expressions : la traduction en Lua
 
-Le MICRO-BASIC ne contient pas de calculateur d'expressions à proprement parler. Il **traduit l'expression en Lua**, puis demande à Lua de la calculer. Suivons `X GT 1 AND X LT 5`, avec `X` valant 3 :
+Le MICRO-BASIC ne contient pas de calculateur d'expressions à proprement parler. Il **traduit l'expression en Lua**, puis demande à Lua de la calculer. Suivons `X GT 1 AND X LT 5` :
 
 ```text
   1. Mise en majuscules           X GT 1 AND X LT 5
@@ -618,17 +620,20 @@ Le MICRO-BASIC ne contient pas de calculateur d'expressions à proprement parler
   4. Mots, un par un :
        mots-operateurs  GT -> >   LT -> <   EQ -> ==   PLUS -> +   MOD -> % ...
        fonctions        SIN -> sin   INT -> floor   RND -> hasard ...
-       variables        remplacees par LEUR VALEUR, ecrite en toutes lettres
-                                  3 > 1 and 3 < 5
-  5. Execution par Lua            true
-  6. Conversion                   vrai -> 1, faux -> 0           resultat : 1
+       variables        X -> (V.X or 0) : lue dans la table des variables V
+                        (V.X or 0) > 1 and (V.X or 0) < 5
+  5. Compilation par Lua          une fonction, gardee en memoire
+  6. Execution, avec X = 3        true
+  7. Conversion                   vrai -> 1, faux -> 0           resultat : 1
 ```
+
+Les étapes 1 à 5 n'ont lieu **qu'une fois par expression** : l'interpréteur garde la fonction compilée et la réutilise chaque fois qu'il retrouve le même texte. Dans une boucle, seules les étapes 6 et 7 sont refaites, ce qui ne prend que quelques microsecondes. Le même principe vaut pour les lignes elles-mêmes : la mise en majuscules et le découpage en commande et arguments sont faits une fois, puis mémorisés.
 
 Cette méthode, simple et compacte, explique tous les comportements particuliers du langage :
 
-* **Les variables ne contiennent que des nombres** : leur valeur est recopiée telle quelle dans le texte de l'expression.
+* **Les variables ne contiennent que des nombres** : `V` est une simple table Lua de nombres. Une variable jamais affectée vaut 0, grâce au `or 0`.
 * **Les noms de variables n'ont pas de chiffres** : l'étape 4 découpe l'expression en suites de lettres. Dans `A1`, elle voit la variable `A` suivie du nombre `1`.
-* **Les valeurs négatives sont mises entre parenthèses** : avec `N` valant -2, `5-N` devient `5-(-2)`. Sans cette précaution, on obtiendrait `5--2`, et en Lua `--` ouvre un **commentaire** : Lua lirait simplement `5`. C'était l'un des défauts de la version V6.0.
+* **Les valeurs négatives ne posent pas de problème** : avec `N` valant -2, `5-N` est calculé par Lua comme `5 - (-2)`. Jusqu'à la V6.0, les variables étaient remplacées par leur valeur écrite en toutes lettres : `5-N` devenait `5--2`, et en Lua `--` ouvre un **commentaire**, si bien que Lua lisait simplement `5`.
 * **Les symboles à deux caractères sont protégés** : l'étape 3 doit transformer le `=` du BASIC en `==` de Lua, sans toucher au `=` de `<=` ou de `>=`. L'interpréteur met donc d'abord `<=`, `>=`, `<>` et `==` de côté, double les `=` restants, puis remet les symboles en place. La version V6.0 doublait tous les `=`, si bien que `<=` devenait `<==`, que Lua refusait.
 * **Une expression que Lua refuse est une erreur** : l'interpréteur le signale par `SYNTAX ERROR`. En V6.0, elle valait 0 sans prévenir, ce qui masquait les défauts précédents, ainsi qu'un quatrième : `MKEY()` était traduit en `mkey() ()`, un appel invalide, et renvoyait donc toujours 0.
 * **`AND` et `OR` entre nombres** : en Lua, seuls `false` et `nil` sont faux ; le nombre 0 est vrai. `0 AND 1` vaut donc 1 pour Lua. Les comparaisons, elles, produisent de vrais `true` et `false`, d'où le conseil du § 2.5.
@@ -636,19 +641,21 @@ Cette méthode, simple et compacte, explique tous les comportements particuliers
 
 ### 5.4 La vitesse
 
-Le temps d'exécution est dominé par une **pause de 5 millisecondes après chaque ligne**, réalisée en lançant la commande `sleep` du système. Elle évite que l'interpréteur n'accapare le processeur et lui laisse le temps de surveiller le clavier.
+Grâce aux traductions mémorisées (§ 5.3), à l'index des lignes (§ 5.2) et à l'écran virtuel (§ 4.3), une ligne de BASIC ne coûte plus que quelques microsecondes.
 
-| Mesure | Résultat |
-| :----- | :------- |
-| Boucle vide `FOR I = 1 TO 500` / `NEXT I` (1 000 lignes exécutées) | **4,2 secondes** sur un PC récent, soit environ **240 lignes par seconde** |
-| Sur Raspberry Pi | Plus lent : lancer un processus y coûte davantage. Comptez de l'ordre d'une centaine de lignes par seconde. |
+| Mesure, sur un PC récent | Avant | Maintenant |
+| :----- | :---: | :---: |
+| Boucle de calcul, 500 tours (`X = X + I * 2 - INT(I / 3)`, un `IF`, 2 000 lignes exécutées) | 9,7 s | moins de 0,05 s |
+| Boucle `GOTO` de 300 tours (900 lignes exécutées) | 3,9 s | moins de 0,05 s |
+| La même boucle de calcul, 50 000 tours (200 000 lignes exécutées) | environ 16 minutes (estimé) | 0,3 s |
 
-C'est la vitesse d'un micro-ordinateur 8 bits des années 1980. Les mêmes recettes s'appliquent :
+Avant, chaque ligne était suivie d'une pause de 5 millisecondes obtenue en lançant la commande `sleep` du système, et chaque expression était retraduite à chaque passage : le BASIC plafonnait vers 200 à 300 lignes par seconde, et autour d'une centaine sur le Raspberry Pi. Il en exécute désormais plusieurs centaines de milliers par seconde sur un PC. Le Raspberry Pi est plus lent qu'un PC, mais l'écart avec l'ancienne version reste du même ordre.
 
-* **Comptez les lignes, pas les instructions** : chaque ligne coûte le même temps fixe, quelle que soit sa complexité. Une expression longue sur une ligne vaut mieux que trois lignes courtes.
-* **Sortez des boucles** tout ce qui peut l'être (calculs constants, `REM`).
-* **Évitez les `GOTO` lointains dans les boucles rapides** : pour trouver la ligne cible, l'interpréteur parcourt la liste des lignes depuis le début.
-* **L'affichage reste le vrai goulot** : 960 caractères par seconde au plus vers le Minitel. Un programme qui affiche beaucoup est limité par la liaison avant de l'être par l'interpréteur.
+Conséquences pratiques :
+
+* **L'affichage est le vrai goulot** : 960 caractères par seconde au plus vers le Minitel. Un programme qui affiche beaucoup est limité par la liaison, pas par l'interpréteur. L'écran virtuel n'envoie que ce qui change : redessiner un écran identique ne coûte rien.
+* **Réglez la vitesse avec `PAUSE`** : un jeu qui comptait sur la lenteur de l'ancien interpréteur tourne maintenant beaucoup trop vite. Ajoutez une `PAUSE` dans sa boucle principale, comme à la ligne 305 de SLALOM (§ 6.9).
+* **`PAUSE` est précis** : les dixièmes de seconde entiers sont confiés à la commande `sleep` du système, qui laisse le processeur se reposer, et le reste est attendu par l'interpréteur lui-même, en surveillant le clavier. Avant, une pause courte coûtait en plus le lancement de `sleep` (plusieurs millisecondes), et `PAUSE 0.15` ne durait que 0,1 seconde : les fractions de dixième étaient perdues.
 
 ### 5.5 Astuce : l'aiguillage calculé
 
@@ -1014,6 +1021,7 @@ Neuf programmes complets, classés par difficulté (★ à ★★★). Tapez-les
 280 IF P LE R THEN GOTO 400
 290 IF P GE R + W THEN GOTO 400
 300 S = S + 1
+305 PAUSE 0.15
 310 GOTO 100
 400 BEEP
 410 LOCATE 30, 12
@@ -1034,9 +1042,10 @@ Neuf programmes complets, classés par difficulté (★ à ★★★). Tapez-les
 * **Le défilement** : les deux bords sont dessinés sur la ligne 24, et le `PRINT "#"` de la ligne 200, **sans point-virgule**, passe à la ligne alors que le curseur est déjà tout en bas. Toute la zone de travail monte donc d'un cran, et la route semble avancer vers le haut (§ 4.2). Un seul caractère de passage à la ligne fait défiler tout l'écran : aucune ligne de route n'est jamais redessinée.
 * **La voiture** reste sur la ligne 23, mais le défilement l'emporte vers la ligne 22 : la ligne 210 efface donc l'ancienne voiture en ligne 22, à l'ancienne position `Q`, avant de la redessiner en ligne 23.
 * **La collision** : après le défilement, la ligne de route qui vient d'être dessinée se trouve justement en ligne 23, celle de la voiture. Il suffit de comparer `P` à `R` et à `R + W` (lignes 280-290).
+* **Le rythme** : la ligne 305 fixe la vitesse du jeu, environ sept lignes de route par seconde. Sans elle, l'interpréteur ferait défiler la route aussi vite que la liaison le permet, et le jeu serait injouable. Diminuez la valeur pour corser la partie.
 
 **À vous de jouer.**
-1. Rétrécissez la route au fil du temps : `IF S MOD 100 EQ 0 THEN W = W - 1`.
+1. Rétrécissez la route au fil du temps : `IF S MOD 100 EQ 0 THEN W = W - 1`. Ou accélérez : remplacez la ligne 305 par `305 PAUSE 0.15 - S / 2000`, en veillant à ce que la pause ne devienne pas négative.
 2. Ajoutez des obstacles : de temps en temps (`IF RND(20) EQ 1`), dessinez un `*` au milieu de la route.
 3. Affichez le score en direct sur la ligne 2, à côté de la barre d'état.
 
