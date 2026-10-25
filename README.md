@@ -38,7 +38,7 @@ Un second volume, le **[Manuel de programmation MICRO-BASIC](docs/MANUEL_BASIC.m
 
 > **À propos des illustrations.** Toutes les copies d'écran de ce manuel sont **authentiques** : chaque programme a été réellement exécuté, et l'image reproduit, caractère par caractère, ce qu'il a envoyé à l'écran 80 × 24 (vidéo inverse et gras compris). Elles ont été réalisées en mode émulation PC : c'est pourquoi la température du processeur y apparaît parfois comme `N/A`.
 
-> **Impression.** Ce document est prévu pour être lu à l'écran comme imprimé. Les sauts de page sont marqués pour les logiciels qui les reconnaissent (VS Code, Typora, Pandoc, impression navigateur d'un rendu HTML).
+> **Impression.** Ce document est prévu pour être lu à l'écran comme imprimé. Les deux manuels existent en PDF au format A4, prêts à imprimer, dans le dossier [`impression/`](impression/). Une action GitHub les régénère à chaque commit qui modifie la documentation (script `outils/manuels_pdf.py`).
 
 <div style="page-break-after: always;"></div>
 

@@ -1,0 +1,54 @@
+# Regenere les manuels PDF (format A4) a chaque commit qui modifie la documentation,
+# puis les commite dans impression/. Les PDF sont aussi joints au run en artefact.
+name: Manuels PDF
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - README.md
+      - docs/**
+      - outils/manuels_pdf.py
+      - .github/workflows/manuels-pdf.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: manuels-pdf
+  cancel-in-progress: true
+
+jobs:
+  pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+
+      - name: Installer les polices des captures
+        run: sudo apt-get update -q && sudo apt-get install -y -q fonts-dejavu-core
+
+      - name: Generer les PDF
+        run: |
+          python3 outils/manuels_pdf.py README.md impression/Manuel_Minitel_Magis_Club.pdf
+          python3 outils/manuels_pdf.py docs/MANUEL_BASIC.md impression/Manuel_MICRO-BASIC.pdf
+
+      - name: Joindre les PDF au run
+        uses: actions/upload-artifact@v4
+        with:
+          name: manuels-pdf
+          path: impression/*.pdf
+
+      - name: Commiter les PDF
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add impression/*.pdf
+          if git diff --cached --quiet; then
+            echo "PDF inchanges, rien a commiter."
+            exit 0
+          fi
+          git commit -m "Regeneration automatique des manuels PDF"
+          git pull --rebase origin main
+          git push origin HEAD:main
