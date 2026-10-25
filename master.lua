@@ -457,11 +457,13 @@ while true do
             
             net_info = get_network_info()
             if net_info.connected then
+                -- Si une nouvelle version est installee, l'updater redemarre
+                -- la session ; sinon il rend la main et on passe au menu.
                 minitel.cleanup()
                 os.execute("lua5.3 updater.lua")
-                break
+                minitel.init()
             end
-            
+
             build_options()
             state = "MENU"
             draw_static_portal()
@@ -511,24 +513,22 @@ while true do
                     io.flush()
                     minitel.sleep(0.2)
 
-                    if selected.cmd == "update" then
-                        minitel.cleanup()
-                        os.execute("lua5.3 updater.lua")
-                        break 
-                    else
-                        minitel.cleanup()
-                        os.execute(selected.cmd)
-                        minitel.init()
-                        
-                        net_info = get_network_info()
-                        build_options()
-                        if cursor > #options then cursor = #options end
-                        last_net_update = os.time()
-                        last_input_time = os.time()
-                        
-                        draw_static_portal()
-                        draw_full_list()
-                    end
+                    -- L'updater ne rend la main que s'il n'y a rien a recharger
+                    local cmd = selected.cmd
+                    if cmd == "update" then cmd = "lua5.3 updater.lua" end
+
+                    minitel.cleanup()
+                    os.execute(cmd)
+                    minitel.init()
+
+                    net_info = get_network_info()
+                    build_options()
+                    if cursor > #options then cursor = #options end
+                    last_net_update = os.time()
+                    last_input_time = os.time()
+
+                    draw_static_portal()
+                    draw_full_list()
                 end
             end
         end

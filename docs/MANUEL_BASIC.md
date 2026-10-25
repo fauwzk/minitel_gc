@@ -145,6 +145,8 @@ Tapez maintenant une instruction **précédée d'un numéro**. Rien ne se passe 
 
 Un fichier `.bas` est un simple **fichier texte**, une instruction par ligne, précédée de son numéro. Vous pouvez donc écrire un long programme confortablement dans **MAGIS EDIT** (ou sur un autre ordinateur), l'enregistrer dans `utils/prog_basic/`, puis le charger avec `LOAD`.
 
+> **Vos programmes survivent aux mises à jour.** Le programme de mise à jour du système met de côté les fichiers de `utils/prog_basic/` que vous avez créés ou modifiés, puis les remet en place après avoir téléchargé la nouvelle version. Même si celle-ci contient un programme du même nom, c'est le vôtre qui reste (voir le manuel du système, § 3.5).
+
 > **Attention aux majuscules.** Linux distingue majuscules et minuscules dans les noms de fichiers, et le BASIC convertit tout ce que vous tapez en majuscules. Un fichier nommé `jeu.bas` ne pourra pas être chargé : nommez vos fichiers **en majuscules** (`JEU.bas`, l'extension restant en minuscules).
 
 ### 1.6 Quitter

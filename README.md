@@ -420,7 +420,7 @@ Du moment où l'on branche le Raspberry Pi jusqu'à l'affichage du portail, chaq
        +------------------------------> +--> edit.lua, nmtui, bash, reboot...
 ```
 
-Le portail est lancé par `exec` : il **remplace** le shell. Quand il se termine (par exemple après une mise à jour), la session se ferme, et `serial-getty` en rouvre aussitôt une nouvelle, qui relance le portail. Un portail planté se relance donc tout seul.
+Le portail est lancé par `exec` : il **remplace** le shell. Quand il se termine (par exemple après une mise à jour qui a installé une nouvelle version), la session se ferme, et `serial-getty` en rouvre aussitôt une nouvelle, qui relance le portail. Un portail planté se relance donc tout seul.
 
 ### 3.2 L'arborescence du disque
 
@@ -526,22 +526,36 @@ Le système se met à jour depuis son dépôt Git. Le programme est lancé autom
   Sauvegarde : utils/prog_basic/ -> /home/minitel/minitel_gc_backup/
                  |
                  v
-  git status --porcelain : y a-t-il des modifications locales ?
-        |                      |
-       NON                    OUI  ->  ecran "CONFLIT LOCAL"
+  git fetch : le serveur a-t-il de nouveaux commits ?
+  git status : modifications locales (hors utils/prog_basic/) ?
+                 |
+     rien de nouveau, rien de local  ->  "SYSTEME A JOUR", retour
+                 |                        direct au portail
+                 v                        (pas de redemarrage)
+  modifications locales ?  OUI  ->  ecran "CONFLIT LOCAL"
         |                      |
         |   [1] FORCER : git reset --hard + git clean -fd (local ecrase)
         |   [2] SAUVEGARDER ET ENVOYER : git add, commit, push
         |   [3] RENOMMER : chaque fichier modifie devient nom_local.ext
         |   [4] ANNULER : retour au portail sans rien toucher
+       NON                     |
         v                      |
-  git pull  <------------------+
+  Programmes BASIC locaux mis de cote  <--------------+
         |
         v
-  Retour au portail (la session se relance)
+  git pull, puis remise en place des programmes BASIC locaux
+        |
+        v
+  Nouveau commit ?  NON -> "SYSTEME A JOUR", retour au portail
+        |
+       OUI -> "MISE A JOUR REUSSIE", la session redemarre
 ```
 
-> **Important.** Avant toute opération, vos programmes BASIC sont copiés dans `/home/minitel/minitel_gc_backup/utils/prog_basic_backup/`. Les fichiers listés dans `.gitignore` (comme le dossier `utils/sante/`) ne sont jamais envoyés ni effacés par la mise à jour.
+Le système **ne redémarre que si quelque chose a réellement changé** : un nouveau commit a été téléchargé, ou les options 1 et 3 ont modifié les fichiers. Dans tous les autres cas (déjà à jour, envoi réussi, annulation, erreur réseau), vous revenez directement au portail, à l'endroit où vous l'aviez quitté.
+
+> **Vos programmes BASIC sont toujours conservés.** Le dossier `utils/prog_basic/` est traité à part : il ne déclenche jamais l'écran « CONFLIT LOCAL », et ses fichiers créés ou modifiés sur le Pi sont mis de côté avant le `git pull`, puis remis en place à l'identique. Si le dépôt apporte un programme du même nom, **votre version l'emporte** ; les programmes que vous n'avez pas touchés reçoivent normalement la version du dépôt. L'écran de fin indique combien de programmes locaux ont été conservés.
+>
+> Par sécurité, une copie complète du dossier est aussi faite dans `/home/minitel/minitel_gc_backup/utils/prog_basic_backup/`. Les fichiers listés dans `.gitignore` (comme le dossier `utils/sante/`) ne sont jamais envoyés ni effacés par la mise à jour.
 
 ### 3.6 Les fichiers de réglages et de données
 
