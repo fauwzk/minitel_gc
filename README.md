@@ -473,11 +473,12 @@ Le portail est l'écran d'accueil. Il est organisé en **double panneau** : à g
 | `[ENVOI]` ou Espace | Lancer le module sélectionné. |
 | `R` | **Recherche globale** : tapez une partie du nom d'un script ; le premier fichier `.lua` correspondant (sur deux niveaux de dossiers) est lancé. |
 | `[REPETITION]` | Redessiner l'écran. |
+| `H` | Basculer entre le **mode turbo** (par défaut) et le mode direct pour le panneau de droite (voir ci-dessous). |
 
 **Une navigation économe.** À 9600 bauds, chaque caractère compte, et le portail n'envoie que le strict nécessaire :
 
 * une flèche ne redessine que **les deux lignes de la liste** qui changent : la sélection se déplace en un dixième de seconde ;
-* le **panneau de droite** (dessin, cible, type, description) attend que le curseur reste immobile environ 0,2 seconde, et seuls les caractères qui diffèrent de l'écran précédent sont alors envoyés ;
+* le **panneau de droite** (dessin, cible, type, description) ne renvoie que les caractères qui diffèrent de l'écran précédent. En **mode turbo**, actif par défaut comme dans les lanceurs, il attend que le curseur reste immobile **0,3 seconde** ; le bandeau du panneau l'indique (`APERCU SYSTEME [H: TURBO 0.3S]`). La touche `H` passe en **mode direct**, où le panneau suit chaque mouvement, et inversement ;
 * plusieurs flèches reçues d'affilée (touche maintenue) sont regroupées en un seul déplacement : le Minitel ne prend jamais de retard sur le clavier ;
 * le dessin complet du portail n'envoie que les bordures des panneaux, pas leurs espaces intérieurs : environ 2 400 caractères, soit 2,5 secondes.
 

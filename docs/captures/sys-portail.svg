@@ -12,7 +12,7 @@
 <text x="104.4" y="128.0" fill="rgb(18,22,17)" textLength="182.4" lengthAdjust="spacingAndGlyphs">COMMANDES &amp; MODULES</text>
 <text x="363.6" y="128.0" fill="rgb(183,196,177)" textLength="38.4" lengthAdjust="spacingAndGlyphs">|  |</text>
 <rect x="402.0" y="114.0" width="364.8" height="19.0" fill="rgb(232,240,228)"/>
-<text x="459.6" y="128.0" fill="rgb(18,22,17)" textLength="240.0" lengthAdjust="spacingAndGlyphs">MONITEUR &amp; APERCU SYSTEME</text>
+<text x="440.4" y="128.0" fill="rgb(18,22,17)" textLength="288.0" lengthAdjust="spacingAndGlyphs">APERCU SYSTEME [H: TURBO 0.3S]</text>
 <text x="766.8" y="128.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
 <text x="27.6" y="147.0" fill="rgb(183,196,177)" textLength="748.8" lengthAdjust="spacingAndGlyphs">|----------------------------------|  |--------------------------------------|</text>
 <text x="27.6" y="166.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
@@ -44,12 +44,12 @@
 <text x="27.6" y="375.0" fill="rgb(183,196,177)" textLength="748.8" lengthAdjust="spacingAndGlyphs">|                                  |  | Rogue-like Enigma et fictions        |</text>
 <text x="27.6" y="394.0" fill="rgb(183,196,177)" textLength="748.8" lengthAdjust="spacingAndGlyphs">|----------------------------------|  |--------------------------------------|</text>
 <text x="27.6" y="413.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="75.6" y="413.0" fill="rgb(232,240,228)" font-weight="bold" textLength="240.0" lengthAdjust="spacingAndGlyphs">CPU: N/A     | UP: 00h02m</text>
+<text x="75.6" y="413.0" fill="rgb(232,240,228)" font-weight="bold" textLength="240.0" lengthAdjust="spacingAndGlyphs">CPU: N/A     | UP: 00h01m</text>
 <text x="363.6" y="413.0" fill="rgb(183,196,177)" textLength="86.4" lengthAdjust="spacingAndGlyphs">|  | NET:</text>
 <rect x="450.0" y="399.0" width="96.0" height="19.0" fill="rgb(232,240,228)"/>
 <text x="459.6" y="413.0" fill="rgb(18,22,17)" textLength="76.8" lengthAdjust="spacingAndGlyphs">EN LIGNE</text>
 <text x="555.6" y="413.0" fill="rgb(183,196,177)" textLength="220.8" lengthAdjust="spacingAndGlyphs">IP:10.19.1.1          |</text>
 <text x="27.6" y="432.0" fill="rgb(183,196,177)" textLength="748.8" lengthAdjust="spacingAndGlyphs">&#x27;----------------------------------&#x27;  &#x27;--------------------------------------&#x27;</text>
 <rect x="18.0" y="456.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
-<text x="37.2" y="470.0" fill="rgb(18,22,17)" textLength="720.0" lengthAdjust="spacingAndGlyphs">[Z/S] NAVIGUER   |   [ENVOI] VALIDER   |   [R] RECHERCHE LUA   |   [VEILLE]</text>
+<text x="37.2" y="470.0" fill="rgb(18,22,17)" textLength="729.6" lengthAdjust="spacingAndGlyphs">[Z/S] NAVIGUER   |   [ENVOI] VALIDER   |   [R] RECHERCHE LUA   |   [H] TURBO</text>
 </g></svg>

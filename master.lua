@@ -264,6 +264,27 @@ end
 -- seuls les caracteres qui changent sont renvoyes au Minitel
 local panel_shown = {}
 
+-- Mode Turbo [H], actif par defaut : le panneau de droite ne suit le curseur
+-- qu'apres 0,3 s d'immobilite ; en mode direct, il suit chaque mouvement
+local fast_mode = true
+local TURBO_DELAY = 0.3
+
+local function get_mono_time()
+    local f = io.open("/proc/uptime", "r")
+    if f then
+        local s = f:read("*l")
+        f:close()
+        local up = s and tonumber(s:match("^([%d%.]+)"))
+        if up then return up end
+    end
+    return os.time()
+end
+
+local function draw_right_header_badge()
+    local badge = fast_mode and "APERCU SYSTEME [H: TURBO 0.3S]" or "APERCU SYSTEME [H: DIRECT]"
+    io.write("\x1b[6;40H|\x1b[7m" .. center_str(badge, 38) .. "\x1b[0m|")
+end
+
 local function draw_static_portal()
     io.write("\x1b[r\x1b[2J\x1b[H")
     panel_shown = {}
@@ -279,7 +300,7 @@ local function draw_static_portal()
     io.write("\x1b[5;40H.--------------------------------------.")
 
     io.write("\x1b[6;2H|\x1b[7m" .. center_str("COMMANDES & MODULES", 34) .. "\x1b[0m|")
-    io.write("\x1b[6;40H|\x1b[7m" .. center_str("MONITEUR & APERCU SYSTEME", 38) .. "\x1b[0m|")
+    draw_right_header_badge()
 
     io.write("\x1b[7;2H|----------------------------------|")
     io.write("\x1b[7;40H|--------------------------------------|")
@@ -303,7 +324,7 @@ local function draw_static_portal()
     io.write("\x1b[22;40H'--------------------------------------'")
 
     -- Bandeau Inferieur (Ligne 24)
-    io.write("\x1b[24;1H\x1b[7m  [Z/S] NAVIGUER   |   [ENVOI] VALIDER   |   [R] RECHERCHE LUA   |   [VEILLE]   \x1b[0m")
+    io.write("\x1b[24;1H\x1b[7m  [Z/S] NAVIGUER   |   [ENVOI] VALIDER   |   [R] RECHERCHE LUA   |   [H] TURBO  \x1b[0m")
     -- La barre de telemetrie est dessinee par draw_full_list, appele juste apres
 end
 
@@ -372,7 +393,7 @@ local function update_cursor(old_index, new_index)
     if new_y >= list_start_y and new_y < list_start_y + max_visible then
         io.write(string.format("\x1b[%d;3H%s", new_y, format_list_entry(new_index, true)))
     end
-    -- Le panneau de droite suit quand le curseur s'arrete (voir details_due)
+    -- Le panneau de droite suit quand le curseur s'arrete (voir details_due_ts)
     io.flush()
 end
 
@@ -546,7 +567,7 @@ local last_net_update = os.time()
 local last_input_time = os.time()
 local INACTIVITY_TIMEOUT = 90
 local pending_key = nil   -- touche lue en avance pendant un deplacement groupe
-local details_due = nil   -- tours de boucle restants avant de redessiner le panneau
+local details_due_ts = nil -- instant du dernier mouvement, panneau a rattraper
 
 local function is_nav_key(k)
     return k == "z" or k == "Z" or k == "UP" or k == "s" or k == "S" or k == "DOWN"
@@ -630,7 +651,12 @@ while true do
                     end
                     if cursor ~= old_cursor then
                         update_cursor(old_cursor, cursor)
-                        details_due = 8
+                        if fast_mode then
+                            details_due_ts = get_mono_time()
+                        else
+                            draw_details_panel()
+                            io.flush()
+                        end
                     end
                 elseif key == "r" or key == "R" then
                     search_and_launch()
@@ -640,6 +666,12 @@ while true do
                 elseif key == "REPETITION" then
                     draw_static_portal()
                     draw_full_list()
+                elseif key == "h" or key == "H" then
+                    fast_mode = not fast_mode
+                    draw_right_header_badge()
+                    details_due_ts = nil
+                    draw_details_panel()
+                    io.flush()
                 elseif key == " " or key == "\n" or key == "\r" or key == "ENVOI" then
                     local selected = options[cursor]
                     minitel.play_sound("hit")
@@ -666,11 +698,10 @@ while true do
                 end
             end
 
-            -- Curseur immobile depuis ~0,2 s : le panneau de droite le rattrape
-            if details_due then
-                details_due = details_due - 1
-                if details_due <= 0 then
-                    details_due = nil
+            -- Curseur immobile depuis TURBO_DELAY : le panneau de droite le rattrape
+            if details_due_ts then
+                if get_mono_time() - details_due_ts >= TURBO_DELAY then
+                    details_due_ts = nil
                     draw_details_panel()
                     io.flush()
                 end
