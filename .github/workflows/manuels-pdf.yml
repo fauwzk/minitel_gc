@@ -1,5 +1,5 @@
 # Regenere les manuels PDF (format A4) a chaque commit qui modifie la documentation,
-# puis les commite dans impression/. Les PDF sont aussi joints au run en artefact.
+# et les publie dans la release "manuels" (toujours la derniere version, sans commit).
 name: Manuels PDF
 
 on:
@@ -34,21 +34,26 @@ jobs:
           python3 outils/manuels_pdf.py README.md impression/Manuel_Minitel_Magis_Club.pdf
           python3 outils/manuels_pdf.py docs/MANUEL_BASIC.md impression/Manuel_MICRO-BASIC.pdf
 
-      - name: Joindre les PDF au run
-        uses: actions/upload-artifact@v4
-        with:
-          name: manuels-pdf
-          path: impression/*.pdf
-
-      - name: Commiter les PDF
+      - name: Publier dans la release "manuels"
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add impression/*.pdf
-          if git diff --cached --quiet; then
-            echo "PDF inchanges, rien a commiter."
-            exit 0
+          # L'etiquette "manuels" suit le dernier commit qui a genere les PDF
+          git tag -f manuels
+          git push -f origin refs/tags/manuels
+
+          {
+            echo "Manuels du Minitel Magis Club au format PDF A4, prets a imprimer."
+            echo
+            echo "- **Manuel_Minitel_Magis_Club.pdf** : guide de l'utilisateur et manuel de reference du systeme"
+            echo "- **Manuel_MICRO-BASIC.pdf** : manuel de programmation MICRO-BASIC"
+            echo
+            echo "Regeneres automatiquement le $(date -u '+%d/%m/%Y a %H:%M UTC'), depuis le commit ${GITHUB_SHA::7}."
+          } > notes.md
+
+          if gh release view manuels > /dev/null 2>&1; then
+            gh release edit manuels --title "Manuels PDF" --notes-file notes.md --latest
+          else
+            gh release create manuels --title "Manuels PDF" --notes-file notes.md --latest
           fi
-          git commit -m "Regeneration automatique des manuels PDF"
-          git pull --rebase origin main
-          git push origin HEAD:main
+          gh release upload manuels impression/*.pdf --clobber
