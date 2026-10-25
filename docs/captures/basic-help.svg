@@ -2,8 +2,8 @@
 <rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
 <rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
 <g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
-<rect x="18.0" y="19.0" width="710.4" height="19.0" fill="rgb(232,240,228)"/>
-<text x="27.6" y="33.0" fill="rgb(18,22,17)" textLength="700.8" lengthAdjust="spacingAndGlyphs">MICRO-BASIC V6.1 : MANUEL COMPLET   [Z/S/FLECHES] DEFILER [RETOUR] FERMER</text>
+<rect x="18.0" y="19.0" width="700.8" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="33.0" fill="rgb(18,22,17)" textLength="691.2" lengthAdjust="spacingAndGlyphs">MICRO-BASIC V6.1 : MANUEL COMPLET   HAUT/BAS: LIGNE  GAUCHE/DROITE: PAGE</text>
 <text x="37.2" y="71.0" fill="rgb(232,240,228)" font-weight="bold" textLength="374.4" lengthAdjust="spacingAndGlyphs">=== 1. COMMANDES DU SHELL =============</text>
 <text x="37.2" y="90.0" fill="rgb(183,196,177)" textLength="691.2" lengthAdjust="spacingAndGlyphs">RUN        : Execute le programme   NEW / CLEAR: Efface code + coupe PWM</text>
 <text x="37.2" y="109.0" fill="rgb(183,196,177)" textLength="691.2" lengthAdjust="spacingAndGlyphs">LIST       : Affiche le code        DIR        : Liste les fichiers .bas</text>
@@ -22,6 +22,6 @@
 <text x="37.2" y="394.0" fill="rgb(232,240,228)" font-weight="bold" textLength="374.4" lengthAdjust="spacingAndGlyphs">=== 3. PWM, FREQUENCE &amp; ANALOGIQUE ====</text>
 <text x="37.2" y="413.0" fill="rgb(183,196,177)" textLength="691.2" lengthAdjust="spacingAndGlyphs">PWM P R    : Signal PWM sur broche P avec rapport cyclique R (0 a 100 %)</text>
 <text x="162.0" y="432.0" fill="rgb(183,196,177)" textLength="576.0" lengthAdjust="spacingAndGlyphs">Ex: PWM 18 75  (Module la broche 18 a 75%) | PWM 18 0 (Stop)</text>
-<rect x="18.0" y="456.0" width="672.0" height="19.0" fill="rgb(232,240,228)"/>
-<text x="27.6" y="470.0" fill="rgb(18,22,17)" textLength="652.8" lengthAdjust="spacingAndGlyphs">LIGNE 01/20 - UTILISEZ LES FLECHES HAUT/BAS OU [RETOUR] POUR QUITTER</text>
+<rect x="18.0" y="456.0" width="681.6" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="470.0" fill="rgb(18,22,17)" textLength="662.4" lengthAdjust="spacingAndGlyphs">LIGNES 01-20/39 - FLECHES (OU Z/S/Q/D) POUR DEFILER, [RETOUR] QUITTER</text>
 </g></svg>

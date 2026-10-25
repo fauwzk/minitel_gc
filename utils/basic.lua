@@ -1105,13 +1105,14 @@ local function show_help()
     local max_offset = math.max(1, #help_lines - max_visible + 1)
 
     local function draw_help_screen()
-        io.write("\x1b[1;1H\x1b[7m MICRO-BASIC V6.1 : MANUEL COMPLET   [Z/S/FLECHES] DEFILER [RETOUR] FERMER\x1b[K\x1b[0m\r\n")
+        io.write("\x1b[1;1H\x1b[7m MICRO-BASIC V6.1 : MANUEL COMPLET   HAUT/BAS: LIGNE  GAUCHE/DROITE: PAGE\x1b[K\x1b[0m\r\n")
         for i = 1, max_visible do
             local line_idx = offset + i - 1
             io.write("\x1b[" .. (i + 2) .. ";1H\x1b[K")
             if help_lines[line_idx] then io.write(" " .. help_lines[line_idx]) end
         end
-        io.write("\x1b[24;1H\x1b[7m LIGNE " .. string.format("%02d/%02d", offset, max_offset) .. " - UTILISEZ LES FLECHES HAUT/BAS OU [RETOUR] POUR QUITTER \x1b[K\x1b[0m")
+        local last = math.min(#help_lines, offset + max_visible - 1)
+        io.write("\x1b[24;1H\x1b[7m LIGNES " .. string.format("%02d-%02d/%02d", offset, last, #help_lines) .. " - FLECHES (OU Z/S/Q/D) POUR DEFILER, [RETOUR] QUITTER \x1b[K\x1b[0m")
         io.flush()
     end
 
@@ -1121,6 +1122,11 @@ local function show_help()
         if k == "RETOUR" or k == "ESC" or k == " " or k == "ENVOI" or k == "\r" or k == "\n" then break
         elseif k == "UP" or k == "Z" or k == "z" then if offset > 1 then offset = offset - 1; draw_help_screen() end
         elseif k == "DOWN" or k == "S" or k == "s" then if offset < max_offset then offset = offset + 1; draw_help_screen() end
+        -- Gauche / droite : un ecran complet en arriere / en avant
+        elseif k == "LEFT" or k == "Q" or k == "q" or k == "PAGE_UP" then
+            if offset > 1 then offset = math.max(1, offset - max_visible); draw_help_screen() end
+        elseif k == "RIGHT" or k == "D" or k == "d" or k == "PAGE_DOWN" then
+            if offset < max_offset then offset = math.min(max_offset, offset + max_visible); draw_help_screen() end
         end
         minitel.sleep(0.03)
     end

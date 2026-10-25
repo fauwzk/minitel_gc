@@ -300,7 +300,7 @@ Ces commandes se tapent à l'invite, sans numéro de ligne.
 | `SAVE NOM` | Sauvegarde dans `utils/prog_basic/NOM.bas`. |
 | `LOAD NOM` | Charge `utils/prog_basic/NOM.bas`. |
 | `DIR` | Liste les programmes sauvegardés. |
-| `HELP` ou `GUIDE` | Aide-mémoire intégré, à faire défiler avec `Z`/`S` ou les flèches. |
+| `HELP` ou `GUIDE` | Aide-mémoire intégré. Flèches ↑ / ↓ (ou `Z` / `S`) : une ligne à la fois ; flèches ← / → (ou `Q` / `D`) : un écran complet en arrière ou en avant. `[RETOUR]` le referme. |
 | `GPIOMON` | Moniteur des broches GPIO, des PWM et des entrées analogiques (§ 7.6). |
 | `EXIT` ou `QUIT` | Quitte le MICRO-BASIC. |
 
