@@ -3,31 +3,31 @@
 <rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
 <g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
 <rect x="18.0" y="19.0" width="672.0" height="19.0" fill="rgb(232,240,228)"/>
-<text x="27.6" y="33.0" fill="rgb(18,22,17)" textLength="652.8" lengthAdjust="spacingAndGlyphs">MICRO-BASIC TELETEL V6.0 (GPIO/PWM/ADC)   [EXIT] OU [RETOUR] QUITTER</text>
+<text x="27.6" y="33.0" fill="rgb(18,22,17)" textLength="652.8" lengthAdjust="spacingAndGlyphs">MICRO-BASIC TELETEL V6.1 (GPIO/PWM/ADC)   [EXIT] OU [RETOUR] QUITTER</text>
 <rect x="18.0" y="38.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
 <text x="27.6" y="52.0" fill="rgb(18,22,17)" textLength="604.8" lengthAdjust="spacingAndGlyphs">LIGNES:038 | FICHIER:SLALOM | PILOTE:SYSFS | &#x27;HELP&#x27; / &#x27;GPIOMON&#x27;</text>
-<text x="248.4" y="71.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="258.0" y="90.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="248.4" y="109.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="258.0" y="128.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="248.4" y="147.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="238.8" y="166.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="238.8" y="185.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="248.4" y="204.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="258.0" y="223.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="258.0" y="242.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="267.6" y="261.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="277.2" y="71.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="267.6" y="90.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="267.6" y="109.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="277.2" y="128.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="286.8" y="147.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="296.4" y="166.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="296.4" y="185.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="286.8" y="204.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="286.8" y="223.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="286.8" y="242.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="277.2" y="261.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
 <text x="267.6" y="280.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="258.0" y="299.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="248.4" y="318.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="267.6" y="299.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="258.0" y="318.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
 <text x="258.0" y="337.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="258.0" y="356.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="258.0" y="375.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="258.0" y="394.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="258.0" y="413.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="248.4" y="432.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
-<text x="238.8" y="451.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">#</text>
-<rect x="392.4" y="437.0" width="9.6" height="19.0" fill="rgb(232,240,228)"/>
-<text x="392.4" y="451.0" fill="rgb(18,22,17)" textLength="9.6" lengthAdjust="spacingAndGlyphs">A</text>
-<text x="430.8" y="451.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">#</text>
+<text x="267.6" y="356.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="277.2" y="375.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="286.8" y="394.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="296.4" y="413.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="286.8" y="432.0" fill="rgb(183,196,177)" textLength="201.6" lengthAdjust="spacingAndGlyphs">#                   #</text>
+<text x="286.8" y="451.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">#</text>
+<rect x="411.6" y="437.0" width="9.6" height="19.0" fill="rgb(232,240,228)"/>
+<text x="411.6" y="451.0" fill="rgb(18,22,17)" textLength="9.6" lengthAdjust="spacingAndGlyphs">A</text>
+<text x="478.8" y="451.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">#</text>
 </g></svg>

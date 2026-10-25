@@ -1,5 +1,5 @@
 -- @TYPE: DEVELOPPEMENT / EXEC
--- @DESC: Interpreteur BASIC V6.0 avec GPIO, generateur PWM (0-100%), Frequence (Hz), lecture ADC analogique et moniteur temps reel.
+-- @DESC: Interpreteur BASIC V6.1 avec GPIO, generateur PWM (0-100%), Frequence (Hz), lecture ADC analogique et moniteur temps reel.
 
 local minitel = require("minitel")
 minitel.init()
@@ -12,6 +12,7 @@ local vars = {}
 local current_filename = nil
 local is_modified = false
 local key_buffer = nil
+local expr_error = false -- Leve par eval_expr quand une expression est invalide
 
 -- =====================================================================
 -- 1. PILOTE MATERIEL GPIO, PWM, FREQUENCE & ADC (RASPBERRY PI)
@@ -276,6 +277,22 @@ end
 -- =====================================================================
 -- 2. EVALUATEUR MATHEMATIQUE & ENTREES (IN / ADC / TEMP / MKEY)
 -- =====================================================================
+-- Valeur d'une variable recopiee dans l'expression Lua. Les negatifs sont
+-- mis entre parentheses : sinon "5-N" deviendrait "5--2", un commentaire Lua.
+local function num_literal(v)
+    if v ~= v then return "(0/0)" end
+    if v == math.huge then return "(1/0)" end
+    if v == -math.huge then return "(-1/0)" end
+    if v < 0 then return "(" .. tostring(v) .. ")" end
+    return tostring(v)
+end
+
+-- Affichage a la BASIC : 4/2 affiche 2 et non 2.0
+local function fmt_num(v)
+    if v == math.floor(v) and math.abs(v) < 1e15 then return string.format("%d", v) end
+    return tostring(v)
+end
+
 local function eval_expr(expr)
     local e = string.upper(expr)
 
@@ -286,20 +303,20 @@ local function eval_expr(expr)
     e = e:gsub("%f[%a]ADC%s+(%d+)", "ADC(%1)")
     e = e:gsub("%f[%a]ANALOG%s+(%d+)", "ADC(%1)")
     e = e:gsub("%f[%a]RND%s+(%d+)", "RND(%1)")
-    e = e:gsub("%f[%a]MKEY%f[%A]%s*([^(]?)", function(next_c)
-        if next_c == "(" then return "MKEY(" end
-        return "MKEY() " .. next_c
+    -- "MKEY" et "MKEY()" donnent tous deux un appel de fonction (idem pour TEMP)
+    e = e:gsub("%f[%a]MKEY%f[%A]%s*(%(?)", function(paren)
+        if paren == "(" then return "MKEY(" end
+        return "MKEY() "
     end)
-    e = e:gsub("%f[%a]TEMP%f[%A]%s*([^(]?)", function(next_c)
-        if next_c == "(" then return "TEMP(" end
-        return "TEMP() " .. next_c
+    e = e:gsub("%f[%a]TEMP%f[%A]%s*(%(?)", function(paren)
+        if paren == "(" then return "TEMP(" end
+        return "TEMP() "
     end)
 
-    e = string.gsub(e, "<>", "~=")
-    e = string.gsub(e, "<=", "<=")
-    e = string.gsub(e, ">=", ">=")
-    e = string.gsub(e, "=", "==")
-    e = string.gsub(e, "====", "==")
+    -- Les operateurs a deux caracteres sont mis de cote avant de doubler les "=" isoles
+    e = e:gsub("<>", "\1"):gsub("~=", "\1"):gsub("<=", "\2"):gsub(">=", "\3"):gsub("==", "\4")
+    e = e:gsub("=", "==")
+    e = e:gsub("\1", "~="):gsub("\2", "<="):gsub("\3", ">="):gsub("\4", "==")
 
     e = string.gsub(e, "%a+", function(w)
         if w == "EQ" then return "==" end
@@ -322,7 +339,7 @@ local function eval_expr(expr)
             SIN=1, COS=1, TAN=1, ABS=1, SQR=1, INT=1, PI=1, EXP=1, LOG=1
         }
         if reserved[w] then return string.lower(w) end
-        return tostring(vars[w] or 0)
+        return num_literal(vars[w] or 0)
     end)
 
     local env = {
@@ -353,9 +370,10 @@ local function eval_expr(expr)
         local ok, val = pcall(func)
         if ok then
             if type(val) == "boolean" then return val and 1 or 0 end
-            return tonumber(val) or 0
+            if type(val) == "number" then return val end
         end
     end
+    expr_error = true
     return 0
 end
 
@@ -378,7 +396,7 @@ local function input_string(prompt, initial_text)
                 io.flush()
                 return string.upper(str)
             elseif k == "RETOUR" or k == "ESC" then
-                return "ABORT"
+                return "ABORT", str == ""
             elseif k == "LEFT" then
                 if pos > 0 then
                     pos = pos - 1
@@ -435,7 +453,7 @@ end
 local function update_ui()
     io.write("\x1b7\x1b[s")
     io.write("\x1b[3;24r")
-    io.write("\x1b[1;1H\x1b[7m MICRO-BASIC TELETEL V6.0 (GPIO/PWM/ADC)   [EXIT] OU [RETOUR] QUITTER \x1b[K\x1b[0m")
+    io.write("\x1b[1;1H\x1b[7m MICRO-BASIC TELETEL V6.1 (GPIO/PWM/ADC)   [EXIT] OU [RETOUR] QUITTER \x1b[K\x1b[0m")
     local count = 0
     for _ in pairs(program) do count = count + 1 end
     local fname = current_filename or "SANS NOM"
@@ -566,7 +584,11 @@ local function execute_line(line)
                 local next_semi = string.find(content, ';', idx)
                 local sub_expr = next_semi and string.sub(content, idx, next_semi - 1) or string.sub(content, idx)
                 idx = next_semi or (len + 1)
-                if string.match(sub_expr, "%S") then io.write(tostring(eval_expr(sub_expr))) end
+                if string.match(sub_expr, "%S") then
+                    local v = eval_expr(sub_expr)
+                    if expr_error then return "SYNTAX ERROR" end
+                    io.write(fmt_num(v))
+                end
             else idx = idx + 1 end
         end
         if not string.match(content, ";%s*$") then
@@ -762,7 +784,9 @@ local function run_program()
         end
 
         local line_num = sorted_lines[pc]
+        expr_error = false
         local stat, arg = execute_line(program[line_num])
+        if expr_error and stat ~= "BREAK" then stat = "SYNTAX ERROR" end
 
         if stat == "BREAK" then
             io.write("\r\n\x1b[K\x1b[7m BREAK IN " .. line_num .. " \x1b[0m\r\n"); io.flush(); break
@@ -865,7 +889,7 @@ local function show_help()
     local max_offset = math.max(1, #help_lines - max_visible + 1)
 
     local function draw_help_screen()
-        io.write("\x1b[1;1H\x1b[7m MICRO-BASIC V6.0 : MANUEL COMPLET   [Z/S/FLECHES] DEFILER [RETOUR] FERMER\x1b[K\x1b[0m\r\n")
+        io.write("\x1b[1;1H\x1b[7m MICRO-BASIC V6.1 : MANUEL COMPLET   [Z/S/FLECHES] DEFILER [RETOUR] FERMER\x1b[K\x1b[0m\r\n")
         for i = 1, max_visible do
             local line_idx = offset + i - 1
             io.write("\x1b[" .. (i + 2) .. ";1H\x1b[K")
@@ -891,14 +915,21 @@ end
 -- =====================================================================
 local function shell()
     io.write("\x1b[2J\x1b[H\x1b[3;24r\x1b[3;1H")
-    io.write("\x1b[7m MICRO-BASIC V6.0 - GPIO / PWM / FREQ / ADC (" .. GPIO_BACKEND:upper() .. ") \x1b[0m\r\nREADY.\r\n")
+    io.write("\x1b[7m MICRO-BASIC V6.1 - GPIO / PWM / FREQ / ADC (" .. GPIO_BACKEND:upper() .. ") \x1b[0m\r\nREADY.\r\n")
     io.flush()
 
     while true do
         update_ui()
-        local line = input_string("\x1b[K> ")
+        local line, was_empty = input_string("\x1b[K> ")
 
-        if line == "ABORT" then io.write("\r\n")
+        if line == "ABORT" and was_empty then
+            -- [RETOUR] sur une invite vide quitte, apres confirmation si le programme n'est pas sauvegarde
+            if not is_modified or minitel.confirm_box("QUITTER LE BASIC", "Le programme n'est pas sauvegarde. Quitter quand meme ?") then
+                stop_all_pwm()
+                break
+            end
+            io.write("\x1b[2J\x1b[3;24r\x1b[3;1HREADY.\r\n"); io.flush()
+        elseif line == "ABORT" then io.write("\r\n")
         elseif line == "" then -- Rien
         elseif line == "HELP" or line == "GUIDE" then
             show_help()
@@ -925,7 +956,9 @@ local function shell()
             table.sort(sorted_lines)
             for _, l in ipairs(sorted_lines) do io.write(string.format("\x1b[1m%d\x1b[0m %s\r\n", l, program[l])) end
             io.flush()
-        elseif line == "RUN" then io.write("\x1b[3;24r"); run_program(); io.write("\x1b[KREADY.\r\n"); io.flush()
+        elseif line == "RUN" then
+            -- Definir la zone de defilement ramene le curseur en haut : on le sauvegarde autour
+            io.write("\x1b7\x1b[3;24r\x1b8"); run_program(); io.write("\x1b[KREADY.\r\n"); io.flush()
         elseif line == "NEW" or line == "CLEAR" then
             stop_all_pwm()
             program = {}; vars = {}; current_filename = nil; is_modified = false; io.write("READY.\r\n"); io.flush()
@@ -968,8 +1001,9 @@ local function shell()
                 if rest == "" then program[lnum] = nil; is_modified = true
                 else program[lnum] = rest; is_modified = true end
             else
+                expr_error = false
                 local stat, _ = execute_line(line)
-                if stat == "SYNTAX ERROR" then io.write("SYNTAX ERROR\r\n"); io.flush() end
+                if stat == "SYNTAX ERROR" or expr_error then io.write("SYNTAX ERROR\r\n"); io.flush() end
             end
         end
     end

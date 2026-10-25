@@ -7,7 +7,7 @@
  | |  | || | |___|  _ <| |_| |_____| |_) / ___ \ ___) | | |___
  |_|  |_|___\____|_| \_\\___/      |____/_/   \_\____/___\____|
 
-              T E L E T E L   V 6 . 0
+              T E L E T E L   V 6 . 1
 ```
 
 # MANUEL DE PROGRAMMATION MICRO-BASIC
@@ -59,7 +59,7 @@ Tous les programmes de ce manuel ont été **réellement exécutés** sur l'inte
 Depuis le portail, choisissez **3615 OUTILS**, puis **BASIC**. L'écran se présente ainsi :
 
 ```text
- Ligne 1   [ MICRO-BASIC TELETEL V6.0 (GPIO/PWM/ADC)  [EXIT] ... ]  <- bandeau
+ Ligne 1   [ MICRO-BASIC TELETEL V6.1 (GPIO/PWM/ADC)  [EXIT] ... ]  <- bandeau
  Ligne 2   [ LIGNES:000 | FICHIER:SANS NOM | PILOTE:SYSFS | ...  ]  <- etat
  Ligne 3    READY.
  Ligne 4    > _                                                     <- invite
@@ -149,7 +149,11 @@ Un fichier `.bas` est un simple **fichier texte**, une instruction par ligne, pr
 
 ### 1.6 Quitter
 
-Tapez `EXIT` (ou `QUIT`). Tous les signaux PWM en cours sont coupés. Malgré ce qu'indique le bandeau, `[RETOUR]` à l'invite ne quitte pas : il abandonne seulement la ligne en cours de saisie. **Le programme en mémoire n'est pas sauvegardé automatiquement** : pensez à `SAVE` avant de partir.
+Tapez `EXIT` (ou `QUIT`), ou appuyez sur `[RETOUR]` **à une invite vide**. Si le programme en mémoire a été modifié depuis la dernière sauvegarde, `[RETOUR]` demande d'abord confirmation. Tous les signaux PWM en cours sont coupés.
+
+<p align="center"><img src="captures/basic-quitter.svg" width="640" alt="Quitter"><br><sub><b>Fig. 1.5</b> — <code>[RETOUR]</code> avec un programme non sauvegardé : le BASIC demande confirmation.</sub></p>
+
+`[RETOUR]` au milieu d'une ligne en cours de saisie se contente d'abandonner cette ligne. **Le programme en mémoire n'est pas sauvegardé automatiquement** : pensez à `SAVE` avant de partir.
 
 <div style="page-break-after: always;"></div>
 
@@ -186,19 +190,19 @@ L'affectation s'écrit `X = 5`, `LET X = 5` ou, sans symbole, `X EQ 5`.
 
 ### 2.3 Les nombres et leur affichage
 
-Le BASIC calcule avec les nombres de Lua 5.3, qui distingue deux sortes de nombres. Cela se voit à l'affichage :
+Le BASIC calcule avec les nombres de Lua 5.3. `PRINT` affiche un nombre sans décimales quand il tombe juste, et avec ses décimales sinon :
 
-| Calcul | Affichage | Pourquoi |
+| Calcul | Affichage | Remarque |
 | :----- | :-------- | :------- |
-| `PRINT 3 * 4` | `12` | Entier fois entier : entier. |
-| `PRINT 7 / 2` | `3.5` | La division donne toujours un décimal… |
-| `PRINT 4 / 2` | `2.0` | … même quand le résultat tombe juste. |
+| `PRINT 3 * 4` | `12` | |
+| `PRINT 7 / 2` | `3.5` | |
+| `PRINT 4 / 2` | `2` | La division tombe juste : pas de décimales. |
 | `PRINT INT(7 / 2)` | `3` | `INT` ramène à l'entier inférieur. |
-| `PRINT 2 ^ 10` | `1024.0` | La puissance donne aussi un décimal. |
+| `PRINT 2 ^ 10` | `1024` | |
 | `PRINT 10 / 3` | `3.3333333333333` | 14 chiffres significatifs au plus. |
 | `PRINT 1 / 0` | `inf` | L'infini, et non une erreur. |
 
-> **Pour un affichage propre**, passez les résultats de division par `INT()` : `PRINT INT(S / N)`.
+> **Pour arrondir**, passez les résultats par `INT()` : `PRINT INT(S / N)` donne la partie entière ; `INT(X + 0.5)` arrondit au plus proche.
 
 ### 2.4 Les expressions
 
@@ -213,7 +217,7 @@ Une expression combine nombres, variables, opérateurs et fonctions : `X * 2 + 1
 | `*` | `FOIS`, `MUL` | Multiplication | `7 * 2` | `14` |
 | `/` | `DIV` | Division | `7 / 2` | `3.5` |
 | — | `MOD` | Reste de la division | `17 MOD 5` | `2` |
-| `^` | — | Puissance | `2 ^ 3` | `8.0` |
+| `^` | — | Puissance | `2 ^ 3` | `8` |
 
 **Opérateurs de comparaison** (ils donnent 1 pour vrai, 0 pour faux)
 
@@ -222,9 +226,11 @@ Une expression combine nombres, variables, opérateurs et fonctions : `X * 2 + 1
 | `=` ou `EQ` | égal | `IF X = 5` et `IF X EQ 5` sont équivalents. |
 | `<` ou `LT` | inférieur | |
 | `>` ou `GT` | supérieur | |
-| **`LE`** | inférieur ou égal | **N'écrivez pas `<=`** (voir l'encadré ci-dessous). |
-| **`GE`** | supérieur ou égal | **N'écrivez pas `>=`**. |
-| **`NEQ`** | différent | **N'écrivez pas `<>`**. |
+| `<=` ou `LE` | inférieur ou égal | |
+| `>=` ou `GE` | supérieur ou égal | |
+| `<>` ou `NEQ` | différent | |
+
+Les formes en toutes lettres évitent de chercher les symboles sur le clavier du Minitel.
 
 **Opérateurs logiques** : `AND`, `OR`, `NOT`.
 
@@ -238,11 +244,11 @@ Une expression combine nombres, variables, opérateurs et fonctions : `X * 2 + 1
 | `INT(X)` | Partie entière, **arrondie vers le bas** | `INT(3.7)` = 3, `INT(-2.5)` = -3 |
 | `ABS(X)` | Valeur absolue | `ABS(0 - 3)` = 3 |
 | `SQR(X)` | Racine carrée | `SQR(2)` = 1.4142135623731 |
-| `SIN(X)` `COS(X)` `TAN(X)` | Trigonométrie, angle en **radians** | `SIN(PI / 2)` = 1.0 |
-| `EXP(X)` `LOG(X)` | Exponentielle, logarithme népérien | `LOG(EXP(1))` = 1.0 |
+| `SIN(X)` `COS(X)` `TAN(X)` | Trigonométrie, angle en **radians** | `SIN(PI / 2)` = 1 |
+| `EXP(X)` `LOG(X)` | Exponentielle, logarithme népérien | `LOG(EXP(1))` = 1 |
 | `PI` | 3,14159… (sans parenthèses) | `2 * PI` |
-| `MKEY()` | Touche pressée, sans attendre (chapitre 4) | `K = MKEY()` |
-| `TEMP` | Température du processeur en °C | `T = TEMP` |
+| `MKEY()` ou `MKEY` | Touche pressée, sans attendre (chapitre 4) | `K = MKEY()` |
+| `TEMP` ou `TEMP()` | Température du processeur en °C | `T = TEMP` |
 | `IN(P)` ou `IN P` | État d'une broche GPIO, 0 ou 1 (chapitre 7) | `IF IN 27 EQ 0 THEN …` |
 | `ADC(C)` ou `ADC C` | Valeur d'un canal analogique (chapitre 7) | `V = ADC 0` |
 
@@ -260,18 +266,17 @@ L'instruction `IF` exécute sa partie `THEN` quand la condition **vaut autre cho
 
 > **Subtilité de `AND`, `OR` et `NOT`.** Ces opérateurs ne fonctionnent correctement **qu'entre des comparaisons**. Écrivez `IF X GT 1 AND X LT 5`, et jamais `IF A AND B` avec de simples nombres : en interne, le nombre 0 n'est pas considéré comme « faux » par ces opérateurs (chapitre 5). Pour tester une variable, comparez-la : `IF A NEQ 0 AND B NEQ 0`.
 
-### 2.6 ERRATA — trois pièges à connaître
+### 2.6 Les erreurs dans les expressions
 
-Comme les manuels de l'époque, celui-ci a sa page d'errata. La version V6.0 de l'interpréteur présente trois défauts. Ils ne provoquent aucun message d'erreur, d'où l'importance de les connaître. Le chapitre 5 explique leur origine.
+Une expression mal formée (`2 + * 3`, parenthèse manquante, mot réservé employé comme variable) ou impossible à calculer (`(X GT 1) + 1`) arrête le programme sur un **`SYNTAX ERROR`**, avec le numéro de la ligne fautive (chapitre 8).
 
-> **1. Les symboles `<=`, `>=` et `<>` donnent toujours FAUX.**
-> `IF X <= 5 THEN …` n'est jamais exécuté, quelle que soit la valeur de `X`. Utilisez **`LE`**, **`GE`** et **`NEQ`** : `IF X LE 5 THEN …`. Les symboles simples `=`, `<` et `>` fonctionnent normalement.
-
-> **2. Une soustraction collée à une valeur négative est ignorée.**
-> Si `N` vaut -2, `PRINT 5-N` affiche `5` au lieu de `7`. **Entourez les opérateurs d'espaces** : `PRINT 5 - N` affiche bien `7`. C'est une bonne habitude de toute façon.
-
-> **3. Une expression incorrecte vaut 0, sans prévenir.**
-> `PRINT 2 + * 3` affiche `0`. Si un calcul donne un 0 inattendu, relisez l'expression : faute de frappe, parenthèse manquante, mot réservé employé comme nom de variable…
+> **Nouveautés de la version V6.1.** La version précédente de l'interpréteur avait quatre défauts qui ne provoquaient aucun message. Si vous reprenez un ancien programme, voici ce qui a changé :
+> * `<=`, `>=` et `<>` étaient toujours faux : ils fonctionnent désormais, comme `LE`, `GE` et `NEQ` ;
+> * `5-N` avec `N` négatif donnait un résultat faux : le calcul est désormais exact, avec ou sans espaces ;
+> * `MKEY()` avec parenthèses renvoyait toujours 0 (seule la forme `MKEY` fonctionnait) : les deux formes marchent désormais ;
+> * une expression incorrecte valait 0 sans prévenir : elle provoque désormais un `SYNTAX ERROR`.
+>
+> La V6.1 affiche aussi `4 / 2` comme `2` au lieu de `2.0`. Elle n'écrit plus par-dessus la barre d'état au lancement d'un programme sans `CLS`. Enfin, `[RETOUR]` à une invite vide quitte le BASIC, comme l'annonce le bandeau.
 
 <div style="page-break-after: always;"></div>
 
@@ -320,7 +325,7 @@ Affiche des textes entre guillemets et des valeurs d'expressions, **séparés pa
 
 #### `CLS` — effacer l'écran
 
-Efface l'écran, redessine la barre d'état et place le curseur en haut de la zone de travail (colonne 1, ligne 3). **Commencez vos programmes par `CLS`** (voir § 4.2).
+Efface l'écran, redessine la barre d'état et place le curseur en haut de la zone de travail (colonne 1, ligne 3). Un programme qui commence par `CLS` démarre sur un écran propre.
 
 #### `LOCATE x, y` — positionner le curseur
 
@@ -374,7 +379,7 @@ Affiche `? `, attend que l'utilisateur tape un nombre et `[ENVOI]`, puis le rang
 
 #### `MKEY()` — lire le clavier sans attendre
 
-Fonction (et non instruction) : `K = MKEY()` range dans `K` le code de la dernière touche pressée, ou **0** si aucune ne l'a été. Le programme ne s'arrête pas. Codes détaillés au § 4.4.
+Fonction (et non instruction) : `K = MKEY()`, ou `K = MKEY`, range dans `K` le code de la dernière touche pressée, ou **0** si aucune ne l'a été. Le programme ne s'arrête pas. Codes détaillés au § 4.4.
 
 #### `PAUSE secondes` — attendre
 
@@ -456,7 +461,7 @@ Répète les lignes comprises entre `WHILE` et `WEND` **tant que** la condition 
 ```text
           colonne 1                                                      colonne 80
              |                                                               |
- ligne  1    MICRO-BASIC TELETEL V6.0 ...                (barre d'etat)
+ ligne  1    MICRO-BASIC TELETEL V6.1 ...                (barre d'etat)
  ligne  2    LIGNES:012 | FICHIER:...                    (barre d'etat)
  ligne  3    +---------------------------------------------------------------+
      .       |                                                               |
@@ -471,7 +476,7 @@ Répète les lignes comprises entre `WHILE` et `WEND` **tant que** la condition 
 
 La zone de travail (lignes 3 à 24) est une **zone de défilement** : quand un `PRINT` passe à la ligne alors que le curseur est déjà sur la ligne 24, tout le contenu de la zone monte d'un cran. C'est le Minitel lui-même qui fait glisser les lignes : l'opération est quasi instantanée. Le programme SLALOM exploite cette propriété pour faire défiler une route.
 
-> **Commencez vos programmes par `CLS`.** Au lancement, `RUN` redéfinit la zone de défilement ; d'après la norme VT100, cette opération ramène le curseur **en haut à gauche de l'écran**, sur la barre d'état. Sur un écran qui respecte strictement la norme, un programme qui affiche du texte sans `CLS` préalable écrit donc par-dessus la barre d'état. Un `CLS` (ou un `LOCATE`) en première ligne règle la question.
+> **Au lancement d'un programme.** `RUN` redéfinit la zone de défilement. D'après la norme VT100, cette opération ramène le curseur en haut à gauche de l'écran, sur la barre d'état : l'interpréteur mémorise donc la position du curseur juste avant et la restaure juste après. Un programme sans `CLS` écrit à la suite de la commande `RUN`.
 
 ### 4.3 Animer sans clignoter
 
@@ -592,10 +597,11 @@ Cette méthode, simple et compacte, explique tous les comportements particuliers
 
 * **Les variables ne contiennent que des nombres** : leur valeur est recopiée telle quelle dans le texte de l'expression.
 * **Les noms de variables n'ont pas de chiffres** : l'étape 4 découpe l'expression en suites de lettres. Dans `A1`, elle voit la variable `A` suivie du nombre `1`.
-* **L'erratum n° 2** (§ 2.6) : avec `N` valant -2, l'expression `5-N` devient le texte `5--2`. Or, en Lua, `--` ouvre un **commentaire** ! Lua lit simplement `5`. Avec des espaces, `5 - N` devient `5 - -2`, qui vaut bien 7.
-* **L'erratum n° 1** : l'étape 3 remplace chaque `=` par `==`, y compris celui de `<=`, qui devient `<==`. Lua refuse cette expression, et une expression refusée vaut 0 (erratum n° 3). Les mots `LE`, `GE` et `NEQ` étant traduits à l'étape 4, après ce remplacement, ils ne sont pas touchés.
+* **Les valeurs négatives sont mises entre parenthèses** : avec `N` valant -2, `5-N` devient `5-(-2)`. Sans cette précaution, on obtiendrait `5--2`, et en Lua `--` ouvre un **commentaire** : Lua lirait simplement `5`. C'était l'un des défauts de la version V6.0.
+* **Les symboles à deux caractères sont protégés** : l'étape 3 doit transformer le `=` du BASIC en `==` de Lua, sans toucher au `=` de `<=` ou de `>=`. L'interpréteur met donc d'abord `<=`, `>=`, `<>` et `==` de côté, double les `=` restants, puis remet les symboles en place. La version V6.0 doublait tous les `=`, si bien que `<=` devenait `<==`, que Lua refusait.
+* **Une expression que Lua refuse est une erreur** : l'interpréteur le signale par `SYNTAX ERROR`. En V6.0, elle valait 0 sans prévenir, ce qui masquait les défauts précédents, ainsi qu'un quatrième : `MKEY()` était traduit en `mkey() ()`, un appel invalide, et renvoyait donc toujours 0.
 * **`AND` et `OR` entre nombres** : en Lua, seuls `false` et `nil` sont faux ; le nombre 0 est vrai. `0 AND 1` vaut donc 1 pour Lua. Les comparaisons, elles, produisent de vrais `true` et `false`, d'où le conseil du § 2.5.
-* **Un calcul mélangeant comparaison et arithmétique**, comme `(X GT 1) + 1`, vaut 0 : Lua refuse d'additionner `true` et 1.
+* **Un calcul mélangeant comparaison et arithmétique**, comme `(X GT 1) + 1`, provoque un `SYNTAX ERROR` : Lua refuse d'additionner `true` et 1.
 
 ### 5.4 La vitesse
 
@@ -903,7 +909,7 @@ Neuf programmes complets, classés par difficulté (★ à ★★★). Tapez-les
 
 **Comment ça marche.** `DX` et `DY` sont les composantes de la vitesse : +1 ou -1 sur chaque axe. Lorsque la balle atteint un bord, la composante correspondante change de signe : c'est le rebond. Chaque image n'envoie au Minitel qu'une vingtaine d'octets : l'effacement de l'ancienne balle (lignes 110-120) et le dessin de la nouvelle (lignes 190-200).
 
-> **Errata en pratique.** Les tests des lignes 150 à 180 utilisent `LE` et `GE`. Avec `<=` et `>=`, la balle sortirait de l'écran (§ 2.6).
+> **Sans symboles.** Les tests des lignes 150 à 180 utilisent `LE` et `GE` ; `<=` et `>=` donneraient le même résultat.
 
 **À vous de jouer.** Faites émettre un `BEEP` à chaque rebond. Laissez une traînée en ne l'effaçant que tous les deux pas.
 
@@ -1221,7 +1227,7 @@ Une erreur arrête le programme et affiche le numéro de la ligne fautive. Les v
 
 | Message | Signification | Que faire |
 | :------ | :------------ | :-------- |
-| `SYNTAX ERROR IN n` | L'instruction de la ligne `n` n'est pas reconnue, ou il lui manque un élément. | Vérifiez l'orthographe du mot-clé, les espaces, la virgule de `LOCATE` ou de `OUT`, le `THEN` d'un `IF`. |
+| `SYNTAX ERROR IN n` | L'instruction de la ligne `n` n'est pas reconnue, il lui manque un élément, ou l'une de ses expressions est incorrecte (`2 + * 3`, parenthèse manquante, `(X GT 1) + 1`). | Vérifiez l'orthographe du mot-clé, la virgule de `LOCATE` ou de `OUT`, le `THEN` d'un `IF`, puis chaque expression de la ligne. |
 | `SYNTAX ERROR` | Même chose, en mode direct. | |
 | `UNDEFINED LINE x IN n` | `GOTO` ou `GOSUB` vers une ligne `x` qui n'existe pas. | Vérifiez le numéro ; `LIST` pour revoir le programme. |
 | `NEXT WITHOUT FOR IN n` | `NEXT` sans `FOR` correspondant, ou avec une autre variable. | Le `NEXT` doit nommer la variable du `FOR` le plus récent encore ouvert. |
@@ -1239,11 +1245,11 @@ Une erreur arrête le programme et affiche le numéro de la ligne fautive. Les v
 <td align="center"><img src="captures/basic-err-next.svg" width="380" alt="NEXT WITHOUT FOR"><br><sub><b>Fig. 8.2</b> — <code>30 NEXT J</code> sans <code>FOR</code></sub></td>
 </tr>
 <tr>
-<td align="center" colspan="2"><img src="captures/basic-err-syntax.svg" width="380" alt="SYNTAX ERROR"><br><sub><b>Fig. 8.3</b> — Une instruction inconnue, en programme puis en mode direct</sub></td>
+<td align="center" colspan="2"><img src="captures/basic-err-syntax.svg" width="380" alt="SYNTAX ERROR"><br><sub><b>Fig. 8.3</b> — Une expression incorrecte en ligne 30, puis une instruction inconnue en mode direct</sub></td>
 </tr>
 </table>
 
-> **Et les erreurs silencieuses ?** Rappelez-vous l'errata (§ 2.6) : une expression incorrecte ne provoque pas d'erreur, elle vaut 0. Si un programme se comporte bizarrement sans message, affichez les valeurs intermédiaires avec des `PRINT` provisoires, ou placez un `STOP` et inspectez les variables.
+> **Un programme qui se trompe sans message ?** Si le résultat est faux sans qu'aucune erreur ne s'affiche, affichez les valeurs intermédiaires avec des `PRINT` provisoires, ou placez un `STOP` et inspectez les variables en mode direct. Pensez au piège des variables qui gardent leur valeur d'un `RUN` à l'autre (§ 2.2) et à celui de `AND` / `OR` entre de simples nombres (§ 2.5).
 
 <div style="page-break-after: always;"></div>
 
@@ -1251,7 +1257,7 @@ Une erreur arrête le programme et affiche le numéro de la ligne fautive. Les v
 
 ```text
 +==============================================================================+
-|                   MICRO-BASIC TELETEL V6.0  -  CARTE DE REFERENCE            |
+|                   MICRO-BASIC TELETEL V6.1  -  CARTE DE REFERENCE            |
 +==============================================================================+
 | COMMANDES        RUN  LIST  NEW  CLEAR(=NEW!)  EDIT n  DIR                   |
 |                  SAVE NOM  LOAD NOM  HELP  GPIOMON  EXIT                     |
@@ -1273,8 +1279,7 @@ Une erreur arrête le programme et affiche le numéro de la ligne fautive. Les v
 |                  WHILE cond ... WEND                                         |
 +------------------------------------------------------------------------------+
 | OPERATEURS       +  -  *  /  ^  MOD     PLUS MOINS FOIS MUL DIV              |
-| COMPARAISONS     =  <  >     EQ  LT  GT  LE  GE  NEQ                         |
-|                  !! <=  >=  <>  NE MARCHENT PAS : utiliser LE  GE  NEQ !!    |
+| COMPARAISONS     =  <  >  <=  >=  <>      EQ  LT  GT  LE  GE  NEQ            |
 | LOGIQUE          AND  OR  NOT   (entre des comparaisons uniquement)          |
 | FONCTIONS        RND(n)  INT  ABS  SQR  SIN  COS  TAN  EXP  LOG  PI          |
 +------------------------------------------------------------------------------+
@@ -1312,7 +1317,6 @@ Pour qui a appris sur un Commodore 64, un Amstrad CPC, un Thomson MO5 ou en GW-B
 | `FOR I = 10 TO 0 STEP -2` | Pas de `STEP` : modifiez la variable dans la boucle. |
 | `ON X GOTO 100, 200` | `GOTO 100 * X` (aiguillage calculé, § 5.5). |
 | `IF X > 0 THEN 100` | `IF X > 0 THEN GOTO 100` |
-| `IF X <= 5` / `<>` | `IF X LE 5` / `NEQ` (errata, § 2.6). |
 | `PRINT A, B` (tabulation) | `PRINT A ; "   " ; B` |
 | `DATA` / `READ` | N'existent pas : affectez les valeurs une à une. |
 | `CLEAR` efface les variables | `CLEAR` efface **aussi le programme** (comme `NEW`). |

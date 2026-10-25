@@ -380,7 +380,7 @@ Le connecteur GPIO à 40 broches du Raspberry Pi est accessible depuis le **MICR
 | Débit d'affichage | 960 caractères par seconde |
 | Écran complet | Environ 2 000 à 2 500 octets, soit 2 à 2,5 secondes |
 | Son | Synthèse SoX sur le Raspberry Pi, diffusée par le haut-parleur du Minitel (broches audio 6 et 8) |
-| Langage utilisateur | MICRO-BASIC V6.0 (numéros de ligne, GPIO, PWM, ADC) |
+| Langage utilisateur | MICRO-BASIC V6.1 (numéros de ligne, GPIO, PWM, ADC) |
 | Stockage | Carte micro-SD (programmes `.bas`, documents, sauvegardes) |
 | Réseau | Wi-Fi / Ethernet du Raspberry Pi, configuré par `nmtui` |
 | Mise en veille | Écran de veille après 90 s d'inactivité au portail |
@@ -909,7 +909,7 @@ Ces deux jeux utilisent le serveur décrit au § 3.8 et le fichier `utils/pictoc
 
 ## CHAPITRE 7 : LE LANGAGE MICRO-BASIC
 
-Comme tout micro-ordinateur digne de ce nom, votre Minitel démarre... un BASIC. L'interpréteur **MICRO-BASIC TÉLÉTEL V6.0** (`utils/basic.lua`) se lance depuis **3615 OUTILS**.
+Comme tout micro-ordinateur digne de ce nom, votre Minitel démarre... un BASIC. L'interpréteur **MICRO-BASIC TÉLÉTEL V6.1** (`utils/basic.lua`) se lance depuis **3615 OUTILS**.
 
 <p align="center"><img src="docs/captures/basic-demarrage.svg" width="640" alt="MICRO-BASIC"><br><sub><b>Fig. 7.1</b> — L'invite du MICRO-BASIC.</sub></p>
 

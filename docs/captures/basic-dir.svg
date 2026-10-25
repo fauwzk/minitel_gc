@@ -3,14 +3,13 @@
 <rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
 <g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
 <rect x="18.0" y="19.0" width="672.0" height="19.0" fill="rgb(232,240,228)"/>
-<text x="27.6" y="33.0" fill="rgb(18,22,17)" textLength="652.8" lengthAdjust="spacingAndGlyphs">MICRO-BASIC TELETEL V6.0 (GPIO/PWM/ADC)   [EXIT] OU [RETOUR] QUITTER</text>
+<text x="27.6" y="33.0" fill="rgb(18,22,17)" textLength="652.8" lengthAdjust="spacingAndGlyphs">MICRO-BASIC TELETEL V6.1 (GPIO/PWM/ADC)   [EXIT] OU [RETOUR] QUITTER</text>
 <rect x="18.0" y="38.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
 <text x="27.6" y="52.0" fill="rgb(18,22,17)" textLength="624.0" lengthAdjust="spacingAndGlyphs">LIGNES:000 | FICHIER:SANS NOM | PILOTE:SYSFS | &#x27;HELP&#x27; / &#x27;GPIOMON&#x27;</text>
-<rect x="18.0" y="57.0" width="499.2" height="19.0" fill="rgb(232,240,228)"/>
-<text x="27.6" y="71.0" fill="rgb(18,22,17)" textLength="480.0" lengthAdjust="spacingAndGlyphs">MICRO-BASIC V6.0 - GPIO / PWM / FREQ / ADC (SYSFS)</text>
-<text x="18.0" y="90.0" fill="rgb(183,196,177)" textLength="57.6" lengthAdjust="spacingAndGlyphs">READY.</text>
-<text x="18.0" y="109.0" fill="rgb(183,196,177)" textLength="48.0" lengthAdjust="spacingAndGlyphs">&gt; DIR</text>
-<text x="18.0" y="128.0" fill="rgb(183,196,177)" textLength="96.0" lengthAdjust="spacingAndGlyphs">CADRES.bas</text>
+<text x="18.0" y="71.0" fill="rgb(183,196,177)" textLength="48.0" lengthAdjust="spacingAndGlyphs">&gt; DIR</text>
+<text x="18.0" y="90.0" fill="rgb(183,196,177)" textLength="96.0" lengthAdjust="spacingAndGlyphs">BOUTON.bas</text>
+<text x="18.0" y="109.0" fill="rgb(183,196,177)" textLength="96.0" lengthAdjust="spacingAndGlyphs">CADRES.bas</text>
+<text x="18.0" y="128.0" fill="rgb(183,196,177)" textLength="96.0" lengthAdjust="spacingAndGlyphs">CLIGNO.bas</text>
 <text x="18.0" y="147.0" fill="rgb(183,196,177)" textLength="67.2" lengthAdjust="spacingAndGlyphs">DES.bas</text>
 <text x="18.0" y="166.0" fill="rgb(183,196,177)" textLength="76.8" lengthAdjust="spacingAndGlyphs">DYNO.bas</text>
 <text x="18.0" y="185.0" fill="rgb(183,196,177)" textLength="86.4" lengthAdjust="spacingAndGlyphs">FUSEE.bas</text>
@@ -23,8 +22,10 @@
 <text x="18.0" y="318.0" fill="rgb(183,196,177)" textLength="105.6" lengthAdjust="spacingAndGlyphs">PREMIER.bas</text>
 <text x="18.0" y="337.0" fill="rgb(183,196,177)" textLength="115.2" lengthAdjust="spacingAndGlyphs">RANDTEST.bas</text>
 <text x="18.0" y="356.0" fill="rgb(183,196,177)" textLength="96.0" lengthAdjust="spacingAndGlyphs">REBOND.bas</text>
-<text x="18.0" y="375.0" fill="rgb(183,196,177)" textLength="96.0" lengthAdjust="spacingAndGlyphs">SLALOM.bas</text>
-<text x="18.0" y="394.0" fill="rgb(183,196,177)" textLength="96.0" lengthAdjust="spacingAndGlyphs">TABLES.bas</text>
-<text x="18.0" y="413.0" fill="rgb(183,196,177)" textLength="57.6" lengthAdjust="spacingAndGlyphs">READY.</text>
-<text x="18.0" y="432.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">&gt;</text>
+<text x="18.0" y="375.0" fill="rgb(183,196,177)" textLength="105.6" lengthAdjust="spacingAndGlyphs">RESPIRE.bas</text>
+<text x="18.0" y="394.0" fill="rgb(183,196,177)" textLength="96.0" lengthAdjust="spacingAndGlyphs">SLALOM.bas</text>
+<text x="18.0" y="413.0" fill="rgb(183,196,177)" textLength="96.0" lengthAdjust="spacingAndGlyphs">TABLES.bas</text>
+<text x="18.0" y="432.0" fill="rgb(183,196,177)" textLength="96.0" lengthAdjust="spacingAndGlyphs">THERMO.bas</text>
+<text x="18.0" y="451.0" fill="rgb(183,196,177)" textLength="57.6" lengthAdjust="spacingAndGlyphs">READY.</text>
+<text x="18.0" y="470.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">&gt;</text>
 </g></svg>
