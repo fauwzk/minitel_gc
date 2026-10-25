@@ -474,7 +474,16 @@ Le portail est l'écran d'accueil. Il est organisé en **double panneau** : à g
 | `R` | **Recherche globale** : tapez une partie du nom d'un script ; le premier fichier `.lua` correspondant (sur deux niveaux de dossiers) est lancé. |
 | `[REPETITION]` | Redessiner l'écran. |
 
-**La télémétrie.** Le pied gauche affiche la température du processeur (lue dans `/sys/class/thermal/thermal_zone0/temp`) et la durée de fonctionnement (lue dans `/proc/uptime`). Le pied droit affiche l'état du réseau et l'adresse IP locale. L'état du réseau est retesté **toutes les 30 secondes** ; s'il change, le menu est reconstruit (l'entrée MISE À JOUR apparaît ou disparaît).
+**Une navigation économe.** À 9600 bauds, chaque caractère compte, et le portail n'envoie que le strict nécessaire :
+
+* une flèche ne redessine que **les deux lignes de la liste** qui changent : la sélection se déplace en un dixième de seconde ;
+* le **panneau de droite** (dessin, cible, type, description) attend que le curseur reste immobile environ 0,2 seconde, et seuls les caractères qui diffèrent de l'écran précédent sont alors envoyés ;
+* plusieurs flèches reçues d'affilée (touche maintenue) sont regroupées en un seul déplacement : le Minitel ne prend jamais de retard sur le clavier ;
+* le dessin complet du portail n'envoie que les bordures des panneaux, pas leurs espaces intérieurs : environ 2 400 caractères, soit 2,5 secondes.
+
+Mesuré en émulation, six appuis rapides sur une flèche envoyaient auparavant 3 500 caractères, soit près de 4 secondes d'affichage en retard ; ils en envoient désormais 900.
+
+**La télémétrie.** Le pied gauche affiche la température du processeur (lue dans `/sys/class/thermal/thermal_zone0/temp`) et la durée de fonctionnement (lue dans `/proc/uptime`). Le pied droit affiche l'état du réseau et l'adresse IP locale. L'état du réseau est retesté **toutes les 30 secondes**, mais seulement après 5 secondes sans frappe : le test (un `ping`) peut bloquer jusqu'à une seconde hors ligne, et ne doit pas gêner la navigation. S'il change, le menu est reconstruit (l'entrée MISE À JOUR apparaît ou disparaît).
 
 **L'écran de veille.** Après **90 secondes** sans frappe, le portail laisse place à une **grande horloge** en chiffres de blocs, avec la date en toutes lettres en dessous, au milieu d'un ciel d'étoiles qui scintillent. N'importe quelle touche réveille le portail.
 

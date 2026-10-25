@@ -260,8 +260,13 @@ local function draw_telemetry_bar()
     io.flush()
 end
 
+-- Contenu actuellement affiche dans le panneau de droite, ligne par ligne :
+-- seuls les caracteres qui changent sont renvoyes au Minitel
+local panel_shown = {}
+
 local function draw_static_portal()
     io.write("\x1b[r\x1b[2J\x1b[H")
+    panel_shown = {}
     minitel.sleep(0.04)
 
     -- Bandeau Superieur (3 lignes)
@@ -279,10 +284,10 @@ local function draw_static_portal()
     io.write("\x1b[7;2H|----------------------------------|")
     io.write("\x1b[7;40H|--------------------------------------|")
 
-    -- Corps des panneaux (Lignes 8 a 19)
+    -- Corps des panneaux (Lignes 8 a 19) : l'ecran vient d'etre efface, seules
+    -- les bordures sont envoyees, pas les espaces interieurs
     for y = 8, 19 do
-        io.write(string.format("\x1b[%d;2H|                                  |", y))
-        io.write(string.format("\x1b[%d;40H|                                      |", y))
+        io.write(string.format("\x1b[%d;2H|\x1b[%d;37H|\x1b[%d;40H|\x1b[%d;79H|", y, y, y, y))
     end
 
     -- Separateur interne dans le panneau droit (Ligne 13)
@@ -292,15 +297,29 @@ local function draw_static_portal()
     io.write("\x1b[20;2H|----------------------------------|")
     io.write("\x1b[20;40H|--------------------------------------|")
 
-    io.write("\x1b[21;2H|                                  |")
-    io.write("\x1b[21;40H|                                      |")
+    io.write("\x1b[21;2H|\x1b[21;37H|\x1b[21;40H|\x1b[21;79H|")
 
     io.write("\x1b[22;2H'----------------------------------'")
     io.write("\x1b[22;40H'--------------------------------------'")
 
     -- Bandeau Inferieur (Ligne 24)
     io.write("\x1b[24;1H\x1b[7m  [Z/S] NAVIGUER   |   [ENVOI] VALIDER   |   [R] RECHERCHE LUA   |   [VEILLE]   \x1b[0m")
-    draw_telemetry_bar()
+    -- La barre de telemetrie est dessinee par draw_full_list, appele juste apres
+end
+
+-- Ecrit une ligne du panneau de droite en n'envoyant que la portion qui
+-- differe de ce qui est deja affiche (de la premiere a la derniere difference)
+local function panel_line(y, x, text, bold)
+    local old = panel_shown[y]
+    if old == text then return end
+    local i, j = 1, #text
+    if old and #old == #text then
+        while string.byte(old, i) == string.byte(text, i) do i = i + 1 end
+        while string.byte(old, j) == string.byte(text, j) do j = j - 1 end
+    end
+    io.write(string.format("\x1b[%d;%dH", y, x + i - 1)
+        .. (bold and "\x1b[1m" or "") .. string.sub(text, i, j) .. (bold and "\x1b[0m" or ""))
+    panel_shown[y] = text
 end
 
 local function draw_details_panel()
@@ -308,18 +327,15 @@ local function draw_details_panel()
     if not item then return end
 
     for i = 1, 5 do
-        local art_line = item.art[i] or ""
-        io.write(string.format("\x1b[%d;41H\x1b[1m%s\x1b[0m", 7 + i, center_str(art_line, 38)))
+        panel_line(7 + i, 41, center_str(item.art[i] or "", 38), true)
     end
 
-    local title_line = "CIBLE : " .. item.title
-    local type_line  = "TYPE  : " .. item.type
-    io.write(string.format("\x1b[14;42H\x1b[1m%s\x1b[0m", pad_str(title_line, 36)))
-    io.write(string.format("\x1b[15;42H%s", pad_str(type_line, 36)))
+    panel_line(14, 42, pad_str("CIBLE : " .. item.title, 36), true)
+    panel_line(15, 42, pad_str("TYPE  : " .. item.type, 36), false)
 
     local desc_lines = wrap_text(item.desc, 36, 3)
     for i = 1, 3 do
-        io.write(string.format("\x1b[%d;42H%s", 16 + i, desc_lines[i]))
+        panel_line(16 + i, 42, desc_lines[i], false)
     end
 end
 
@@ -356,8 +372,7 @@ local function update_cursor(old_index, new_index)
     if new_y >= list_start_y and new_y < list_start_y + max_visible then
         io.write(string.format("\x1b[%d;3H%s", new_y, format_list_entry(new_index, true)))
     end
-
-    draw_details_panel()
+    -- Le panneau de droite suit quand le curseur s'arrete (voir details_due)
     io.flush()
 end
 
@@ -530,9 +545,16 @@ local last_boot_draw = 0
 local last_net_update = os.time()
 local last_input_time = os.time()
 local INACTIVITY_TIMEOUT = 90
+local pending_key = nil   -- touche lue en avance pendant un deplacement groupe
+local details_due = nil   -- tours de boucle restants avant de redessiner le panneau
+
+local function is_nav_key(k)
+    return k == "z" or k == "Z" or k == "UP" or k == "s" or k == "S" or k == "DOWN"
+end
 
 while true do
-    local key = minitel.get_key()
+    local key = pending_key or minitel.get_key()
+    pending_key = nil
     local now = os.time()
     
     if key then 
@@ -575,7 +597,9 @@ while true do
             state = "SCREENSAVER"
             start_screensaver()
         else
-            if now - last_net_update >= 30 then
+            -- Le test reseau (un ping qui peut bloquer une seconde hors ligne)
+            -- attend que l'utilisateur ait cesse de naviguer depuis 5 secondes
+            if now - last_net_update >= 30 and now - last_input_time >= 5 then
                 local old_status = net_info.connected
                 net_info = get_network_info()
                 
@@ -591,12 +615,23 @@ while true do
             
             if key then
                 local old_cursor = cursor
-                if key == "z" or key == "Z" or key == "UP" then
-                    cursor = (cursor > 1) and (cursor - 1) or #options
-                    update_cursor(old_cursor, cursor)
-                elseif key == "s" or key == "S" or key == "DOWN" then
-                    cursor = (cursor < #options) and (cursor + 1) or 1
-                    update_cursor(old_cursor, cursor)
+                if is_nav_key(key) then
+                    -- Toutes les fleches deja recues sont cumulees en un seul
+                    -- deplacement : une touche maintenue ne fait pas d'embouteillage
+                    local k = key
+                    while k do
+                        if k == "z" or k == "Z" or k == "UP" then
+                            cursor = (cursor > 1) and (cursor - 1) or #options
+                        else
+                            cursor = (cursor < #options) and (cursor + 1) or 1
+                        end
+                        k = minitel.get_key()
+                        if k and not is_nav_key(k) then pending_key = k; k = nil end
+                    end
+                    if cursor ~= old_cursor then
+                        update_cursor(old_cursor, cursor)
+                        details_due = 8
+                    end
                 elseif key == "r" or key == "R" then
                     search_and_launch()
                     draw_static_portal()
@@ -628,6 +663,16 @@ while true do
 
                     draw_static_portal()
                     draw_full_list()
+                end
+            end
+
+            -- Curseur immobile depuis ~0,2 s : le panneau de droite le rattrape
+            if details_due then
+                details_due = details_due - 1
+                if details_due <= 0 then
+                    details_due = nil
+                    draw_details_panel()
+                    io.flush()
                 end
             end
         end
