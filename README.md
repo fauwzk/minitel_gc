@@ -164,11 +164,27 @@ Tapez au clavier du Minitel les trois combinaisons indiquées. L'écran s'efface
 Appuyez ensuite sur **`[ENVOI]`**. Le portail :
 
 1. crée le fichier témoin `/tmp/minitel_warmboot` (il disparaît à l'extinction du Pi) ;
-2. teste la connexion Internet (un `ping` vers `1.1.1.1`) ;
+2. déroule l'**autotest de démarrage**, à la manière des micro-ordinateurs des années 1980 (ci-dessous). Il se termine par le test de la connexion Internet (un `ping` vers `1.1.1.1`) ;
 3. **si le réseau répond**, lance d'abord le programme de mise à jour (voir § 3.5), puis revient au portail ;
 4. sinon, affiche directement le portail.
 
-Tant que le Raspberry Pi reste allumé, les sessions suivantes trouvent `/tmp/minitel_warmboot` et sautent l'écran d'initialisation : c'est le **démarrage à chaud**.
+**L'autotest.** Maintenant que le Minitel est en 80 colonnes, le système se présente ligne par ligne. Tout ce qu'il affiche est réel :
+
+| Ligne | Ce qui est vérifié |
+| :---- | :----------------- |
+| UNITÉ CENTRALE | Le modèle de Raspberry Pi, lu dans `/proc/device-tree/model`. |
+| TEST MÉMOIRE | Un compteur grimpe jusqu'à la mémoire vive réelle (`/proc/meminfo`). |
+| LIAISON MINITEL | Le réglage de la liaison série. |
+| SYNTHÈSE SONORE | La présence de SoX (commande `play`), qui produit les sons (§ 2.5). Sinon : `ABSENTE`. |
+| NOYAU / INTERPRÉTEUR | Les versions de Linux et de Lua. |
+| CARTOUCHES, OUTILS | Le nombre de programmes trouvés dans `jeux/` et `utils/`. |
+| RÉSEAU | Le test de connexion dont dépend la mise à jour, avec l'adresse IP si le Pi est en ligne. |
+
+L'ensemble dure environ 4,5 secondes et se termine par une barre de chargement et un petit carillon. **N'importe quelle touche abrège l'autotest** : les lignes restantes s'affichent d'un coup, sans les pauses, et le test réseau a lieu quand même.
+
+<p align="center"><img src="docs/captures/sys-autotest.svg" width="640" alt="Autotest de démarrage"><br><sub><b>Fig. 1.2</b> — L'autotest de démarrage (exemple sur un Raspberry Pi 4).</sub></p>
+
+Tant que le Raspberry Pi reste allumé, les sessions suivantes trouvent `/tmp/minitel_warmboot` et sautent l'écran d'initialisation et l'autotest : c'est le **démarrage à chaud**.
 
 > **Vitesse de la liaison.** Le système dialogue à **9600 bauds, 8 bits**. Le port série du Magis Club fonctionne soit en 1200 bauds 7 bits, soit en 9600 bauds 8 bits ; le choix se fait par logiciel. Le Minitel et le Raspberry Pi doivent être réglés sur la même vitesse, sinon l'écran se remplit de caractères incohérents.
 

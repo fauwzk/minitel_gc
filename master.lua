@@ -242,6 +242,119 @@ local function draw_boot_screen()
     io.flush()
 end
 
+-- =====================================================================
+-- FAUX ECRAN DE DEMARRAGE (AUTOTEST FACON MICRO DES ANNEES 80)
+-- =====================================================================
+-- Affiche apres l'initialisation, une fois le Minitel en 80 colonnes. Les
+-- informations sont vraies (modele, memoire, noyau, modules, reseau) ; le test
+-- reseau affiche est celui dont le portail a besoin. Une touche abrege tout.
+local function read_first_line(path)
+    local f = io.open(path, "r")
+    if not f then return nil end
+    local s = f:read("*l"); f:close()
+    return s
+end
+
+local function shell_line(cmd)
+    local f = io.popen(cmd .. " 2>/dev/null")
+    if not f then return nil end
+    local s = f:read("*l"); f:close()
+    return s
+end
+
+local function run_boot_sequence()
+    local skip = false
+    -- Attente interruptible : une touche fait passer tout le reste sans delai
+    local function wait(sec)
+        if skip then return end
+        local steps = math.max(1, math.floor(sec / 0.05))
+        for _ = 1, steps do
+            if minitel.get_key() then skip = true; return end
+            minitel.sleep(0.05)
+        end
+    end
+    local row = 6
+    local function line(label)
+        label = string.sub(label, 1, 61)
+        io.write(string.format("\x1b[%d;4H%s", row, label .. " " .. string.rep(".", 62 - #label)))
+        io.flush()
+    end
+    local function status(text, inverse)
+        io.write(string.format("\x1b[%d;68H%s", row, inverse and ("\x1b[7m " .. text .. " \x1b[0m") or text))
+        io.flush()
+        row = row + 1
+    end
+
+    io.write("\x1b[r\x1b[0m\x1b[2J")
+    io.write("\x1b[1;1H\x1b[7m" .. string.rep(" ", 80) .. "\x1b[0m")
+    io.write("\x1b[2;1H\x1b[7m" .. center_str("MAGIS CLUB  -  SYSTEME TELEMATIQUE  -  AUTOTEST DE DEMARRAGE", 80) .. "\x1b[0m")
+    io.write("\x1b[3;1H\x1b[7m" .. string.rep(" ", 80) .. "\x1b[0m")
+    io.write("\x1b[24;1H\x1b[7m" .. center_str("UNE TOUCHE POUR PASSER", 80) .. "\x1b[0m")
+    io.flush()
+    minitel.play_sound("hit")
+    wait(0.6)
+
+    -- Processeur
+    local model = (read_first_line("/proc/device-tree/model") or "PROCESSEUR INCONNU"):gsub("%z", "")
+    line("UNITE CENTRALE : " .. string.sub(string.upper(model), 1, 40))
+    wait(0.4); status("OK", true)
+
+    -- Memoire : compteur qui grimpe jusqu'a la taille reelle
+    local mem_kb = 0
+    for l in (io.open("/proc/meminfo") or { lines = function() return function() end end }):lines() do
+        local v = l:match("^MemTotal:%s+(%d+)")
+        if v then mem_kb = tonumber(v); break end
+    end
+    line("TEST MEMOIRE")
+    for i = 1, 12 do
+        io.write(string.format("\x1b[%d;55H%9d KO", row, math.floor(mem_kb * i / 12)))
+        io.flush()
+        wait(0.08)
+    end
+    status("OK", true)
+
+    line("LIAISON MINITEL : 9600 BAUDS 8N1, VT100 80 COLONNES")
+    wait(0.3); status("OK", true)
+
+    local sox = shell_line("command -v play")
+    line("SYNTHESE SONORE (SOX) VERS LA PRISE PERI-INFORMATIQUE")
+    wait(0.3); status(sox and "OK" or "ABSENTE", sox ~= nil)
+
+    local kernel = (shell_line("uname -r") or "?"):match("^[%d%.]+") or "?"
+    line("NOYAU LINUX " .. kernel .. " / INTERPRETEUR " .. string.upper(_VERSION))
+    wait(0.3); status("OK", true)
+
+    local function count(dir)
+        return tonumber(shell_line("ls -1 " .. dir .. "/*.lua | wc -l")) or 0
+    end
+    line("CARTOUCHES DE JEUX (jeux/)")
+    wait(0.25); status(string.format("%d TROUVEES", count("jeux")))
+    line("OUTILS (utils/)")
+    wait(0.25); status(string.format("%d TROUVES", count("utils")))
+
+    line("RESEAU")
+    io.write(string.format("\x1b[%d;68HTEST...", row)); io.flush()
+    local net = get_network_info()
+    io.write(string.format("\x1b[%d;68H       ", row))
+    status(net.connected and "EN LIGNE" or "HORS LIGNE", net.connected)
+    if net.connected then
+        io.write(string.format("\x1b[%d;8HADRESSE IP : %s", row, net.ip))
+        row = row + 1
+    end
+
+    -- Barre de progression finale
+    row = row + 1
+    io.write(string.format("\x1b[%d;4HCHARGEMENT DU PORTAIL  [%s]", row, string.rep(" ", 40)))
+    for i = 1, 40, 4 do
+        io.write(string.format("\x1b[%d;28H\x1b[7m%s\x1b[0m", row, string.rep(" ", i + 3)))
+        io.flush()
+        wait(0.05)
+    end
+    minitel.play_sound("win")
+    wait(0.8)
+    return net
+end
+
 -- Met a jour uniquement l'interieur des pieds de cadres (Col 3-36 et Col 41-78) sans toucher aux bordures !
 local function draw_telemetry_bar()
     local temp, up = get_sys_metrics()
@@ -597,8 +710,10 @@ while true do
         if key == "ENVOI" or key == " " or key == "\n" or key == "\r" then
             minitel.play_sound("hit")
             os.execute("touch /tmp/minitel_warmboot")
-            
-            net_info = get_network_info()
+
+            -- Le Minitel est maintenant en 80 colonnes : autotest de demarrage,
+            -- qui fait au passage le test reseau dont depend la mise a jour
+            net_info = run_boot_sequence()
             if net_info.connected then
                 -- Si une nouvelle version est installee, l'updater redemarre
                 -- la session ; sinon il rend la main et on passe au menu.

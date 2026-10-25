@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="Autotest de demarrage">
+<rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
+<rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
+<g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
+<rect x="18.0" y="19.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<rect x="18.0" y="38.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="114.0" y="52.0" fill="rgb(18,22,17)" textLength="576.0" lengthAdjust="spacingAndGlyphs">MAGIS CLUB  -  SYSTEME TELEMATIQUE  -  AUTOTEST DE DEMARRAGE</text>
+<rect x="18.0" y="57.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="46.8" y="128.0" fill="rgb(183,196,177)" textLength="604.8" lengthAdjust="spacingAndGlyphs">UNITE CENTRALE : RASPBERRY PI 4 MODEL B REV 1.4 ...............</text>
+<rect x="661.2" y="114.0" width="38.4" height="19.0" fill="rgb(232,240,228)"/>
+<text x="670.8" y="128.0" fill="rgb(18,22,17)" textLength="19.2" lengthAdjust="spacingAndGlyphs">OK</text>
+<text x="46.8" y="147.0" fill="rgb(183,196,177)" textLength="604.8" lengthAdjust="spacingAndGlyphs">TEST MEMOIRE ......................................  3884136 KO</text>
+<rect x="661.2" y="133.0" width="38.4" height="19.0" fill="rgb(232,240,228)"/>
+<text x="670.8" y="147.0" fill="rgb(18,22,17)" textLength="19.2" lengthAdjust="spacingAndGlyphs">OK</text>
+<text x="46.8" y="166.0" fill="rgb(183,196,177)" textLength="604.8" lengthAdjust="spacingAndGlyphs">LIAISON MINITEL : 9600 BAUDS 8N1, VT100 80 COLONNES ...........</text>
+<rect x="661.2" y="152.0" width="38.4" height="19.0" fill="rgb(232,240,228)"/>
+<text x="670.8" y="166.0" fill="rgb(18,22,17)" textLength="19.2" lengthAdjust="spacingAndGlyphs">OK</text>
+<text x="46.8" y="185.0" fill="rgb(183,196,177)" textLength="604.8" lengthAdjust="spacingAndGlyphs">SYNTHESE SONORE (SOX) VERS LA PRISE PERI-INFORMATIQUE .........</text>
+<rect x="661.2" y="171.0" width="38.4" height="19.0" fill="rgb(232,240,228)"/>
+<text x="670.8" y="185.0" fill="rgb(18,22,17)" textLength="19.2" lengthAdjust="spacingAndGlyphs">OK</text>
+<text x="46.8" y="204.0" fill="rgb(183,196,177)" textLength="604.8" lengthAdjust="spacingAndGlyphs">NOYAU LINUX 6.6.51 / INTERPRETEUR LUA 5.3 .....................</text>
+<rect x="661.2" y="190.0" width="38.4" height="19.0" fill="rgb(232,240,228)"/>
+<text x="670.8" y="204.0" fill="rgb(18,22,17)" textLength="19.2" lengthAdjust="spacingAndGlyphs">OK</text>
+<text x="46.8" y="223.0" fill="rgb(183,196,177)" textLength="720.0" lengthAdjust="spacingAndGlyphs">CARTOUCHES DE JEUX (jeux/) .................................... 15 TROUVEES</text>
+<text x="46.8" y="242.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">OUTILS (utils/) ............................................... 13 TROUVES</text>
+<text x="46.8" y="261.0" fill="rgb(183,196,177)" textLength="604.8" lengthAdjust="spacingAndGlyphs">RESEAU ........................................................</text>
+<rect x="661.2" y="247.0" width="96.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="670.8" y="261.0" fill="rgb(18,22,17)" textLength="76.8" lengthAdjust="spacingAndGlyphs">EN LIGNE</text>
+<text x="85.2" y="280.0" fill="rgb(183,196,177)" textLength="211.2" lengthAdjust="spacingAndGlyphs">ADRESSE IP : 10.19.1.1</text>
+<text x="46.8" y="318.0" fill="rgb(183,196,177)" textLength="230.4" lengthAdjust="spacingAndGlyphs">CHARGEMENT DU PORTAIL  [</text>
+<rect x="277.2" y="304.0" width="384.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="661.2" y="318.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">]</text>
+<rect x="18.0" y="456.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="296.4" y="470.0" fill="rgb(18,22,17)" textLength="211.2" lengthAdjust="spacingAndGlyphs">UNE TOUCHE POUR PASSER</text>
+</g></svg>
