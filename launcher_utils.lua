@@ -73,6 +73,16 @@ local TYPE_LOGOS = {
         }
     },
     {
+        keywords = {"SANTE", "HEALTH", "CARDIO", "SOMMEIL"},
+        art = {
+            "     .-.   .-.            ",
+            "    (   `v'   )   FC  72  ",
+            "     \\       /   PAS 8K   ",
+            "  ~~~~\\~~^~~/~/\\~~~~~~    ",
+            "        `v'      \\/       "
+        }
+    },
+    {
         keywords = {"TELEMATIQUE", "RESEAU", "WEB", "API", "INFOS", "PING"},
         art = {
             "      .---.      .---.    ",

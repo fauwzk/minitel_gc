@@ -40,6 +40,7 @@ Materiel Requis : Terminal Minitel (Magis Club) + Coprocesseur Raspberry Pi
     - [4.2 MAGIS CALC (`utils/calc.lua`) — Tableur Multi-Feuilles Dynamique](#42-magis-calc-utilscalclua--tableur-multi-feuilles-dynamique)
       - [Syntaxe des Formules (commençant par `=`)](#syntaxe-des-formules-commençant-par-)
     - [4.3 Les Utilitaires Télématiques en Direct (`train.lua`, `carburant.lua`, `updater.lua`)](#43-les-utilitaires-télématiques-en-direct-trainlua-carburantlua-updaterlua)
+    - [4.4 3615 SANTE (`utils/sante.lua`) — Carnet Apple Health](#44-3615-sante-utilssantelua--carnet-apple-health)
   - [💻 CHAPITRE 5 : LE LANGAGE MICRO-BASIC TÉLÉTEL V4.0 \& PROGRAMMES À TAPER](#-chapitre-5--le-langage-micro-basic-télétel-v40--programmes-à-taper)
     - [5.1 Référence Complète du Langage MICRO-BASIC](#51-référence-complète-du-langage-micro-basic)
     - [5.2 Cinq Programmes BASIC Complets à Taper ("Type-In Listings")](#52-cinq-programmes-basic-complets-à-taper-type-in-listings)
@@ -267,6 +268,21 @@ Tableur financier supportant de multiples feuilles par classeur, les référence
 * **`3615 TRAIN` (`utils/train.lua`)** : Panneau *Solari* des prochains départs SNCF en direct. Affiche l'heure, le terminus, le numéro de train (`TER`, `TGV`, `IC`), la **Voie** et les **Retards** éventuels.
 * **`3615 CARBURANT` (`utils/carburant.lua`)** : Interroge en 100 % Lua le flux gouvernemental `data.economie.gouv.fr` par Code Postal, trie les stations par prix du Gazole croissant, et élargit automatiquement la recherche à tout le département si un village n'a pas de station.
 * **`3615 MISE À JOUR` (`updater.lua`)** : Client Git complet avec sauvegarde automatique des programmes BASIC locaux et résolution interactive des conflits (`Reset`, `Commit & Push` au clavier Minitel, ou renommage `*_local.lua`).
+
+### 4.4 3615 SANTE (`utils/sante.lua`) — Carnet Apple Health
+
+Apple Santé ne propose aucune API réseau : le carnet lit l'**export officiel de l'iPhone**.
+
+1. Sur l'iPhone : app **Santé** > photo de profil > **Exporter toutes les données de santé**.
+2. Copier `exportation.zip` (ou `export.zip`) dans **`utils/sante/`** du Raspberry Pi (scp, Samba, clé USB...).
+3. Onglet **[4] IMPORT** > `[ENVOI]`. Le ZIP est lu en flux via `unzip -p` (paquet `unzip` requis), sans décompression sur la carte SD.
+
+L'import agrège les mesures par jour dans `utils/sante/cache_sante.lua` (les ouvertures suivantes sont instantanées). Les pas, distances et calories sont comptés **par source** et seule la meilleure source est gardée, pour ne pas additionner iPhone + Apple Watch.
+
+* **[1] JOURNEE** : pas, distance, énergie active, étages, minutes d'exercice, fréquence cardiaque (moyenne / min / max / repos), VFC, SpO2, sommeil par phases (profond, paradoxal, léger), poids et tendances sur 7 / 30 jours. `[Q/D]` change de jour.
+* **[2] COURBES** : histogramme 30 jours de 9 indicateurs (`[Z/S]`), curseur jour par jour (`[Q/D]`), `[ENVOI]` ouvre la journée pointée.
+* **[3] SEANCES** : journal des entraînements Apple Watch (durée, distance, kcal).
+* **[D] DEMO** (onglet Import) : génère 120 jours de données fictives pour essayer le carnet sans iPhone.
 
 ---
 
