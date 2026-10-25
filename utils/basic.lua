@@ -386,18 +386,39 @@ end
 -- =====================================================================
 -- 3. LECTURE DU CLAVIER (AVEC GESTION DE CURSEUR ET EDITION)
 -- =====================================================================
-local function input_string(prompt, initial_text)
+-- history (facultatif) : liste des lignes deja tapees, parcourue avec les
+-- fleches haut / bas ; la ligne en cours de frappe est gardee de cote.
+local function input_string(prompt, initial_text, history)
     io.write(prompt)
     local str = initial_text or ""
     if str ~= "" then io.write(str) end
     io.flush()
 
     local pos = #str
+    local h_idx, draft = history and (#history + 1), str
+
+    -- Remplace le texte saisi par un autre (curseur ramene en fin de ligne)
+    local function replace_text(new_str)
+        io.write(string.rep("\x1b[D", pos) .. new_str .. "\x1b[K")
+        io.flush()
+        str, pos = new_str, #new_str
+    end
 
     while true do
         local k = minitel.get_key()
         if k then
-            if k == "ENVOI" or k == "\n" or k == "\r" then
+            if history and k == "UP" then
+                if h_idx > 1 then
+                    if h_idx == #history + 1 then draft = str end
+                    h_idx = h_idx - 1
+                    replace_text(history[h_idx])
+                end
+            elseif history and k == "DOWN" then
+                if h_idx <= #history then
+                    h_idx = h_idx + 1
+                    replace_text(h_idx == #history + 1 and draft or history[h_idx])
+                end
+            elseif k == "ENVOI" or k == "\n" or k == "\r" then
                 io.write("\r\n")
                 io.flush()
                 return string.upper(str)
@@ -1140,9 +1161,16 @@ local function shell()
     io.write("\x1b[7m MICRO-BASIC V6.1 - GPIO / PWM / FREQ / ADC (" .. GPIO_BACKEND:upper() .. ") \x1b[0m\r\nREADY.\r\n")
     io.flush()
 
+    -- Historique des lignes tapees a l'invite (fleches haut / bas), 50 au plus
+    local history = {}
+
     while true do
         update_ui()
-        local line, was_empty = input_string("\x1b[K> ")
+        local line, was_empty = input_string("\x1b[K> ", nil, history)
+        if line ~= "ABORT" and line ~= "" and line ~= history[#history] then
+            table.insert(history, line)
+            if #history > 50 then table.remove(history, 1) end
+        end
 
         if line == "ABORT" and was_empty then
             -- [RETOUR] sur une invite vide quitte, apres confirmation si le programme n'est pas sauvegarde

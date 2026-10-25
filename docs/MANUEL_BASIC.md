@@ -130,6 +130,14 @@ Tapez maintenant une instruction **précédée d'un numéro**. Rien ne se passe 
 | `[ANNULATION]` | Effacer toute la ligne. |
 | `[ENVOI]` | Valider. Après `EDIT`, une ligne vidée est supprimée. |
 | `[RETOUR]` | Abandonner la saisie. |
+| `↑` `↓` | À l'invite `>` seulement : rappeler les lignes déjà tapées (voir ci-dessous). |
+
+**L'historique.** Le BASIC garde en mémoire les 50 dernières lignes tapées à l'invite `>`, commandes comme lignes de programme. La flèche `↑` rappelle la précédente, puis celle d'avant, et ainsi de suite ; `↓` revient vers les plus récentes. La ligne rappelée se corrige comme une autre, avec `←`, `→` et `[CORRECTION]`, puis `[ENVOI]` l'exécute. Après une faute de frappe, il suffit donc de faire `↑`, de corriger, et de valider.
+
+* Ce que vous étiez en train de taper n'est pas perdu : en redescendant tout en bas avec `↓`, vous le retrouvez.
+* Une ligne tapée deux fois de suite n'est gardée qu'une fois.
+* L'historique dure le temps de la session : il est vidé quand vous quittez le BASIC.
+* Pendant la réponse à un `INPUT`, les flèches n'ont pas d'effet.
 
 <p align="center"><img src="captures/basic-edit.svg" width="640" alt="EDIT"><br><sub><b>Fig. 1.3</b> — <code>EDIT 10</code> : on recule d'un caractère et on insère « MINITEL » ; puis <code>20</code> seul supprime la ligne 20.</sub></p>
 
