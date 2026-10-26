@@ -19,7 +19,6 @@ local STEPS = {
     { unit = "local-fs.target",        label = "SYSTEMES DE FICHIERS MONTES" },
     { unit = "sysinit.target",         label = "INITIALISATION DU SYSTEME" },
     { unit = "basic.target",           label = "SERVICES DE BASE" },
-    { unit = "time-sync.target",       label = "HORLOGE" },
     { unit = "NetworkManager.service", label = "GESTIONNAIRE DE RESEAU" },
     { unit = "network.target",         label = "PILE RESEAU" },
     { unit = "network-online.target",  label = "CONNEXION AU RESEAU" },
@@ -153,13 +152,8 @@ end
 minitel.init()
 
 -- Le Minitel vient peut-etre d'etre allume (40 colonnes) : on le met en 80
--- colonnes, ce que le portail constatera ensuite tout seul
-local mode = minitel.detect_mode()
-if mode == "40" or mode == "mixte" then
-    minitel.switch_to_80(mode)
-elseif mode == "80" then
-    minitel.echo_off_80()
-end
+-- colonnes, sans echo et avec le clavier etendu
+minitel.force_80()
 
 local model = (read_first_line("/proc/device-tree/model") or "RASPBERRY PI"):gsub("%z", "")
 local kernel = (shell_lines("uname -r")[1] or "?"):match("^[%w%.%-%+]+") or "?"

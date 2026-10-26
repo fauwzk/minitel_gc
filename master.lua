@@ -246,7 +246,7 @@ local function shell_line(cmd)
     return s
 end
 
-local function run_boot_sequence(link_status)
+local function run_boot_sequence()
     local skip = false
     -- Attente interruptible : une touche fait passer tout le reste sans delai
     local function wait(sec)
@@ -298,7 +298,7 @@ local function run_boot_sequence(link_status)
     status("OK", true)
 
     line("LIAISON MINITEL : 9600 BAUDS 8N1, VT100 80 COLONNES")
-    wait(0.3); status(link_status or "OK", true)
+    wait(0.3); status("OK", true)
 
     local sox = shell_line("command -v play")
     line("SYNTHESE SONORE (SOX) SUR LA SORTIE AUDIO DU PI")
@@ -652,10 +652,9 @@ local state = "MENU"
 
 -- Fin de l'initialisation, le Minitel etant en 80 colonnes : autotest de
 -- demarrage, qui fait au passage le test reseau dont depend la mise a jour
-local function finish_boot(link_status)
-    minitel.echo_off_80()
+local function finish_boot()
     os.execute("touch /tmp/minitel_warmboot")
-    net_info = run_boot_sequence(link_status)
+    net_info = run_boot_sequence()
     if net_info.connected then
         -- Si une nouvelle version est installee, l'updater redemarre
         -- la session ; sinon il rend la main et on passe au menu.
@@ -679,18 +678,9 @@ if f then
 else
     io.write("\x1b[2J\x1b[H")
     io.flush()
-    -- On demande au Minitel dans quel mode il est : deja en 80 colonnes (le
-    -- Raspberry a redemarre sans lui), ou en 40 colonnes, et on le fait alors
-    -- passer en 80 colonnes tout seul. S'il ne repond pas, on continue quand
-    -- meme : les commandes a taper a la main sont dans le manuel (§ 1.4).
-    local mode = minitel.detect_mode()
-    if mode == "80" then
-        finish_boot("DETECTE")
-    elseif (mode == "40" or mode == "mixte") and minitel.switch_to_80(mode) then
-        finish_boot("BASCULE")
-    else
-        finish_boot("SANS REP")
-    end
+    -- Le Minitel a ete mis en 80 colonnes par l'ecran de demarrage du Pi
+    -- (boot_minitel.lua). A la main : voir le manuel (§ 1.4).
+    finish_boot()
 end
 
 local last_net_update = os.time()
