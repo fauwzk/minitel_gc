@@ -125,7 +125,7 @@ Sur un Raspberry Pi fraîchement installé (Raspberry Pi OS), récupérez le scr
 sudo ./install_minitel.sh
 ```
 
-Le script `install_minitel.sh` déroule neuf étapes. Comprendre ce qu'il fait vous aidera en cas de panne :
+Le script `install_minitel.sh` déroule dix étapes. Comprendre ce qu'il fait vous aidera en cas de panne :
 
 | Étape | Action | Détail technique |
 | :---: | :----- | :--------------- |
@@ -138,6 +138,7 @@ Le script `install_minitel.sh` déroule neuf étapes. Comprendre ce qu'il fait v
 | **7** | Démarrage silencieux | Retire la console série du noyau de `cmdline.txt` et ajoute `quiet splash` : les messages de démarrage de Linux ne polluent plus l'écran du Minitel. |
 | **8** | Volume audio | Règle les mixeurs ALSA à 85 %. |
 | **9** | Écran de démarrage | Lance `install_ecran_demarrage.sh`, qui installe le service `minitel-boot` : pendant que Linux démarre, le Minitel affiche l'écran de démarrage du Raspberry Pi (§ 1.4). |
+| **10** | Scripts de mise à jour | Lance `install_scripts_maj.sh`, qui permet à la mise à jour de jouer en root les scripts `maj/*.sh` du dépôt (§ 3.5). Les scripts déjà présents sont notés comme faits. |
 
 Redémarrez ensuite le Raspberry Pi (`sudo reboot`).
 
@@ -510,6 +511,8 @@ Le portail est lancé par `exec` : il **remplace** le shell. Quand il se termine
 |-- install_minitel.sh       Script d'installation (chapitre 1)
 |-- install_ecran_demarrage.sh  Service de l'ecran de demarrage du Pi
 |-- boot_minitel.lua         Ecran de demarrage du Pi sur le Minitel (§ 1.4)
+|-- install_scripts_maj.sh   Autorise les scripts de mise a jour (§ 3.5)
+|-- maj/                     Scripts de mise a jour, joues une fois en root
 |
 |-- jeux/                    Cartouches de jeux (*.lua) + leurs reglages (*.cfg)
 |-- utils/                   Logiciels du poste de travail (*.lua)
@@ -650,8 +653,9 @@ Le système se met à jour depuis son dépôt Git. Le programme est lancé autom
         |
         v
   Nouveau commit ?  NON -> "SYSTEME A JOUR", retour au portail
-        |
-       OUI -> "MISE A JOUR REUSSIE", la session redemarre
+        |                  (scripts maj/*.sh restes en attente joues)
+       OUI -> scripts maj/*.sh nouveaux joues en root, puis
+              "MISE A JOUR REUSSIE", la session redemarre
 ```
 
 Après le `git pull`, puis juste avant de redémarrer la session, le programme lance `sync`, qui force l'écriture sur la carte SD. Sans lui, une coupure de courant dans les secondes qui suivent une mise à jour peut laisser des fichiers vides.
@@ -662,11 +666,33 @@ Le système **ne redémarre que si quelque chose a réellement changé** : un no
 >
 > Par sécurité, une copie complète est aussi faite dans `/home/minitel/minitel_gc_backup/` : les programmes BASIC dans `utils/prog_basic_backup/`, et chaque `.cfg` à son chemin dans le dépôt. Les fichiers listés dans `.gitignore` (comme le dossier `utils/sante/`) ne sont jamais envoyés ni effacés par la mise à jour.
 
+**Les scripts de mise à jour.** Certaines évolutions demandent plus qu'un `git pull` : réinstaller le service de l'écran de démarrage, ajouter un paquet, changer un réglage du système. Le dépôt les livre sous forme de scripts shell, dans le dossier `maj/`. Après le `git pull`, la mise à jour joue **une seule fois**, dans l'ordre de leur nom, ceux qui ne l'ont pas encore été. L'écran de fin en donne le bilan, par exemple `SCRIPTS MAJ : 1 OK, 0 ECHEC`.
+
+| Élément | Rôle |
+| :------ | :--- |
+| `maj/NNNN_description.sh` | Un script, par exemple `0001_ecran_demarrage.sh`, qui réinstalle le service de l'écran de démarrage. Le numéro fixe l'ordre. |
+| `/usr/local/sbin/minitel-maj` | Le lanceur, installé hors du dépôt par `install_scripts_maj.sh`. Le compte `minitel` a le droit de le lancer en root par `sudo`, et seulement lui (`/etc/sudoers.d/011_minitel_maj`). |
+| `/var/lib/minitel/maj_faites` | La liste des scripts réussis. Un script en échec n'y est pas inscrit : il est retenté à la mise à jour suivante, même si elle n'apporte rien de nouveau. |
+| `/var/lib/minitel/maj.log` | La sortie de chaque script, datée. C'est là qu'il faut regarder après un `ECHEC`. |
+
+Le lanceur ne joue que les scripts **tels que le dépôt les a livrés**. Un script ajouté ou modifié à la main sur le Pi est ignoré (`IGNORE` dans le bilan). Un script ne doit rien demander au clavier, et doit pouvoir être rejoué sans dommage, puisqu'il l'est après un échec. Il est lancé depuis la racine du dépôt, dont le chemin est dans la variable `$DEPOT`.
+
+Sur un système installé avant l'arrivée de ces scripts, activez-les une fois, depuis le dépôt :
+
+```bash
+sudo ./install_scripts_maj.sh
+```
+
+Pour les désactiver, tapez `sudo ./install_scripts_maj.sh --retirer`. Tant qu'ils ne sont pas activés, l'écran de fin affiche `SCRIPTS MAJ NON ACTIVES`.
+
+> **Sécurité.** Une fois les scripts activés, tout script ajouté au dépôt GitHub s'exécute **en root** sur le Raspberry Pi à la mise à jour suivante. Ne donnez l'accès en écriture au dépôt qu'à des personnes de confiance. Et comme le compte `minitel` peut lui-même créer un commit dans le dépôt local, puis lancer le lanceur, quiconque a le Minitel sous la main peut aussi obtenir les droits root.
+
 ### 3.6 Les fichiers de réglages et de données
 
 | Fichier ou dossier | Créé par | Contenu |
 | :----------------- | :------- | :------ |
 | `/tmp/minitel_warmboot` | Portail | Témoin de démarrage à chaud (effacé à l'extinction). |
+| `/var/lib/minitel/maj_faites`, `maj.log` | Mise à jour | Scripts de mise à jour déjà joués, et leur sortie (§ 3.5). |
 | `jeux/minitel_*.cfg` | Les jeux | Réglages (difficulté, mise de départ, son…). Conservés par la mise à jour (§ 3.5). |
 | `utils/pictochat.cfg` | PICTO, BATAILLE, QUIZZ | Ligne 1 : adresse du serveur. Ligne 2 : pseudo. |
 | `utils/prog_basic/*.bas` | MICRO-BASIC | Programmes BASIC, en texte brut. |
@@ -1223,6 +1249,7 @@ Codes de contrôle utiles : `8` Retour arrière, `13` Retour chariot (`[ENVOI]`)
 | Pas de son | SoX absent, sortie audio mal dirigée, volume coupé, ou aucun haut-parleur sur la sortie du Pi | Lancez l'outil **AUDIO** de 3615 OUTILS (§ 2.6). `sudo apt install sox` ; `raspi-config` > *Audio* > *Headphones* ; `alsamixer`. |
 | Rien n'en sort alors que la sortie du Pi est câblée sur les broches 6 et 8 | Ces broches mènent à la ligne téléphonique, pas au haut-parleur du Minitel | Branchez un haut-parleur amplifié sur la sortie du Pi (§ 2.6). |
 | Ronflement continu dans le haut-parleur du Pi | Boucle de masse | Alimentez le haut-parleur depuis le Pi (USB) plutôt que par une autre alimentation. |
+| La mise à jour affiche `SCRIPTS MAJ : ... ECHEC` | Un script de `maj/` a échoué | Lire `/var/lib/minitel/maj.log`. Le script sera retenté à la prochaine mise à jour. |
 | L'entrée MISE À JOUR n'apparaît pas | Le `ping` vers `1.1.1.1` échoue | Vérifier le réseau avec CONFIG RÉSEAU ; l'état est retesté toutes les 30 s. |
 | La mise à jour signale un « conflit local » | Des fichiers suivis par Git ont été modifiés sur le Pi | Choisir l'option 3 (renommer) pour garder vos versions, ou 1 pour revenir à l'officielle (§ 3.5). |
 | La session s'ouvre et se ferme en boucle, le Minitel bipe, puis plus rien. `git` signale `object file ... is empty` | Fichiers vidés par une coupure de courant pendant une écriture : `master.lua` vide s'arrête aussitôt | En SSH : mettre le dépôt de côté (`sudo mv /home/minitel/minitel_gc /home/minitel/minitel_gc_casse`), le recloner (`sudo -u minitel git clone https://github.com/fauwzk/minitel_gc.git /home/minitel/minitel_gc`), y recopier les `.bas` et `.cfg` non vides, puis `sync` et `sudo systemctl restart serial-getty@ttyUSB0`. |

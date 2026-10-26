@@ -85,6 +85,12 @@ sudo -u minitel amixer -q sset PCM 85% unmute 2>/dev/null || true
 echo "> 9. ECRAN DE DEMARRAGE DU RASPBERRY PI SUR LE MINITEL..."
 bash /home/minitel/minitel_gc/install_ecran_demarrage.sh
 
+echo "> 10. SCRIPTS DE MISE A JOUR (LANCES EN ROOT PAR updater.lua)..."
+bash /home/minitel/minitel_gc/install_scripts_maj.sh
+# Une installation neuve est deja a jour : les scripts existants sont notes
+# comme faits, seuls ceux des prochaines mises a jour seront joues
+ls /home/minitel/minitel_gc/maj/*.sh 2>/dev/null | xargs -r -n1 basename >> /var/lib/minitel/maj_faites
+
 echo "====================================================================="
 echo " INSTALLATION TERMINEE ! "
 echo "====================================================================="

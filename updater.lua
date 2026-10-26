@@ -192,11 +192,79 @@ local function show_commit_info(y)
     end
 end
 
+-- =====================================================================
+-- SCRIPTS DE MISE A JOUR (maj/*.sh, JOUES UNE FOIS EN ROOT)
+-- =====================================================================
+-- Le depot peut livrer des scripts shell qui reglent le systeme (service de
+-- l'ecran de demarrage, paquets...). Le lanceur minitel-maj, installe en root
+-- par install_scripts_maj.sh, joue ceux qui ne l'ont pas encore ete.
+local MAJ_RUNNER = "/usr/local/sbin/minitel-maj"
+local MAJ_DONE = "/var/lib/minitel/maj_faites"
+
+local function pending_scripts()
+    local done = {}
+    local f = io.open(MAJ_DONE, "r")
+    if f then
+        for l in f:lines() do done[l] = true end
+        f:close()
+    end
+    local count = 0
+    local p = io.popen("ls maj/*.sh 2>/dev/null")
+    for l in p:lines() do
+        if not done[string.match(l, "([^/]+)$")] then count = count + 1 end
+    end
+    p:close()
+    return count
+end
+
+-- Rend nil s'il n'y avait rien a jouer, sinon le bilan des scripts
+local function run_update_scripts(y)
+    if pending_scripts() == 0 then return nil end
+    local r = { ok = 0, echec = 0, ignore = 0 }
+    local f = io.open(MAJ_RUNNER, "r")
+    if not f then r.absent = true; return r end
+    f:close()
+
+    io.write(string.format("\x1b[%d;15H SCRIPTS DE MISE A JOUR EN COURS...\x1b[K", y))
+    io.flush()
+    local p = io.popen("sudo -n " .. MAJ_RUNNER .. " 2>/dev/null")
+    local lines = 0
+    for l in p:lines() do
+        local st = string.match(l, "^(%u+) ")
+        if st == "OK" then r.ok = r.ok + 1
+        elseif st == "ECHEC" then r.echec = r.echec + 1
+        elseif st == "IGNORE" then r.ignore = r.ignore + 1 end
+        lines = lines + 1
+    end
+    local ok = p:close()
+    if not ok and lines == 0 then r.absent = true end -- sudo a refuse
+    return r
+end
+
+local function show_scripts_result(y, r)
+    if not r then return end
+    local msg
+    if r.absent then
+        msg = "SCRIPTS MAJ NON ACTIVES : install_scripts_maj.sh"
+    else
+        msg = string.format("SCRIPTS MAJ : %d OK, %d ECHEC", r.ok, r.echec)
+        if r.ignore > 0 then msg = msg .. string.format(", %d IGNORE", r.ignore) end
+    end
+    io.write(string.format("\x1b[%d;15H %s\x1b[K\r\n", y, msg))
+    io.flush()
+    if r.echec > 0 then
+        minitel.play_sound("damage")
+        minitel.sleep(3) -- le temps de lire ; detail dans /var/lib/minitel/maj.log
+    end
+end
+
 local function show_up_to_date()
     minitel.play_sound("pickup")
     draw_frame("S Y S T E M E   A   J O U R")
     io.write("\x1b[10;15H\x1b[1mAUCUNE NOUVELLE VERSION DISPONIBLE.\x1b[0m\r\n")
     show_commit_info(12)
+    -- scripts restes en echec, ou lanceur installe depuis la derniere fois
+    show_scripts_result(16, run_update_scripts(16))
     io.write("\x1b[22;11H==========================================================\r\n")
     io.write("\x1b[23;24H\x1b[7m RETOUR AU MENU PRINCIPAL... \x1b[0m")
     io.flush()
@@ -384,6 +452,8 @@ end
 if cfg_count > 0 then
     io.write(string.format("\x1b[17;15H SAUVEGARDES DES JEUX (.CFG) CONSERVEES : %d\r\n", cfg_count))
 end
+-- Les scripts livres par cette version, avant le redemarrage
+show_scripts_result(19, run_update_scripts(19))
 
 minitel.play_sound("win")
 io.write("\x1b[22;11H==========================================================\r\n")

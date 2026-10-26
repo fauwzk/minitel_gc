@@ -1,0 +1,50 @@
+#!/bin/bash
+# =====================================================================
+# SCRIPTS DE MISE A JOUR DU MINITEL (lances en root par updater.lua)
+# =====================================================================
+# Installe dans /usr/local/sbin par install_scripts_maj.sh. Joue, dans l'ordre
+# de leur nom, les scripts maj/*.sh du depot qui ne l'ont pas encore ete, et
+# note chaque reussite dans /var/lib/minitel/maj_faites : un script n'est
+# joue qu'une fois, un script en echec est retente a la mise a jour suivante.
+#
+# Seuls les scripts tels que le depot les a livres sont joues : un script
+# modifie ou ajoute a la main sur le Pi est ignore.
+#
+# Sortie, une ligne par script, lue par updater.lua :
+#   OK nom.sh | ECHEC nom.sh | IGNORE nom.sh
+
+DEPOT=${MINITEL_DEPOT:-/home/minitel/minitel_gc}
+ETAT=${MINITEL_ETAT:-/var/lib/minitel/maj_faites}
+JOURNAL=$(dirname "$ETAT")/maj.log
+
+mkdir -p "$(dirname "$ETAT")"
+touch "$ETAT"
+chmod 644 "$ETAT"
+cd "$DEPOT" || exit 1
+
+code=0
+for f in maj/*.sh; do
+    [ -e "$f" ] || continue
+    nom=$(basename "$f")
+    grep -qxF "$nom" "$ETAT" && continue
+
+    if ! git -c safe.directory="$DEPOT" ls-files --error-unmatch "$f" >/dev/null 2>&1 \
+       || ! git -c safe.directory="$DEPOT" diff --quiet HEAD -- "$f"; then
+        echo "IGNORE $nom"
+        continue
+    fi
+
+    {
+        echo "===== $(date '+%Y-%m-%d %H:%M:%S') $nom"
+        DEPOT="$DEPOT" bash "$f"
+    } >> "$JOURNAL" 2>&1 < /dev/null
+    if [ $? -eq 0 ]; then
+        echo "$nom" >> "$ETAT"
+        echo "OK $nom"
+    else
+        echo "ECHEC $nom"
+        code=1
+    fi
+done
+sync
+exit $code
