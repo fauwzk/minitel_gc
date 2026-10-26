@@ -168,7 +168,7 @@ end
 --   "les2", "aucun"), ligne 2 = ecart minimal en secondes
 local SOUND_FILE = (os.getenv("HOME") or "/tmp") .. "/.minitel_son"
 local SOUND_MODES = { bip = true, sox = true, les2 = true, aucun = true }
-local DEFAULT_GAP = 0.35
+local DEFAULT_GAP = 0.25 -- mesure par calibrage sur un Magis Club
 
 local function read_sound_settings()
     local f = io.open(SOUND_FILE, "r")

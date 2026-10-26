@@ -309,15 +309,15 @@ Le système dispose de deux sources sonores, que la fonction `minitel.play_sound
 * le **bip du Minitel**, déclenché par le caractère de contrôle **BEL** (code 7). Son buzzer n'a **qu'une seule note** : les effets se distinguent donc par leur **rythme** ;
 * la **synthèse SoX** du Raspberry Pi (commande `play`), qui sort par la **sortie audio du Pi**, où l'on branche un petit haut-parleur amplifié. La voie audio de la prise péri-informatique ne permet pas de la faire entendre par le Minitel (§ 2.6).
 
-**Des bips assez espacés.** Le Magis Club ignore les bips trop rapprochés : dans les essais, deux bips à 0,12 seconde d'intervalle ne produisaient aucun son, alors que des bips espacés de 0,35 seconde ou plus s'entendaient. Tous les motifs sont donc construits sur un **écart minimal** *g*, de 0,35 seconde par défaut, que l'on mesure à l'oreille avec le calibrage de l'outil AUDIO (§ 2.6).
+**Des bips assez espacés.** Le Magis Club ignore les bips trop rapprochés : dans les essais, deux bips à 0,12 seconde d'intervalle ne produisaient aucun son, alors que le calibrage a montré que deux bips espacés de **0,25 seconde** s'entendent nettement. Tous les motifs sont donc construits sur un **écart minimal** *g*, de 0,25 seconde par défaut ; un autre Minitel peut demander une autre valeur, que l'on mesure à l'oreille avec le calibrage de l'outil AUDIO (§ 2.6).
 
-| Effet demandé | Bip du Minitel (instants des bips) | Avec *g* = 0,35 s | Synthèse SoX |
+| Effet demandé | Bip du Minitel (instants des bips) | Avec *g* = 0,25 s | Synthèse SoX |
 | :------------ | :--------------------------------- | :---------------- | :----------- |
 | `"hit"` (et tout nom inconnu) | 1 bip : validation, action | 0 | Carrée, 0,05 s, 880 Hz |
-| `"pickup"` | 2 bips : objet, bonus | 0 ; 0,35 | Carrée, 0,15 s, glissando 440 → 1200 Hz |
-| `"damage"` | 3 bips au plus vite (0 ; *g* ; 2*g*) : choc | 0 ; 0,35 ; 0,7 | Dent de scie, 0,3 s, 300 → 100 Hz |
-| `"lose"` | 3 bips lents (0 ; 2,5*g* ; 5*g*) : échec | 0 ; 0,875 ; 1,75 | Dent de scie, 0,3 s, 300 → 100 Hz |
-| `"win"` | 3 bips, un silence, un bip (0 ; *g* ; 2*g* ; 4*g*) : victoire | 0 ; 0,35 ; 0,7 ; 1,4 | Carrée, 0,15 s, glissando 440 → 1200 Hz |
+| `"pickup"` | 2 bips : objet, bonus | 0 ; 0,25 | Carrée, 0,15 s, glissando 440 → 1200 Hz |
+| `"damage"` | 3 bips au plus vite (0 ; *g* ; 2*g*) : choc | 0 ; 0,25 ; 0,5 | Dent de scie, 0,3 s, 300 → 100 Hz |
+| `"lose"` | 3 bips lents (0 ; 2,5*g* ; 5*g*) : échec | 0 ; 0,625 ; 1,25 | Dent de scie, 0,3 s, 300 → 100 Hz |
+| `"win"` | 3 bips, un silence, un bip (0 ; *g* ; 2*g* ; 4*g*) : victoire | 0 ; 0,25 ; 0,5 ; 1 | Carrée, 0,15 s, glissando 440 → 1200 Hz |
 
 **Aucun effet ne bloque le programme.** Le son SoX est lancé en tâche de fond. Les bips d'un motif sont planifiés, puis envoyés à l'heure par `minitel.get_key()` et `minitel.sleep()`, que tous les programmes appellent sans cesse. Si un programme reste longtemps sans les appeler (pendant le lancement d'un autre programme, par exemple), les bips en retard de plus d'un quart de seconde sont abandonnés plutôt que joués en rafale. Un programme peut aussi jouer son propre rythme avec `minitel.beep_pattern({ 0, 0.4, 0.8 })` ; deux motifs joués coup sur coup sont séparés d'au moins *g*.
 
