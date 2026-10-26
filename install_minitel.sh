@@ -82,6 +82,9 @@ sudo -u minitel amixer -q sset Headphone 85% unmute 2>/dev/null || true
 sudo -u minitel amixer -q sset Master 85% unmute 2>/dev/null || true
 sudo -u minitel amixer -q sset PCM 85% unmute 2>/dev/null || true
 
+echo "> 9. ECRAN DE DEMARRAGE DU RASPBERRY PI SUR LE MINITEL..."
+bash /home/minitel/minitel_gc/install_ecran_demarrage.sh
+
 echo "====================================================================="
 echo " INSTALLATION TERMINEE ! "
 echo "====================================================================="

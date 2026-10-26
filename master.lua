@@ -262,7 +262,7 @@ local function shell_line(cmd)
     return s
 end
 
-local function run_boot_sequence()
+local function run_boot_sequence(link_status)
     local skip = false
     -- Attente interruptible : une touche fait passer tout le reste sans delai
     local function wait(sec)
@@ -314,7 +314,7 @@ local function run_boot_sequence()
     status("OK", true)
 
     line("LIAISON MINITEL : 9600 BAUDS 8N1, VT100 80 COLONNES")
-    wait(0.3); status("OK", true)
+    wait(0.3); status(link_status or "OK", true)
 
     local sox = shell_line("command -v play")
     line("SYNTHESE SONORE (SOX) SUR LA SORTIE AUDIO DU PI")
@@ -665,6 +665,26 @@ end
 -- BOUCLE PRINCIPALE
 -- =====================================================================
 local state = "BOOT"
+
+-- Fin de l'initialisation, le Minitel etant en 80 colonnes : autotest de
+-- demarrage, qui fait au passage le test reseau dont depend la mise a jour
+local function finish_boot(link_status)
+    os.execute("touch /tmp/minitel_warmboot")
+    net_info = run_boot_sequence(link_status)
+    if net_info.connected then
+        -- Si une nouvelle version est installee, l'updater redemarre
+        -- la session ; sinon il rend la main et on passe au menu.
+        minitel.cleanup()
+        os.execute("lua5.3 updater.lua")
+        minitel.init()
+    end
+
+    build_options()
+    state = "MENU"
+    draw_static_portal()
+    draw_full_list()
+end
+
 local f = io.open("/tmp/minitel_warmboot", "r")
 if f then
     state = "MENU"
@@ -673,6 +693,17 @@ if f then
     draw_full_list()
 else
     io.write("\x1b[2J\x1b[H")
+    io.flush()
+    -- On demande au Minitel dans quel mode il est : deja en 80 colonnes (le
+    -- Raspberry a redemarre sans lui), on saute l'ecran d'initialisation ; en
+    -- 40 colonnes, on le fait passer en 80 colonnes tout seul. L'ecran
+    -- d'initialisation a la main ne reste que si ces essais echouent.
+    local mode = minitel.detect_mode()
+    if mode == "80" then
+        finish_boot("DETECTE")
+    elseif (mode == "40" or mode == "mixte") and minitel.switch_to_80(mode) then
+        finish_boot("BASCULE")
+    end
 end
 
 local last_boot_draw = 0
@@ -709,23 +740,7 @@ while true do
         
         if key == "ENVOI" or key == " " or key == "\n" or key == "\r" then
             minitel.play_sound("hit")
-            os.execute("touch /tmp/minitel_warmboot")
-
-            -- Le Minitel est maintenant en 80 colonnes : autotest de demarrage,
-            -- qui fait au passage le test reseau dont depend la mise a jour
-            net_info = run_boot_sequence()
-            if net_info.connected then
-                -- Si une nouvelle version est installee, l'updater redemarre
-                -- la session ; sinon il rend la main et on passe au menu.
-                minitel.cleanup()
-                os.execute("lua5.3 updater.lua")
-                minitel.init()
-            end
-
-            build_options()
-            state = "MENU"
-            draw_static_portal()
-            draw_full_list()
+            finish_boot()
         end
         
     elseif state == "MENU" then

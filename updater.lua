@@ -94,15 +94,18 @@ local function show_error(err_msg)
 end
 
 -- =====================================================================
--- PROTECTION DES PROGRAMMES BASIC LOCAUX
+-- PROTECTION DES FICHIERS LOCAUX (PROGRAMMES BASIC ET SAUVEGARDES .CFG)
 -- =====================================================================
--- Les programmes enregistres depuis le MICRO-BASIC (utils/prog_basic) ne
--- doivent jamais etre ecrases ni effaces par une mise a jour : ils sont mis
--- de cote avant toute operation git, puis remis en place a l'identique.
+-- Les programmes enregistres depuis le MICRO-BASIC (utils/prog_basic) et les
+-- fichiers .cfg des jeux et outils (scores, parties, reglages) appartiennent a
+-- ce Minitel : une mise a jour ne doit jamais les ecraser ni les effacer. Ils
+-- sont mis de cote avant toute operation git, puis remis en place a l'identique.
 local BASIC_DIR = "utils/prog_basic"
-local BASIC_STASH = "/tmp/minitel_basic_local"
-local NOT_BASIC = "-- . ':(exclude)" .. BASIC_DIR .. "'"
-local basic_saved = {}
+local LOCAL_STASH = "/tmp/minitel_fichiers_locaux"
+local LOCAL_SPECS = "'" .. BASIC_DIR .. "' ':(glob)**/*.cfg'"
+local NOT_LOCAL = "-- . ':(exclude)" .. BASIC_DIR .. "' ':(exclude,glob)**/*.cfg'"
+local local_saved = {}
+local basic_count, cfg_count = 0, 0
 
 local function sh_quote(s)
     return "'" .. string.gsub(s, "'", "'\\''") .. "'"
@@ -124,11 +127,11 @@ local function dirname(path)
     return string.match(path, "^(.*)/[^/]*$") or "."
 end
 
--- Met de cote les programmes BASIC crees ou modifies localement, puis rend
--- au dossier son etat du depot pour que git pull ne bute jamais dessus.
-local function protect_basic()
-    local _, out = run_git("status --porcelain -z --untracked-files=all -- " .. BASIC_DIR)
-    os.execute("rm -rf " .. BASIC_STASH .. " && mkdir -p " .. BASIC_STASH)
+-- Met de cote les fichiers locaux crees ou modifies, puis leur rend l'etat du
+-- depot pour que git pull ne bute jamais dessus.
+local function protect_local_files()
+    local _, out = run_git("status --porcelain -z --untracked-files=all -- " .. LOCAL_SPECS)
+    os.execute("rm -rf " .. LOCAL_STASH .. " && mkdir -p " .. LOCAL_STASH)
 
     local skip_next = false
     for entry in string.gmatch(out, "([^\0]+)") do
@@ -137,30 +140,35 @@ local function protect_basic()
         else
             local code, path = string.sub(entry, 1, 2), string.sub(entry, 4)
             if string.sub(code, 1, 1) == "R" then skip_next = true end
-            local rel = string.sub(path, #BASIC_DIR + 2)
-            local dst = BASIC_STASH .. "/" .. rel
+            local dst = LOCAL_STASH .. "/" .. path
             os.execute("mkdir -p " .. sh_quote(dirname(dst)))
             if not string.find(code, "D") and copy_file(path, dst) then
-                table.insert(basic_saved, rel)
+                table.insert(local_saved, path)
+                if string.match(path, "%.cfg$") then
+                    cfg_count = cfg_count + 1
+                else
+                    basic_count = basic_count + 1
+                end
             end
         end
     end
 
-    if #basic_saved > 0 then
-        run_git("reset -q -- " .. BASIC_DIR)
-        run_git("checkout -- " .. BASIC_DIR)
-        run_git("clean -fdq -- " .. BASIC_DIR)
+    if #local_saved > 0 then
+        run_git("reset -q -- " .. LOCAL_SPECS)
+        -- un par un : checkout refuse tout si l'un des motifs ne suit aucun fichier
+        run_git("checkout -- '" .. BASIC_DIR .. "'")
+        run_git("checkout -- ':(glob)**/*.cfg'")
+        run_git("clean -fdq -- " .. LOCAL_SPECS)
     end
 end
 
 -- Remet en place les versions locales (elles l'emportent sur celles du depot)
-local function restore_basic()
-    for _, rel in ipairs(basic_saved) do
-        local dst = BASIC_DIR .. "/" .. rel
-        os.execute("mkdir -p " .. sh_quote(dirname(dst)))
-        copy_file(BASIC_STASH .. "/" .. rel, dst)
+local function restore_local_files()
+    for _, path in ipairs(local_saved) do
+        os.execute("mkdir -p " .. sh_quote(dirname(path)))
+        copy_file(LOCAL_STASH .. "/" .. path, path)
     end
-    os.execute("rm -rf " .. BASIC_STASH)
+    os.execute("rm -rf " .. LOCAL_STASH)
 end
 
 local function git_line(args)
@@ -208,6 +216,7 @@ minitel.play_sound("hit")
 -- SAUVEGARDE GLOBALE EN ARRIERE-PLAN (Ceinture de securite)
 os.execute("mkdir -p /home/minitel/minitel_gc_backup/utils/prog_basic_backup >/dev/null 2>&1")
 os.execute("cp -R /home/minitel/minitel_gc/utils/prog_basic/* /home/minitel/minitel_gc_backup/utils/prog_basic_backup/ >/dev/null 2>&1")
+os.execute("cd /home/minitel/minitel_gc && find . -name '*.cfg' -not -path './.git/*' -exec cp --parents {} /home/minitel/minitel_gc_backup/ \\; >/dev/null 2>&1")
 
 -- 1. On interroge le depot distant, sans rien modifier en local
 io.write("\x1b[12;22H INTERROGATION DU SERVEUR...\r\n")
@@ -221,8 +230,8 @@ end
 -- Nombre de commits du serveur absents en local (nil si pas de branche suivie)
 local behind = tonumber(git_line("rev-list --count HEAD..@{u}") or "")
 
--- 2. On verifie s'il y a des modifications locales (hors programmes BASIC)
-local _, status_out = run_git("status --porcelain " .. NOT_BASIC)
+-- 2. On verifie s'il y a des modifications locales (hors BASIC et .cfg)
+local _, status_out = run_git("status --porcelain " .. NOT_LOCAL)
 
 if behind == 0 and status_out == "" then
     show_up_to_date()
@@ -303,8 +312,8 @@ if status_out ~= "" then
     end
 end
 
--- 3. Les programmes BASIC locaux sont mis a l'abri avant de toucher a l'arbre
-protect_basic()
+-- 3. Les fichiers locaux sont mis a l'abri avant de toucher a l'arbre
+protect_local_files()
 local tree_changed = false
 
 if choice == "3" then
@@ -339,7 +348,7 @@ elseif choice == "1" then
     io.write("\x1b[10;22H\x1b[1mECRASEMENT DU CACHE LOCAL...\x1b[0m\r\n")
     io.flush()
     run_git("reset --hard HEAD")
-    run_git("clean -fd " .. NOT_BASIC)
+    run_git("clean -fd " .. NOT_LOCAL)
     tree_changed = true
 end
 
@@ -350,7 +359,7 @@ io.flush()
 minitel.play_sound("pickup")
 
 local pull_ok, pull_err = run_git("pull")
-restore_basic()
+restore_local_files()
 
 if not pull_ok then
     show_error(pull_err)
@@ -366,8 +375,11 @@ end
 draw_frame("M I S E   A   J O U R   R E U S S I E")
 io.write("\x1b[10;15H\x1b[1mDERNIERE VERSION SYNCHRONISEE :\x1b[0m\r\n")
 show_commit_info(12)
-if #basic_saved > 0 then
-    io.write(string.format("\x1b[16;15H PROGRAMMES BASIC LOCAUX CONSERVES : %d\r\n", #basic_saved))
+if basic_count > 0 then
+    io.write(string.format("\x1b[16;15H PROGRAMMES BASIC LOCAUX CONSERVES : %d\r\n", basic_count))
+end
+if cfg_count > 0 then
+    io.write(string.format("\x1b[17;15H SAUVEGARDES DES JEUX (.CFG) CONSERVEES : %d\r\n", cfg_count))
 end
 
 minitel.play_sound("win")

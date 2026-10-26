@@ -125,7 +125,7 @@ Sur un Raspberry Pi fraîchement installé (Raspberry Pi OS), récupérez le scr
 sudo ./install_minitel.sh
 ```
 
-Le script `install_minitel.sh` déroule huit étapes. Comprendre ce qu'il fait vous aidera en cas de panne :
+Le script `install_minitel.sh` déroule neuf étapes. Comprendre ce qu'il fait vous aidera en cas de panne :
 
 | Étape | Action | Détail technique |
 | :---: | :----- | :--------------- |
@@ -137,6 +137,7 @@ Le script `install_minitel.sh` déroule huit étapes. Comprendre ce qu'il fait v
 | **6** | Profil de session | `~/.bash_profile` : si la session arrive par `/dev/ttyUSB0`, il se place dans le dépôt et lance `lua5.3 master.lua`. |
 | **7** | Démarrage silencieux | Retire la console série du noyau de `cmdline.txt` et ajoute `quiet splash` : les messages de démarrage de Linux ne polluent plus l'écran du Minitel. |
 | **8** | Volume audio | Règle les mixeurs ALSA à 85 %. |
+| **9** | Écran de démarrage | Lance `install_ecran_demarrage.sh`, qui installe le service `minitel-boot` : pendant que Linux démarre, le Minitel affiche l'écran de démarrage du Raspberry Pi (§ 1.4). |
 
 Redémarrez ensuite le Raspberry Pi (`sudo reboot`).
 
@@ -144,9 +145,45 @@ Redémarrez ensuite le Raspberry Pi (`sudo reboot`).
 
 ### 1.4 Le premier démarrage (démarrage à froid)
 
-À la mise sous tension, un Minitel démarre en **mode Vidéotex** : 40 colonnes, jeu de caractères Télétel, et il ne comprend pas les séquences VT100 qu'envoie le système. Le portail affiche donc d'abord un écran d'instructions volontairement très simple, lisible même en 40 colonnes :
+À la mise sous tension, un Minitel démarre en **mode Vidéotex** : 40 colonnes, jeu de caractères Télétel, et il ne comprend pas les séquences VT100 qu'envoie le système. Il faut donc d'abord le faire passer en **mode téléinformatique** : 80 colonnes, émulation VT100. **Le système s'en charge seul.**
 
-<p align="center"><img src="docs/captures/sys-boot.svg" width="640" alt="Écran d'initialisation à froid"><br><sub><b>Fig. 1.1</b> — L'écran d'initialisation à froid, redessiné chaque seconde.</sub></p>
+**La détection du mode.** Au démarrage, le système pose deux questions au Minitel, sans rien afficher :
+
+1. la demande de position du curseur VT100 (`ESC [ 6 n`). Seul un Minitel déjà en 80 colonnes y répond ;
+2. sinon, la demande d'état du protocole Vidéotex (`PRO1`, `ESC 9 r`). Un Minitel en 40 colonnes y répond, et sa réponse indique aussi s'il est en mode mixte.
+
+| Réponse | Mode du Minitel | Ce que fait le système |
+| :------ | :-------------- | :--------------------- |
+| Position du curseur | 80 colonnes (téléinformatique) | Rien à faire : le Raspberry Pi a redémarré sans que le Minitel soit éteint. |
+| État Vidéotex | 40 colonnes, ou mixte | Il coupe l'écho local (`PRO3`, `ESC ; 60 58 52`), active le clavier étendu (`PRO3`, `ESC ; 69 59 41`), puis fait passer le Minitel en téléinformatique (`PRO2`, `ESC : 31 7D`). Le Minitel acquitte par `ESC [ ? z`. Un Minitel en mode mixte repasse d'abord en Vidéotex. |
+| Aucune | Inconnu | Il affiche l'écran d'initialisation à la main ci-dessous. |
+
+Chaque commande Vidéotex part d'abord en 7 bits avec parité paire, le réglage d'un Minitel à 1200 bauds. Sans réponse, elle repart en 8 bits sans parité, le réglage à 9600 bauds. Cette détection a lieu deux fois : sur l'écran de démarrage du Raspberry Pi, puis à l'ouverture du portail. Quand tout se passe bien, on ne voit donc jamais l'écran d'instructions.
+
+**L'écran de démarrage du Raspberry Pi.** Le service `minitel-boot` démarre dès que l'adaptateur USB-série apparaît, bien avant la session. Il met le Minitel en 80 colonnes, puis suit le démarrage de Linux en direct :
+
+<p align="center"><img src="docs/captures/sys-demarrage-pi.svg" width="640" alt="Écran de démarrage du Raspberry Pi"><br><sub><b>Fig. 1.1</b> — L'écran de démarrage du Raspberry Pi (exemple sur un Raspberry Pi 4).</sub></p>
+
+| Zone | Contenu |
+| :--- | :------ |
+| En-tête | Le modèle de Raspberry Pi, la version du noyau Linux et le nom du système. |
+| Étapes | Sept étapes du démarrage (`local-fs.target`, `sysinit.target`, `basic.target`, `time-sync.target`, `NetworkManager.service`, `network.target`, `network-online.target`), avec l'instant où systemd les a atteintes, en secondes depuis la mise sous tension. |
+| Journal | Les six derniers messages de systemd, mis à jour deux fois par seconde. |
+| Pied | Le temps écoulé, une barre de progression et l'adresse IP dès que le réseau en donne une. |
+
+La session Minitel attend la fin de cet écran : toutes les étapes atteintes (« SYSTEME PRET »), **une touche**, ou 30 secondes au plus, par exemple sans réseau. L'écran n'envoie que les zones qui changent, comme le portail.
+
+Le script `install_minitel.sh` installe ce service. Sur un système déjà installé, tapez depuis le dépôt :
+
+```bash
+sudo ./install_ecran_demarrage.sh
+```
+
+Pour le retirer, tapez `sudo ./install_ecran_demarrage.sh --retirer`.
+
+**L'initialisation à la main.** Il arrive que le Minitel ne réponde à aucune question : vitesse différente, ou modèle qui ignore ces commandes. Le portail affiche alors un écran d'instructions volontairement très simple, lisible même en 40 colonnes :
+
+<p align="center"><img src="docs/captures/sys-boot.svg" width="640" alt="Écran d'initialisation à froid"><br><sub><b>Fig. 1.2</b> — L'écran d'initialisation à la main, redessiné chaque seconde.</sub></p>
 
 Tapez au clavier du Minitel les trois combinaisons indiquées. L'écran s'efface après chacune :
 
@@ -156,7 +193,7 @@ Tapez au clavier du Minitel les trois combinaisons indiquées. L'écran s'efface
 | 2 | `Ctrl` + `Esc`, puis `T`, puis `E` | **Écho local coupé** : les touches frappées ne s'affichent plus d'elles-mêmes, c'est le Raspberry Pi qui décide quoi afficher. |
 | 3 | `Ctrl` + `Esc`, puis `C`, puis `E` | **Clavier étendu** : les flèches et les touches de fonction envoient des séquences VT100. |
 
-Appuyez ensuite sur **`[ENVOI]`**. Le portail :
+Appuyez ensuite sur **`[ENVOI]`**. Que le passage en 80 colonnes ait été automatique ou fait à la main, le portail :
 
 1. crée le fichier témoin `/tmp/minitel_warmboot` (il disparaît à l'extinction du Pi) ;
 2. déroule l'**autotest de démarrage**, à la manière des micro-ordinateurs des années 1980 (ci-dessous). Il se termine par le test de la connexion Internet (un `ping` vers `1.1.1.1`) ;
@@ -169,7 +206,7 @@ Appuyez ensuite sur **`[ENVOI]`**. Le portail :
 | :---- | :----------------- |
 | UNITÉ CENTRALE | Le modèle de Raspberry Pi, lu dans `/proc/device-tree/model`. |
 | TEST MÉMOIRE | Un compteur grimpe jusqu'à la mémoire vive réelle (`/proc/meminfo`). |
-| LIAISON MINITEL | Le réglage de la liaison série. |
+| LIAISON MINITEL | Le réglage de la liaison série. Le témoin indique comment le Minitel est passé en 80 colonnes : `DETECTE` s'il y était déjà, `BASCULE` si le système l'y a fait passer, `OK` après l'initialisation à la main. |
 | SYNTHÈSE SONORE | La présence de SoX (commande `play`), qui produit les sons sur la sortie audio du Pi (§ 2.5). Sinon : `ABSENTE`. |
 | NOYAU / INTERPRÉTEUR | Les versions de Linux et de Lua. |
 | CARTOUCHES, OUTILS | Le nombre de programmes trouvés dans `jeux/` et `utils/`. |
@@ -177,7 +214,7 @@ Appuyez ensuite sur **`[ENVOI]`**. Le portail :
 
 L'ensemble dure environ 4,5 secondes et se termine par une barre de chargement et un petit carillon. **N'importe quelle touche abrège l'autotest** : les lignes restantes s'affichent d'un coup, sans les pauses, et le test réseau a lieu quand même.
 
-<p align="center"><img src="docs/captures/sys-autotest.svg" width="640" alt="Autotest de démarrage"><br><sub><b>Fig. 1.2</b> — L'autotest de démarrage (exemple sur un Raspberry Pi 4).</sub></p>
+<p align="center"><img src="docs/captures/sys-autotest.svg" width="640" alt="Autotest de démarrage"><br><sub><b>Fig. 1.3</b> — L'autotest de démarrage (exemple sur un Raspberry Pi 4).</sub></p>
 
 Tant que le Raspberry Pi reste allumé, les sessions suivantes trouvent `/tmp/minitel_warmboot` et sautent l'écran d'initialisation et l'autotest : c'est le **démarrage à chaud**.
 
@@ -431,6 +468,9 @@ Du moment où l'on branche le Raspberry Pi jusqu'à l'affichage du portail, chaq
   Noyau Linux (demarrage silencieux : quiet splash)
                  |
                  v
+  systemd  ->  minitel-boot  (boot_minitel.lua : Minitel en 80 colonnes,
+                 |             suivi du demarrage, 30 s au plus)
+                 v
   systemd  ->  serial-getty@ttyUSB0  (agetty --autologin minitel, 9600, vt100)
                  |
                  v
@@ -444,8 +484,9 @@ Du moment où l'on branche le Raspberry Pi jusqu'à l'affichage du portail, chaq
   /tmp/minitel_warmboot absent ?   present ?
        |                                |
        v                                v
-  Ecran d'initialisation        PORTAIL SYSTEME (menu)
-  [ENVOI] -> reseau ?                   |
+  Detection 40/80 colonnes      PORTAIL SYSTEME (menu)
+  (sinon ecran d'initialisation)        |
+  Autotest -> reseau ?                  |
      -> updater.lua                     +--> launcher_jeux.lua  -> jeux/*.lua
        |                                +--> launcher_utils.lua -> utils/*.lua
        +------------------------------> +--> edit.lua, nmtui, bash, reboot...
@@ -465,6 +506,8 @@ Le portail est lancé par `exec` : il **remplace** le shell. Quand il se termine
 |-- launcher.lua             Ancien lanceur simplifie (conserve)
 |-- updater.lua              Mise a jour Git avec gestion des conflits
 |-- install_minitel.sh       Script d'installation (chapitre 1)
+|-- install_ecran_demarrage.sh  Service de l'ecran de demarrage du Pi
+|-- boot_minitel.lua         Ecran de demarrage du Pi sur le Minitel (§ 1.4)
 |
 |-- jeux/                    Cartouches de jeux (*.lua) + leurs reglages (*.cfg)
 |-- utils/                   Logiciels du poste de travail (*.lua)
@@ -581,11 +624,11 @@ Le délai du mode turbo a pu passer de 1,5 à 0,3 seconde, parce que mettre la f
 Le système se met à jour depuis son dépôt Git. Le programme est lancé automatiquement au démarrage à froid si le réseau répond, ou à la demande depuis le portail.
 
 ```text
-  Sauvegarde : utils/prog_basic/ -> /home/minitel/minitel_gc_backup/
+  Sauvegarde : utils/prog_basic/ et *.cfg -> /home/minitel/minitel_gc_backup/
                  |
                  v
   git fetch : le serveur a-t-il de nouveaux commits ?
-  git status : modifications locales (hors utils/prog_basic/) ?
+  git status : modifications locales (hors BASIC et *.cfg) ?
                  |
      rien de nouveau, rien de local  ->  "SYSTEME A JOUR", retour
                  |                        direct au portail
@@ -598,10 +641,10 @@ Le système se met à jour depuis son dépôt Git. Le programme est lancé autom
         |   [4] ANNULER : retour au portail sans rien toucher
        NON                     |
         v                      |
-  Programmes BASIC locaux mis de cote  <--------------+
+  Programmes BASIC et *.cfg locaux mis de cote  <-----+
         |
         v
-  git pull, puis remise en place des programmes BASIC locaux
+  git pull, puis remise en place des fichiers locaux
         |
         v
   Nouveau commit ?  NON -> "SYSTEME A JOUR", retour au portail
@@ -611,16 +654,16 @@ Le système se met à jour depuis son dépôt Git. Le programme est lancé autom
 
 Le système **ne redémarre que si quelque chose a réellement changé** : un nouveau commit a été téléchargé, ou les options 1 et 3 ont modifié les fichiers. Dans tous les autres cas (déjà à jour, envoi réussi, annulation, erreur réseau), vous revenez directement au portail, à l'endroit où vous l'aviez quitté.
 
-> **Vos programmes BASIC sont toujours conservés.** Le dossier `utils/prog_basic/` est traité à part : il ne déclenche jamais l'écran « CONFLIT LOCAL », et ses fichiers créés ou modifiés sur le Pi sont mis de côté avant le `git pull`, puis remis en place à l'identique. Si le dépôt apporte un programme du même nom, **votre version l'emporte** ; les programmes que vous n'avez pas touchés reçoivent normalement la version du dépôt. L'écran de fin indique combien de programmes locaux ont été conservés.
+> **Vos programmes BASIC et vos sauvegardes de jeux sont toujours conservés.** Deux sortes de fichiers appartiennent au Minitel plutôt qu'au dépôt : le dossier `utils/prog_basic/` et **tous les fichiers `.cfg`**, où les jeux et les outils gardent leurs réglages, leurs parties et leurs scores (`jeux/minitel_*.cfg`, `utils/pictochat.cfg`…). Ils sont traités à part : ils ne déclenchent jamais l'écran « CONFLIT LOCAL », et ceux qui ont été créés ou modifiés sur le Pi sont mis de côté avant le `git pull`, puis remis en place à l'identique. Si le dépôt apporte un fichier du même nom, **votre version l'emporte** ; les fichiers que vous n'avez pas touchés reçoivent normalement la version du dépôt. L'écran de fin indique combien de programmes BASIC et de fichiers `.cfg` ont été conservés.
 >
-> Par sécurité, une copie complète du dossier est aussi faite dans `/home/minitel/minitel_gc_backup/utils/prog_basic_backup/`. Les fichiers listés dans `.gitignore` (comme le dossier `utils/sante/`) ne sont jamais envoyés ni effacés par la mise à jour.
+> Par sécurité, une copie complète est aussi faite dans `/home/minitel/minitel_gc_backup/` : les programmes BASIC dans `utils/prog_basic_backup/`, et chaque `.cfg` à son chemin dans le dépôt. Les fichiers listés dans `.gitignore` (comme le dossier `utils/sante/`) ne sont jamais envoyés ni effacés par la mise à jour.
 
 ### 3.6 Les fichiers de réglages et de données
 
 | Fichier ou dossier | Créé par | Contenu |
 | :----------------- | :------- | :------ |
 | `/tmp/minitel_warmboot` | Portail | Témoin de démarrage à chaud (effacé à l'extinction). |
-| `jeux/minitel_*.cfg` | Les jeux | Réglages (difficulté, mise de départ, son…). |
+| `jeux/minitel_*.cfg` | Les jeux | Réglages (difficulté, mise de départ, son…). Conservés par la mise à jour (§ 3.5). |
 | `utils/pictochat.cfg` | PICTO, BATAILLE, QUIZZ | Ligne 1 : adresse du serveur. Ligne 2 : pseudo. |
 | `utils/prog_basic/*.bas` | MICRO-BASIC | Programmes BASIC, en texte brut. |
 | `utils/music/*.MOD` | PROTRACKER | Morceaux (tables Lua). |
@@ -732,6 +775,8 @@ et se termine par `minitel.cleanup()`.
 | :------- | :---------- |
 | `minitel.init()` | Configure la liaison (`raw`, `-echo`, lecture non bloquante) et masque le curseur. |
 | `minitel.cleanup()` | Remet les marges de défilement à zéro, réaffiche le curseur, efface l'écran, rétablit le terminal (`stty sane`). |
+| `minitel.detect_mode()` | Demande au Minitel son mode d'affichage. Rend `"80"` (téléinformatique), `"40"` (Vidéotex), `"mixte"` ou `"inconnu"` (§ 1.4). |
+| `minitel.switch_to_80(mode)` | Fait passer un Minitel en Vidéotex (`"40"` ou `"mixte"`) en 80 colonnes, sans écho et avec le clavier étendu. Rend `true` si le Minitel a confirmé. |
 | `minitel.sleep(secondes)` | Pause (par la commande `sleep` du système, avec repli sur une attente active). Les boucles principales utilisent typiquement `minitel.sleep(0.01)` à `0.05`. |
 | `minitel.play_sound(effet)` | Joue un effet sans bloquer : `"hit"`, `"win"`, `"pickup"`, `"lose"`, `"damage"`, en bips du Minitel et/ou en synthèse SoX selon le mode sonore (§ 2.5). |
 | `minitel.beep_pattern(instants)` | Joue un rythme de bips du Minitel, par exemple `{ 0, 0.4, 0.8 }` (instants en secondes). Les bips plus rapprochés que l'écart minimal `minitel.bip_gap` risquent de ne pas s'entendre (§ 2.5). |
@@ -1163,8 +1208,9 @@ Codes de contrôle utiles : `8` Retour arrière, `13` Retour chariot (`[ENVOI]`)
 
 | Symptôme | Cause probable | Remède |
 | :------- | :------------- | :----- |
-| L'écran reste en 40 colonnes, caractères étranges | Le Minitel est encore en mode Vidéotex | Refaire la séquence du § 1.4 (`Ctrl`+`Esc`, `T`, `A`…). |
-| Chaque touche s'affiche deux fois | L'écho local est actif | `Ctrl`+`Esc`, `T`, `E`. |
+| L'écran reste en 40 colonnes, caractères étranges | Le Minitel est encore en mode Vidéotex, et n'a pas répondu à la détection automatique | Refaire la séquence du § 1.4 (`Ctrl`+`Esc`, `T`, `A`…). |
+| Pas d'écran de démarrage du Pi, le portail arrive directement | Service `minitel-boot` absent | `sudo ./install_ecran_demarrage.sh` depuis le dépôt, puis `sudo reboot`. État : `systemctl status minitel-boot`. |
+| Chaque touche s'affiche deux fois | L'écho local est actif (par exemple si le Minitel l'a remis en passant en 80 colonnes) | `Ctrl`+`Esc`, `T`, `E`. |
 | Les flèches ne font rien | Clavier non étendu | `Ctrl`+`Esc`, `C`, `E`, ou utilisez `Z` `Q` `S` `D`. |
 | Caractères incohérents en continu | Vitesses différentes entre le Minitel et le Pi | Régler le Minitel sur 9600 bauds. |
 | Écran noir, rien ne se passe | Session non ouverte sur le port série | Vérifier que `/dev/ttyUSB0` existe (`ls /dev/ttyUSB*`) et que le service est actif : `systemctl status serial-getty@ttyUSB0`. |

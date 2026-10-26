@@ -287,6 +287,87 @@ function M.play_sound(effect)
 end
 
 -- =====================================================================
+-- MODE DU MINITEL : 40 COLONNES (VIDEOTEX) OU 80 COLONNES (TELEINFORMATIQUE)
+-- =====================================================================
+-- Le Minitel s'allume en Videotex 40 colonnes, ou il obeit aux commandes de
+-- protocole PRO1/PRO2/PRO3 (ESC 9, ESC :, ESC ;) et y repond. En mode
+-- Teleinformatique 80 colonnes (VT100), il les ignore mais repond a la demande
+-- de position du curseur ESC [ 6 n. Deux questions suffisent donc a savoir ou
+-- il en est, et une commande PRO2 le fait passer en 80 colonnes.
+
+-- En Videotex la liaison est en 7 bits + parite paire : le bit 8 de chaque
+-- octet envoye porte la parite, et on l'enleve de ce que le Minitel repond.
+local function videotex(seq)
+    local out = {}
+    for i = 1, #seq do
+        local b, x, p = string.byte(seq, i), string.byte(seq, i), 0
+        while x > 0 do p = p ~ (x & 1); x = x >> 1 end
+        out[i] = string.char(b | (p << 7))
+    end
+    return table.concat(out)
+end
+
+-- Envoie une question et attend une reponse reconnue par le motif, au plus
+-- `timeout` secondes. Rend la reponse (7 bits) ou nil.
+local function ask_terminal(seq, pattern, timeout)
+    while io.read(1) do end -- on vide ce qui trainait (touches, ancien echo)
+    orig_write(seq)
+    io.flush()
+    local buf, t0 = "", mono_time()
+    repeat
+        local c = io.read(1)
+        if c then
+            buf = buf .. string.char(string.byte(c) & 0x7F)
+            local found = string.match(buf, pattern)
+            if found then return found end
+        else
+            M.sleep_raw(0.03)
+        end
+    until mono_time() - t0 > timeout
+    return nil
+end
+
+-- Commande de protocole Videotex : d'abord en 7 bits + parite paire (1200
+-- bauds), puis, sans acquittement, en 8 bits sans parite (9600 bauds)
+local function pro_command(seq, pattern, timeout)
+    local rep = ask_terminal(videotex(seq), pattern, timeout)
+    if rep or videotex(seq) == seq then return rep end
+    return ask_terminal(seq, pattern, timeout)
+end
+
+-- Rend "80" (Teleinformatique), "40" (Videotex), "mixte" (Videotex 80
+-- colonnes) ou "inconnu" (rien n'a repondu : on ne peut pas trancher).
+function M.detect_mode()
+    if ask_terminal("\x1b[6n", "\x1b%[%d+;%d+R", 0.4) then return "80" end
+    -- PRO1 STATUS FONCTIONNEMENT -> PRO2 REP STATUS (ESC : s octet)
+    local rep = pro_command("\x1b\x39\x72", "\x1b\x3a\x73(.)", 0.5)
+    -- En Teleinformatique, ESC 9 est ignore mais le "r" qui suit s'affiche
+    orig_write("\r\x1b[K")
+    io.flush()
+    if not rep then return "inconnu" end
+    if string.byte(rep) & 1 == 1 then return "mixte" end
+    return "40"
+end
+
+-- Fait passer un Minitel en Videotex (40 colonnes ou mixte) en mode
+-- Teleinformatique 80 colonnes, avec les reglages que l'ecran d'initialisation
+-- fait taper a la main : sans echo local et avec le clavier etendu. Rend true
+-- si le Minitel a confirme le changement de mode.
+function M.switch_to_80(mode)
+    if mode == "mixte" then
+        -- pas de passage direct Mixte -> Teleinformatique : retour en Videotex
+        pro_command("\x1b\x3a\x32\x7e", "\x1e\x71", 0.5)
+    end
+    -- PRO3 AIGUILLAGE OFF ECRAN <- MODEM : plus d'echo des touches a l'ecran
+    pro_command("\x1b\x3b\x60\x58\x52", "\x1b\x3b..", 0.4)
+    -- PRO3 START CLAVIER ETEN : clavier etendu (fleches, touches de fonction)
+    pro_command("\x1b\x3b\x69\x59\x41", "\x1b\x3b..", 0.4)
+    -- PRO2 TELINFO : passage en Teleinformatique, acquitte par CSI ? z
+    if pro_command("\x1b\x3a\x31\x7d", "\x1b%[%?z", 1.0) then return true end
+    return M.detect_mode() == "80"
+end
+
+-- =====================================================================
 -- 2. FONCTION D'IMPRESSION ECRAN VERS PASTEBIN (TOUCHE IMPRESSION / CTRL+P)
 -- =====================================================================
 local is_printing = false
