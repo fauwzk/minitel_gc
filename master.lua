@@ -227,22 +227,6 @@ end
 build_options()
 
 -- =====================================================================
--- AFFICHAGE DU SQUELETTE ET DES ENCARTS (9600 BAUDS)
--- =====================================================================
-local function draw_boot_screen()
-    io.write("\x1b[1;1H\x1b[K========================================")
-    io.write("\x1b[2;1H\x1b[K\x1b[7m  INITIALISATION MAGIS CLUB REQUISE   \x1b[0m")
-    io.write("\x1b[3;1H\x1b[K========================================")
-    io.write("\x1b[5;1H\x1b[KVeuillez taper ces commandes au clavier:")
-    io.write("\x1b[7;1H\x1b[K1. 80 Colonnes : \x1b[1mCtrl+Esc\x1b[0m puis \x1b[1mT\x1b[0m puis \x1b[1mA\x1b[0m")
-    io.write("\x1b[8;1H\x1b[K2. Echo OFF    : \x1b[1mCtrl+Esc\x1b[0m puis \x1b[1mT\x1b[0m puis \x1b[1mE\x1b[0m")
-    io.write("\x1b[9;1H\x1b[K3. Clav. Etendu: \x1b[1mCtrl+Esc\x1b[0m puis \x1b[1mC\x1b[0m puis \x1b[1mE\x1b[0m")
-    io.write("\x1b[12;1H\x1b[K(Le terminal s'effacera a chaque fois)")
-    io.write("\x1b[15;1H\x1b[K\x1b[7m APPUYEZ SUR [ENVOI] QUAND TERMINE. \x1b[0m")
-    io.flush()
-end
-
--- =====================================================================
 -- FAUX ECRAN DE DEMARRAGE (AUTOTEST FACON MICRO DES ANNEES 80)
 -- =====================================================================
 -- Affiche apres l'initialisation, une fois le Minitel en 80 colonnes. Les
@@ -664,7 +648,7 @@ end
 -- =====================================================================
 -- BOUCLE PRINCIPALE
 -- =====================================================================
-local state = "BOOT"
+local state = "MENU"
 
 -- Fin de l'initialisation, le Minitel etant en 80 colonnes : autotest de
 -- demarrage, qui fait au passage le test reseau dont depend la mise a jour
@@ -696,18 +680,19 @@ else
     io.write("\x1b[2J\x1b[H")
     io.flush()
     -- On demande au Minitel dans quel mode il est : deja en 80 colonnes (le
-    -- Raspberry a redemarre sans lui), on saute l'ecran d'initialisation ; en
-    -- 40 colonnes, on le fait passer en 80 colonnes tout seul. L'ecran
-    -- d'initialisation a la main ne reste que si ces essais echouent.
+    -- Raspberry a redemarre sans lui), ou en 40 colonnes, et on le fait alors
+    -- passer en 80 colonnes tout seul. S'il ne repond pas, on continue quand
+    -- meme : les commandes a taper a la main sont dans le manuel (§ 1.4).
     local mode = minitel.detect_mode()
     if mode == "80" then
         finish_boot("DETECTE")
     elseif (mode == "40" or mode == "mixte") and minitel.switch_to_80(mode) then
         finish_boot("BASCULE")
+    else
+        finish_boot("SANS REP")
     end
 end
 
-local last_boot_draw = 0
 local last_net_update = os.time()
 local last_input_time = os.time()
 local INACTIVITY_TIMEOUT = 90
@@ -733,18 +718,7 @@ while true do
         end
     end
     
-    if state == "BOOT" then
-        if now - last_boot_draw >= 1 then
-            draw_boot_screen()
-            last_boot_draw = now
-        end
-        
-        if key == "ENVOI" or key == " " or key == "\n" or key == "\r" then
-            minitel.play_sound("hit")
-            finish_boot()
-        end
-        
-    elseif state == "MENU" then
+    if state == "MENU" then
         if now - last_input_time > INACTIVITY_TIMEOUT then
             state = "SCREENSAVER"
             start_screensaver()

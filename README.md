@@ -157,9 +157,9 @@ Redémarrez ensuite le Raspberry Pi (`sudo reboot`).
 | :------ | :-------------- | :--------------------- |
 | Position du curseur | 80 colonnes (téléinformatique) | Rien à faire : le Raspberry Pi a redémarré sans que le Minitel soit éteint. |
 | État Vidéotex | 40 colonnes, ou mixte | Il coupe l'écho local (`PRO3`, `ESC ; 60 58 52`), active le clavier étendu (`PRO3`, `ESC ; 69 59 41`), puis fait passer le Minitel en téléinformatique (`PRO2`, `ESC : 31 7D`). Le Minitel acquitte par `ESC [ ? z`. Un Minitel en mode mixte repasse d'abord en Vidéotex. |
-| Aucune | Inconnu | Il affiche l'écran d'initialisation à la main ci-dessous. |
+| Aucune | Inconnu | Il continue quand même : autotest, puis portail. Si l'écran est illisible, faites l'initialisation à la main ci-dessous. |
 
-En changeant de mode, le Minitel rétablit l'écho local. Une fois en 80 colonnes, le système le coupe donc à nouveau avec la commande VT100 `ESC [ 1 2 h` (mode SRM), l'équivalent de `Ctrl`+`Esc`, `T`, `E`. Il envoie cette commande à chaque démarrage à froid, y compris après l'initialisation à la main.
+En changeant de mode, le Minitel rétablit l'écho local. Une fois en 80 colonnes, le système le coupe donc à nouveau avec la commande VT100 `ESC [ 1 2 h` (mode SRM), l'équivalent de `Ctrl`+`Esc`, `T`, `E`. Il envoie cette commande à chaque démarrage à froid, même quand le Minitel n'a pas répondu.
 
 Chaque commande Vidéotex part d'abord en 7 bits avec parité paire, le réglage d'un Minitel à 1200 bauds. Sans réponse, elle repart en 8 bits sans parité, le réglage à 9600 bauds. Cette détection a lieu deux fois : sur l'écran de démarrage du Raspberry Pi, puis à l'ouverture du portail. Quand tout se passe bien, on ne voit donc jamais l'écran d'instructions.
 
@@ -184,11 +184,7 @@ sudo ./install_ecran_demarrage.sh
 
 Pour le retirer, tapez `sudo ./install_ecran_demarrage.sh --retirer`.
 
-**L'initialisation à la main.** Il arrive que le Minitel ne réponde à aucune question : vitesse différente, ou modèle qui ignore ces commandes. Le portail affiche alors un écran d'instructions volontairement très simple, lisible même en 40 colonnes :
-
-<p align="center"><img src="docs/captures/sys-boot.svg" width="640" alt="Écran d'initialisation à froid"><br><sub><b>Fig. 1.2</b> — L'écran d'initialisation à la main, redessiné chaque seconde.</sub></p>
-
-Tapez au clavier du Minitel les trois combinaisons indiquées. L'écran s'efface après chacune :
+**L'initialisation à la main.** Il arrive que le Minitel ne réponde à aucune question : vitesse différente, ou modèle qui ignore ces commandes. Le système n'affiche plus d'écran d'instructions : il continue comme si le Minitel était en 80 colonnes, et le témoin de l'autotest indique `SANS REP`. Si l'écran reste en 40 colonnes, illisible, ou si les touches s'affichent en double, tapez vous-même au clavier du Minitel les trois combinaisons suivantes. L'écran s'efface après chacune :
 
 | N° | Combinaison | Effet |
 | :-: | :---------- | :---- |
@@ -196,7 +192,9 @@ Tapez au clavier du Minitel les trois combinaisons indiquées. L'écran s'efface
 | 2 | `Ctrl` + `Esc`, puis `T`, puis `E` | **Écho local coupé** : les touches frappées ne s'affichent plus d'elles-mêmes, c'est le Raspberry Pi qui décide quoi afficher. |
 | 3 | `Ctrl` + `Esc`, puis `C`, puis `E` | **Clavier étendu** : les flèches et les touches de fonction envoient des séquences VT100. |
 
-Appuyez ensuite sur **`[ENVOI]`**. Que le passage en 80 colonnes ait été automatique ou fait à la main, le portail :
+Appuyez ensuite sur **`[REPETITION]`** : le portail se redessine en entier, cette fois en 80 colonnes.
+
+**La suite du démarrage à froid.** Une fois la détection faite, le portail :
 
 1. crée le fichier témoin `/tmp/minitel_warmboot` (il disparaît à l'extinction du Pi) ;
 2. déroule l'**autotest de démarrage**, à la manière des micro-ordinateurs des années 1980 (ci-dessous). Il se termine par le test de la connexion Internet (un `ping` vers `1.1.1.1`) ;
@@ -209,7 +207,7 @@ Appuyez ensuite sur **`[ENVOI]`**. Que le passage en 80 colonnes ait été autom
 | :---- | :----------------- |
 | UNITÉ CENTRALE | Le modèle de Raspberry Pi, lu dans `/proc/device-tree/model`. |
 | TEST MÉMOIRE | Un compteur grimpe jusqu'à la mémoire vive réelle (`/proc/meminfo`). |
-| LIAISON MINITEL | Le réglage de la liaison série. Le témoin indique comment le Minitel est passé en 80 colonnes : `DETECTE` s'il y était déjà, `BASCULE` si le système l'y a fait passer, `OK` après l'initialisation à la main. |
+| LIAISON MINITEL | Le réglage de la liaison série. Le témoin indique comment le Minitel est passé en 80 colonnes : `DETECTE` s'il y était déjà, `BASCULE` si le système l'y a fait passer, `SANS REP` si le Minitel n'a répondu à aucune question. |
 | SYNTHÈSE SONORE | La présence de SoX (commande `play`), qui produit les sons sur la sortie audio du Pi (§ 2.5). Sinon : `ABSENTE`. |
 | NOYAU / INTERPRÉTEUR | Les versions de Linux et de Lua. |
 | CARTOUCHES, OUTILS | Le nombre de programmes trouvés dans `jeux/` et `utils/`. |
@@ -217,9 +215,9 @@ Appuyez ensuite sur **`[ENVOI]`**. Que le passage en 80 colonnes ait été autom
 
 L'ensemble dure environ 4,5 secondes et se termine par une barre de chargement et un petit carillon. **N'importe quelle touche abrège l'autotest** : les lignes restantes s'affichent d'un coup, sans les pauses, et le test réseau a lieu quand même.
 
-<p align="center"><img src="docs/captures/sys-autotest.svg" width="640" alt="Autotest de démarrage"><br><sub><b>Fig. 1.3</b> — L'autotest de démarrage (exemple sur un Raspberry Pi 4).</sub></p>
+<p align="center"><img src="docs/captures/sys-autotest.svg" width="640" alt="Autotest de démarrage"><br><sub><b>Fig. 1.2</b> — L'autotest de démarrage (exemple sur un Raspberry Pi 4).</sub></p>
 
-Tant que le Raspberry Pi reste allumé, les sessions suivantes trouvent `/tmp/minitel_warmboot` et sautent l'écran d'initialisation et l'autotest : c'est le **démarrage à chaud**.
+Tant que le Raspberry Pi reste allumé, les sessions suivantes trouvent `/tmp/minitel_warmboot` et sautent la détection du mode et l'autotest : c'est le **démarrage à chaud**.
 
 > **Vitesse de la liaison.** Le système dialogue à **9600 bauds, 8 bits**. Le port série du Magis Club fonctionne soit en 1200 bauds 7 bits, soit en 9600 bauds 8 bits ; le choix se fait par logiciel. Le Minitel et le Raspberry Pi doivent être réglés sur la même vitesse, sinon l'écran se remplit de caractères incohérents.
 
@@ -488,7 +486,6 @@ Du moment où l'on branche le Raspberry Pi jusqu'à l'affichage du portail, chaq
        |                                |
        v                                v
   Detection 40/80 colonnes      PORTAIL SYSTEME (menu)
-  (sinon ecran d'initialisation)        |
   Autotest -> reseau ?                  |
      -> updater.lua                     +--> launcher_jeux.lua  -> jeux/*.lua
        |                                +--> launcher_utils.lua -> utils/*.lua
@@ -1238,7 +1235,7 @@ Codes de contrôle utiles : `8` Retour arrière, `13` Retour chariot (`[ENVOI]`)
 
 | Symptôme | Cause probable | Remède |
 | :------- | :------------- | :----- |
-| L'écran reste en 40 colonnes, caractères étranges | Le Minitel est encore en mode Vidéotex, et n'a pas répondu à la détection automatique | Refaire la séquence du § 1.4 (`Ctrl`+`Esc`, `T`, `A`…). |
+| L'écran reste en 40 colonnes, caractères étranges | Le Minitel est encore en mode Vidéotex, et n'a pas répondu à la détection automatique (témoin `SANS REP`) | Taper les combinaisons du § 1.4 (`Ctrl`+`Esc`, `T`, `A`…), puis `[REPETITION]`. |
 | Pas d'écran de démarrage du Pi, le portail arrive directement | Service `minitel-boot` absent | `sudo ./install_ecran_demarrage.sh` depuis le dépôt, puis `sudo reboot`. État : `systemctl status minitel-boot`. |
 | Chaque touche s'affiche deux fois | L'écho local est actif, et le Minitel a ignoré la commande `ESC [ 1 2 h` | `Ctrl`+`Esc`, `T`, `E`. |
 | Les flèches ne font rien | Clavier non étendu | `Ctrl`+`Esc`, `C`, `E`, ou utilisez `Z` `Q` `S` `D`. |
