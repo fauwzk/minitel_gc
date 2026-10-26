@@ -68,11 +68,11 @@ Un second volume, le **[Manuel de programmation MICRO-BASIC](docs/MANUEL_BASIC.m
 
 | Élément | Rôle | Remarques |
 | :------ | :--- | :-------- |
-| **Minitel Magis Club** | Écran, clavier, haut-parleur | Le terminal pour lequel le système est conçu. Les autres Minitel capables de passer en 80 colonnes (prise DIN 5 broches) fonctionnent aussi, mais sans la liaison audio. |
+| **Minitel Magis Club** | Écran, clavier, bip | Le terminal pour lequel le système est conçu. Les autres Minitel capables de passer en 80 colonnes (prise DIN 5 broches) fonctionnent aussi. |
 | **Raspberry Pi** | Unité centrale | N'importe quel modèle capable de faire tourner Raspberry Pi OS et Lua 5.3. Un Pi 3 ou 4 est confortable. |
 | **Convertisseur USB ↔ série TTL** | Liaison des données | Apparaît sous Linux comme `/dev/ttyUSB0`. |
 | **Fiche DIN mâle à 8 broches** | Prise péri-informatique | Le connecteur rond à l'arrière du Magis Club. Une fiche DIN 5 broches s'y enfiche aussi, mais elle ne donne accès ni à l'audio ni à l'alimentation. |
-| **Câble audio** (fiche jack 3,5 mm) | Liaison audio | De la sortie audio du Raspberry Pi vers les broches audio de la prise (§ 2.6). |
+| **Petit haut-parleur amplifié** (facultatif) | Son | Sur la sortie audio du Raspberry Pi, pour entendre les effets sonores et la musique. La prise péri-informatique ne mène pas le son au haut-parleur du Minitel (§ 2.6). |
 | **Carte micro-SD** (8 Go et plus) | Stockage | Système, programmes, sauvegardes. |
 | **Connexion réseau** (facultative) | Services en ligne et mises à jour | Wi-Fi ou Ethernet. Le système fonctionne aussi hors ligne. |
 
@@ -82,7 +82,7 @@ Les premiers Minitel avaient une prise péri-informatique à 5 broches. Le Magis
 
 * la **liaison série** des données, en niveaux logiques **TTL 5 V**, et non en RS-232. Ne la reliez jamais directement à un vieux port série de PC (±12 V) ;
 * une **alimentation** non régulée pour un périphérique ;
-* une **voie audio** dans chaque sens, reliée au circuit téléphonique du Minitel.
+* une **voie audio** dans chaque sens, reliée à la **ligne téléphonique** du Minitel (et non à son haut-parleur, § 2.6).
 
 | Broche | Signal | Sens (vu du Minitel) | Usage dans ce système |
 | :----: | :----- | :------------------- | :-------------------- |
@@ -91,9 +91,9 @@ Les premiers Minitel avaient une prise péri-informatique à 5 broches. Le Magis
 | **3** | TX — émission des données | Sortie | → RX du convertisseur |
 | **4** | Indicateur de transmission | Sortie | Non utilisée |
 | **5** | Alimentation 8,5 V, 1 A, non régulée (environ 12 V à vide) | Sortie | Non utilisée (voir l'encadré) |
-| **6** | RX audio — audio reçu par le Minitel | Entrée | ← Sortie audio du Raspberry Pi (§ 2.6) |
-| **7** | TX audio — audio émis par le Minitel | Sortie | Facultatif : vers une entrée micro |
-| **8** | Masse audio | — | ↔ Masse de la prise jack |
+| **6** | Audio à émettre sur la ligne téléphonique (`TXAD` sur le schéma Alcatel) | Entrée | Non utilisée (§ 2.6) |
+| **7** | Audio reçu de la ligne téléphonique (`RXAD`) | Sortie | Non utilisée |
+| **8** | Masse audio | — | Non utilisée |
 
 ```text
               CABLAGE DE LA PRISE PERI-INFORMATIQUE (DIN 8)
@@ -105,15 +105,10 @@ Les premiers Minitel avaient une prise péri-informatique à 5 broches. Le Magis
     Broche 1 (RX donnees) <--------------  TX                 USB --> Pi    |
     Broche 2 (masse)      ---------------  GND                              |
                                      '------------------------------------'
+    Broches 6, 7, 8 (audio de ligne) : non cablees (voir 2.6)
                                      .---- Sortie audio (jack 3,5 mm) ----.
-    Broche 6 (RX audio)   <--[ R ]--||--  Pointe (canal gauche)            |
-    Broche 8 (masse audio) -------------  Corps (masse)                    |
+                                     |  --> petit haut-parleur amplifie    |
                                      '------------------------------------'
-    Broche 7 (TX audio)   --------------> (facultatif) entree micro
-                                          d'une carte son USB
-
-    R  : resistance d'attenuation (quelques kilo-ohms, voir 2.6)
-    || : condensateur de liaison (1 a 10 microfarads)
 ```
 
 > **ATTENTION.** Ce brochage est celui relevé sur un Magis Club révision 2 (voir l'[annexe E](#annexe-e--références)). La numérotation diffère d'une documentation à l'autre, et elle est moulée sur la fiche DIN elle-même : **vérifiez chaque broche à l'ohmmètre ou à l'oscilloscope avant de souder**. La sortie TX du Minitel est généralement à **collecteur ouvert** : si votre convertisseur ne voit rien arriver, ajoutez une résistance de rappel (environ 10 kΩ) entre la broche 3 et la tension logique du convertisseur.
@@ -141,7 +136,7 @@ Le script `install_minitel.sh` déroule huit étapes. Comprendre ce qu'il fait v
 | **5** | Connexion automatique | Un service `serial-getty@ttyUSB0` ouvre une session `minitel` sur le port série, à 9600 bauds, avec le type de terminal `vt100`. |
 | **6** | Profil de session | `~/.bash_profile` : si la session arrive par `/dev/ttyUSB0`, il se place dans le dépôt et lance `lua5.3 master.lua`. |
 | **7** | Démarrage silencieux | Retire la console série du noyau de `cmdline.txt` et ajoute `quiet splash` : les messages de démarrage de Linux ne polluent plus l'écran du Minitel. |
-| **8** | Volume audio | Règle les mixeurs ALSA à 85 %. Pour la voie audio du Magis Club, ce niveau est souvent trop fort (§ 2.6). |
+| **8** | Volume audio | Règle les mixeurs ALSA à 85 %. |
 
 Redémarrez ensuite le Raspberry Pi (`sudo reboot`).
 
@@ -175,7 +170,7 @@ Appuyez ensuite sur **`[ENVOI]`**. Le portail :
 | UNITÉ CENTRALE | Le modèle de Raspberry Pi, lu dans `/proc/device-tree/model`. |
 | TEST MÉMOIRE | Un compteur grimpe jusqu'à la mémoire vive réelle (`/proc/meminfo`). |
 | LIAISON MINITEL | Le réglage de la liaison série. |
-| SYNTHÈSE SONORE | La présence de SoX (commande `play`), qui produit les sons (§ 2.5). Sinon : `ABSENTE`. |
+| SYNTHÈSE SONORE | La présence de SoX (commande `play`), qui produit les sons sur la sortie audio du Pi (§ 2.5). Sinon : `ABSENTE`. |
 | NOYAU / INTERPRÉTEUR | Les versions de Linux et de Lua. |
 | CARTOUCHES, OUTILS | Le nombre de programmes trouvés dans `jeux/` et `utils/`. |
 | RÉSEAU | Le test de connexion dont dépend la mise à jour, avec l'adresse IP si le Pi est en ligne. |
@@ -212,17 +207,17 @@ Réglez votre terminal sur **80 colonnes × 24 lignes**. Le mode PC est idéal p
 |  Ecran 80 x 24 (VT100)   | <====================> |  USB : convertisseur serie |
 |  Clavier etendu (ESC)    |  9600 bauds, 8N1, TTL  |  serial-getty (autologin)  |
 |  Echo local coupe        |                        |  Lua 5.3 + minitel.lua     |
-|                          |  AUDIO (6-8)           |                            |
-|  Haut-parleur interne    | <--------------------- |  Sortie jack : SoX (son)   |
+|                          |                        |  Sortie jack : SoX (son)   |
+|  Bip (caractere BEL)     |                        |   --> haut-parleur amplifie|
 |                          |                        |  GPIO (BASIC)              |
 +--------------------------+                        +----------------------------+
-  affiche, transmet, sonne                               calcule et decide
+   affiche, transmet, bipe                               calcule et decide
 ```
 
 Le partage des rôles est strict :
 
-* le **Minitel** n'exécute aucun programme. Il affiche les caractères qu'il reçoit, transmet les touches frappées et diffuse sur son haut-parleur le son qui arrive par la voie audio ;
-* le **Raspberry Pi** exécute tout : système, jeux, BASIC, accès réseau, synthèse sonore. Il ne voit le Minitel qu'au travers d'un flux d'octets dans chaque sens, plus un signal audio.
+* le **Minitel** n'exécute aucun programme. Il affiche les caractères qu'il reçoit, transmet les touches frappées, et émet un bip quand on le lui demande ;
+* le **Raspberry Pi** exécute tout : système, jeux, BASIC, accès réseau, synthèse sonore. Il ne voit le Minitel qu'au travers d'un flux d'octets dans chaque sens.
 
 Conséquence directe : **la vitesse de la liaison série est la ressource la plus précieuse du système.** C'est elle, et non le processeur, qui limite la fluidité de l'affichage (voir chapitre 4).
 
@@ -309,7 +304,7 @@ Par convention, tous les programmes du système partagent la même mise en page 
 
 ### 2.5 La synthèse sonore
 
-Le Minitel ne sait pas fabriquer de musique : le son est **synthétisé par le Raspberry Pi**, avec le synthétiseur en ligne de commande **SoX** (commande `play`), puis envoyé au haut-parleur du Minitel par la voie audio de la prise péri-informatique (§ 2.6). La fonction `minitel.play_sound(effet)` lance `play` **en tâche de fond**, si bien que le programme continue de tourner pendant que le son est joué.
+Le Minitel ne sait pas fabriquer de musique : le son est **synthétisé par le Raspberry Pi**, avec le synthétiseur en ligne de commande **SoX** (commande `play`), et sort par la **sortie audio du Raspberry Pi**, où l'on branche un petit haut-parleur amplifié. La voie audio de la prise péri-informatique ne permet pas de le faire entendre par le Minitel (§ 2.6). La fonction `minitel.play_sound(effet)` lance `play` **en tâche de fond**, si bien que le programme continue de tourner pendant que le son est joué.
 
 | Effet demandé | Forme d'onde | Durée | Fréquence |
 | :------------ | :----------- | :---- | :-------- |
@@ -321,62 +316,61 @@ Si SoX n'est pas installé, les sons sont simplement ignorés. Le séquenceur **
 
 ### 2.6 La voie audio du Magis Club
 
-**Ce qu'elle est.** Les broches 6, 7 et 8 de la prise péri-informatique forment une **interface audio**, prévue par Alcatel pour recevoir et émettre des signaux de parole entre un périphérique et la **ligne téléphonique** du Minitel :
+**Ce qu'elle est.** Les broches 6, 7 et 8 de la prise péri-informatique forment une **interface audio vers la ligne téléphonique**. La fiche Alcatel la décrit comme permettant « la réception et/ou l'émission de signaux de type Parole » : elle était prévue pour des périphériques comme le boîtier *Dialogue*, qui ont besoin d'écouter ou de parler sur la ligne.
 
-| Broche | Signal | Sens |
-| :----: | :----- | :--- |
-| **6** | RX audio | Vers le Minitel : audio reçu |
-| **7** | TX audio | Depuis le Minitel : audio émis |
-| **8** | Masse audio | Référence des deux voies |
+Le schéma de la carte CPU du Magis Club (feuillet « Interface ligne », [annexe E](#annexe-e--références)) montre précisément le chemin :
 
-Le Magis Club possède un **haut-parleur interne**, celui qui fait entendre la numérotation et les tonalités de la ligne. Le système s'en sert pour diffuser son propre son : la sortie audio du Raspberry Pi est injectée sur la broche 6, et les effets sonores, la musique du PROTRACKER et les `BEEP` du BASIC sortent **du Minitel lui-même**, sans haut-parleur supplémentaire.
-
-> **Ce que dit la documentation, et ce qu'elle ne dit pas.** Le rôle des trois broches et leur numérotation proviennent de la fiche du constructeur et de relevés de collectionneurs ([annexe E](#annexe-e--références)). Les **niveaux électriques** attendus ne sont publiés nulle part, et le sens RX / TX est donné ici dans la même convention que la broche 1 (RX = ce que reçoit le Minitel). Montez donc le circuit ci-dessous **avec un volume faible**, et augmentez-le progressivement.
-
-**Le montage.** La sortie casque du Raspberry Pi (prise jack 3,5 mm) délivre un signal stéréo d'environ 1 V, avec une composante continue. On le ramène en mono, on bloque le continu et on l'atténue :
+| Broche | Nom sur le schéma | Sens | Où elle va |
+| :----: | :---------------- | :--- | :--------- |
+| **6** | `TXAD` | Entrée | Condensateur de 100 nF, résistance de 10 kΩ, puis l'amplificateur qui attaque le **transformateur de ligne**. Un transistor commandé par le Minitel (signal `COM_AUD`) court-circuite cette entrée tant que le terminal ne l'a pas mise en service. |
+| **7** | `RXAD` | Sortie | Le signal **reçu de la ligne**, renvoyé au périphérique. |
+| **8** | 0 V | — | Masse audio. |
 
 ```text
-   JACK 3,5 mm DU RASPBERRY PI                         PRISE DIN DU MAGIS CLUB
-
-   Pointe (canal gauche) ---[ 1 kohm ]---+
-                                         +---||---[ 10 kohm ]---- Broche 6 (RX audio)
-   Anneau (canal droit)  ---[ 1 kohm ]---+   10 uF
-                                                    (reglage du niveau)
-   Corps (masse) -------------------------------------------- Broche 8 (masse audio)
+   PRISE PERI          CARTE CPU DU MAGIS CLUB                 PRISE TELEPHONE
+   Broche 6 (TXAD) --||--[10k]--+--[ ampli ]--+                 
+                                |             +--[ TRANSFO ]--[ relais ]-- ligne
+                  COM_AUD --[ coupure ]       |    de ligne      (REL)
+   Broche 7 (RXAD) <--[4,7k]--------- signal recu de la ligne
 ```
 
-| Composant | Rôle |
-| :-------- | :--- |
-| Deux résistances de 1 kΩ | Mélangent les canaux gauche et droit en mono, sans les court-circuiter l'un sur l'autre. |
-| Condensateur de 10 µF (non polarisé, ou chimique, pôle + côté Pi) | Laisse passer le son et bloque la tension continue. |
-| Résistance de 10 kΩ, ou potentiomètre de 10 kΩ | Atténue le signal. Réduisez-la si le son est trop faible, augmentez-la s'il sature. |
+**Ce que cela implique.** Le son qui entre par la broche 6 part **vers la ligne téléphonique**, et seulement quand le Minitel l'y autorise. Le schéma ne prévoit aucun chemin vers un haut-parleur. Injecter la sortie audio du Raspberry Pi sur la broche 6, comme le proposaient les premières versions de ce manuel, **ne fait donc rien entendre** : c'était une erreur, que le schéma constructeur permet de corriger.
+
+> **Et le haut-parleur du Magis Club ?** Le Magis Club révision 2 (1999) contient un petit haut-parleur, soudé à la carte mère : il bipe à la mise sous tension et fait entendre la numérotation. Le schéma de 1992 dont nous disposons ne le montre pas, et **aucune source ne dit qu'il diffuse le son de la prise**. Il est possible qu'il fasse entendre la ligne pendant une connexion ; seul un essai sur votre appareil peut le dire (outil AUDIO ci-dessous). Le réglage « Ampli ligne » du menu du Magis Club révision 2 est cité par des collectionneurs, mais son effet exact n'est documenté nulle part.
+
+**Les sources de son qui fonctionnent.**
+
+1. **Le bip du Minitel.** Le Minitel émet un bip quand il reçoit le caractère de contrôle **BEL** (code 7). Ce son est intégré, sans aucun câblage, mais il n'a qu'une seule note : il convient aux signaux (erreur, validation), pas à la musique.
+2. **Un haut-parleur sur le Raspberry Pi.** Pour les effets de SoX et la musique du PROTRACKER, branchez un **petit haut-parleur amplifié** sur la sortie audio du Pi (jack 3,5 mm, ou carte son USB pour les modèles qui n'en ont pas). Une enceinte USB de bureau convient ; un module amplificateur de quelques watts et un haut-parleur de 8 Ω peuvent aussi se loger dans un boîtier près du Minitel.
+
+**L'outil de diagnostic AUDIO.** Le programme `utils/audio_init.lua`, dans 3615 OUTILS, fait trois essais et affiche un bilan :
+
+| Essai | Ce qu'il fait |
+| :---- | :------------ |
+| **1. Bip du Minitel** | Envoie trois caractères BEL. |
+| **2. Sortie du Raspberry Pi** | Indique la carte son détectée et joue un la à 440 Hz pendant 3 secondes, à écouter au casque ou sur le haut-parleur branché au Pi. |
+| **3. Voie de la ligne** | Joue un son pendant 20 secondes, le temps d'appuyer sur la touche **Connexion/Fin** du Minitel pour mettre la ligne en service, d'écouter, puis de raccrocher. Cet essai suppose que la sortie du Pi est câblée sur la broche 6. |
+
+Après chaque essai, l'outil demande si un son a été entendu. Avant l'essai 3, il demande de **débrancher le cordon téléphonique** : sans cela, le son partirait sur la ligne. Si l'écran repasse en 40 colonnes pendant la connexion, tapez de nouveau `Ctrl`+`Esc`, `T`, `A`.
+
+> L'ancienne version de cet outil envoyait des commandes de modem `AT` (`ATL3`, `ATM2`). Le Minitel n'a pas de modem compatible Hayes : ces commandes s'affichaient comme du texte et ne pouvaient rien activer.
 
 **Les réglages côté Raspberry Pi.** Le son est géré par ALSA. Le profil de session exporte `AUDIODRIVER=alsa` pour que SoX l'utilise.
 
 1. Dirigez le son vers la prise jack : `sudo raspi-config`, puis *System Options* > *Audio* > *Headphones*.
-2. Commencez avec un volume modéré. Le script d'installation règle les mixeurs à 85 %, ce qui peut être trop fort pour l'entrée du Minitel :
-
-   ```bash
-   amixer sset Headphone 40%
-   ```
-
-3. Testez avec un la à 440 Hz pendant une seconde :
+2. Testez avec un la à 440 Hz pendant une seconde :
 
    ```bash
    play -n synth 1 sine 440
    ```
 
-4. Ajustez ensuite la résistance de 10 kΩ et le volume ALSA jusqu'à obtenir un son net, sans grésillement.
+3. Réglez le volume avec `alsamixer`.
 
-Le menu de réglages du Magis Club (révision 2) comporte un niveau nommé **« Ampli ligne »** : s'il est trop bas, le son du Raspberry Pi est faible même avec un bon câblage.
+> **Les modèles sans prise jack.** Le Raspberry Pi Zero et le Raspberry Pi 5 n'ont pas de sortie audio analogique. Utilisez une petite **carte son USB**, ou une enceinte USB.
 
-> **Les modèles sans prise jack.** Le Raspberry Pi Zero et le Raspberry Pi 5 n'ont pas de sortie audio analogique. Utilisez une petite **carte son USB**, ou une carte de conversion audio sur le connecteur GPIO, et branchez le montage sur sa sortie casque.
-
-**Dans l'autre sens : la broche 7.** La broche 7 transporte le son que le Minitel émet vers la ligne, par exemple les tonalités de sa numérotation. Le Raspberry Pi n'a pas d'entrée audio ; pour enregistrer ce signal, il faut l'entrée micro d'une carte son USB, à travers un condensateur de liaison. Aucun programme du système ne l'utilise : c'est une piste d'expérimentation.
-
-> **Précautions.**
-> * **Débranchez le cordon téléphonique** du Minitel : la voie audio est reliée au circuit de la ligne, et le son du Raspberry Pi partirait sur le réseau téléphonique.
-> * Ne reliez **jamais** une sortie d'amplificateur ou de haut-parleur aux broches audio : seulement une sortie casque ou ligne, atténuée.
+> **Précautions, si vous expérimentez avec les broches 6 et 7.**
+> * **Débranchez le cordon téléphonique** du Minitel : la voie audio est reliée au circuit de la ligne.
+> * Ne reliez **jamais** une sortie d'amplificateur ou de haut-parleur aux broches audio : seulement une sortie casque ou ligne, atténuée (quelques kilo-ohms en série, et un condensateur de liaison).
 > * Les masses des données (broche 2) et de l'audio (broche 8) sont séparées sur la prise : câblez chacune avec son propre fil.
 
 ### 2.7 Les entrées-sorties du Raspberry Pi (GPIO)
@@ -395,7 +389,7 @@ Le connecteur GPIO à 40 broches du Raspberry Pi est accessible depuis le **MICR
 | Liaison des données | Série asynchrone 9600 bauds 8N1, niveaux TTL 5 V, via un convertisseur USB |
 | Débit d'affichage | 960 caractères par seconde |
 | Écran complet | Environ 2 000 à 2 500 octets, soit 2 à 2,5 secondes |
-| Son | Synthèse SoX sur le Raspberry Pi, diffusée par le haut-parleur du Minitel (broches audio 6 et 8) |
+| Son | Bip intégré du Minitel (caractère BEL) ; synthèse SoX sur le Raspberry Pi, vers un haut-parleur branché sur sa sortie audio |
 | Langage utilisateur | MICRO-BASIC V6.1 (numéros de ligne, GPIO, PWM, ADC) |
 | Stockage | Carte micro-SD (programmes `.bas`, documents, sauvegardes) |
 | Réseau | Wi-Fi / Ethernet du Raspberry Pi, configuré par `nmtui` |
@@ -1154,10 +1148,9 @@ Codes de contrôle utiles : `8` Retour arrière, `13` Retour chariot (`[ENVOI]`)
 | Écran noir, rien ne se passe | Session non ouverte sur le port série | Vérifier que `/dev/ttyUSB0` existe (`ls /dev/ttyUSB*`) et que le service est actif : `systemctl status serial-getty@ttyUSB0`. |
 | Rien n'arrive au Pi quand on tape | Fils TX / RX inversés, ou résistance de rappel manquante | Voir § 1.2. |
 | Débris à l'écran après une perturbation | Octets perdus sur la ligne | Touche `[REPETITION]`. |
-| Pas de son | SoX absent, sortie audio mal dirigée ou volume coupé | `sudo apt install sox` ; `raspi-config` > *Audio* > *Headphones* ; `alsamixer`. Testez avec `play -n synth 1 sine 440` (§ 2.6). |
-| Son faible dans le haut-parleur du Minitel | Atténuation trop forte, ou réglage « Ampli ligne » bas | Réduisez la résistance de 10 kΩ, montez le volume ALSA, vérifiez « Ampli ligne » (§ 2.6). |
-| Son saturé, grésillant | Signal trop fort pour l'entrée audio | Baissez le volume (`amixer sset Headphone 30%`) ou augmentez l'atténuation. |
-| Ronflement continu | Boucle de masse, ou masse audio non câblée | Reliez la broche 8 à la masse du jack par son propre fil ; évitez de partager le fil de la broche 2. |
+| Pas de son | SoX absent, sortie audio mal dirigée, volume coupé, ou aucun haut-parleur sur la sortie du Pi | Lancez l'outil **AUDIO** de 3615 OUTILS (§ 2.6). `sudo apt install sox` ; `raspi-config` > *Audio* > *Headphones* ; `alsamixer`. |
+| Rien n'en sort alors que la sortie du Pi est câblée sur les broches 6 et 8 | Ces broches mènent à la ligne téléphonique, pas au haut-parleur du Minitel | Branchez un haut-parleur amplifié sur la sortie du Pi (§ 2.6). |
+| Ronflement continu dans le haut-parleur du Pi | Boucle de masse | Alimentez le haut-parleur depuis le Pi (USB) plutôt que par une autre alimentation. |
 | L'entrée MISE À JOUR n'apparaît pas | Le `ping` vers `1.1.1.1` échoue | Vérifier le réseau avec CONFIG RÉSEAU ; l'état est retesté toutes les 30 s. |
 | La mise à jour signale un « conflit local » | Des fichiers suivis par Git ont été modifiés sur le Pi | Choisir l'option 3 (renommer) pour garder vos versions, ou 1 pour revenir à l'officielle (§ 3.5). |
 | Un programme a planté, le terminal est figé | `minitel.cleanup()` n'a pas été appelé | Taper `reset` à l'aveugle puis `[ENVOI]`, ou se déconnecter : la session se relance seule. |
@@ -1196,6 +1189,8 @@ Les informations sur le matériel du Magis Club (brochage de la prise DIN 8, voi
 * **MCbx, *Old Computer Collection*, « Magis Club »** — démontage d'un Magis Club révision 2 (1999), brochage relevé broche par broche, vitesses du port série : <https://oldcomputer.info/terminal/magis/index.htm>
 * **Forum du Musée du Minitel, « Magis "de base" et Magis Club »** — différences entre modèles et révisions, réglages « Lumière » et « Ampli ligne » : <https://forum.museeminitel.fr/t/magis-de-base-et-magis-club-deux-fois-deux-modeles/225>
 * **Forum du Musée du Minitel, « Une simple carte son »** — relier une carte son à la prise téléphonique d'un Minitel : <https://forum.museeminitel.fr/t/nouvelle-interface-de-connexion-du-minitel-une-simple-carte-son/1393>
+* **Alcatel, « Schémas Minitel Magis Club »** (dossier M4, 1992) — schéma bloc de la carte CPU et feuillet « Interface ligne » : chemin des broches audio 6, 7 et 8 vers le transformateur de ligne, signal `COM_AUD`, absence de haut-parleur sur la voie audio : <https://www.minitel-alcatel.fr/documents/M4-1992/Schemas%20Minitel%20Magis%20Club.pdf>
+* **Alcatel / CCETT, « STUM Magis Club »** — présentation du produit et de ses modules (dont le module téléphonique) : <https://www.minitel-alcatel.fr/documents/M4-1992/STUM%20M4.pdf>
 
 ---
 

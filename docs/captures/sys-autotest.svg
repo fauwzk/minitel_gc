@@ -15,7 +15,7 @@
 <text x="46.8" y="166.0" fill="rgb(183,196,177)" textLength="604.8" lengthAdjust="spacingAndGlyphs">LIAISON MINITEL : 9600 BAUDS 8N1, VT100 80 COLONNES ...........</text>
 <rect x="661.2" y="152.0" width="38.4" height="19.0" fill="rgb(232,240,228)"/>
 <text x="670.8" y="166.0" fill="rgb(18,22,17)" textLength="19.2" lengthAdjust="spacingAndGlyphs">OK</text>
-<text x="46.8" y="185.0" fill="rgb(183,196,177)" textLength="604.8" lengthAdjust="spacingAndGlyphs">SYNTHESE SONORE (SOX) VERS LA PRISE PERI-INFORMATIQUE .........</text>
+<text x="46.8" y="185.0" fill="rgb(183,196,177)" textLength="604.8" lengthAdjust="spacingAndGlyphs">SYNTHESE SONORE (SOX) SUR LA SORTIE AUDIO DU PI ...............</text>
 <rect x="661.2" y="171.0" width="38.4" height="19.0" fill="rgb(232,240,228)"/>
 <text x="670.8" y="185.0" fill="rgb(18,22,17)" textLength="19.2" lengthAdjust="spacingAndGlyphs">OK</text>
 <text x="46.8" y="204.0" fill="rgb(183,196,177)" textLength="604.8" lengthAdjust="spacingAndGlyphs">NOYAU LINUX 6.6.51 / INTERPRETEUR LUA 5.3 .....................</text>

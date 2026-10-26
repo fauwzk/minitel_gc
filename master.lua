@@ -317,7 +317,7 @@ local function run_boot_sequence()
     wait(0.3); status("OK", true)
 
     local sox = shell_line("command -v play")
-    line("SYNTHESE SONORE (SOX) VERS LA PRISE PERI-INFORMATIQUE")
+    line("SYNTHESE SONORE (SOX) SUR LA SORTIE AUDIO DU PI")
     wait(0.3); status(sox and "OK" or "ABSENTE", sox ~= nil)
 
     local kernel = (shell_line("uname -r") or "?"):match("^[%d%.]+") or "?"

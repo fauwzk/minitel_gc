@@ -361,7 +361,7 @@ Place le curseur en colonne `x` (1 à 80), ligne `y` (1 à 24). Le prochain `PRI
 
 #### `BEEP` — bip sonore
 
-Émet un bip court (880 Hz), synthétisé par le Raspberry Pi et diffusé par le haut-parleur du Minitel grâce à la voie audio de la prise péri-informatique. Le programme n'attend pas la fin du son.
+Émet un bip court (880 Hz), synthétisé par le Raspberry Pi et diffusé par le haut-parleur branché sur sa sortie audio (voir le manuel du système, § 2.6). Le programme n'attend pas la fin du son.
 
 ### 3.3 Variables et calcul
 
