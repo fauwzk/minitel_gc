@@ -155,7 +155,11 @@ minitel.init()
 -- Le Minitel vient peut-etre d'etre allume (40 colonnes) : on le met en 80
 -- colonnes, ce que le portail constatera ensuite tout seul
 local mode = minitel.detect_mode()
-if mode == "40" or mode == "mixte" then minitel.switch_to_80(mode) end
+if mode == "40" or mode == "mixte" then
+    minitel.switch_to_80(mode)
+elseif mode == "80" then
+    minitel.echo_off_80()
+end
 
 local model = (read_first_line("/proc/device-tree/model") or "RASPBERRY PI"):gsub("%z", "")
 local kernel = (shell_lines("uname -r")[1] or "?"):match("^[%w%.%-%+]+") or "?"
