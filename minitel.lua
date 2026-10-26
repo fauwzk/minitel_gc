@@ -161,35 +161,56 @@ end
 -- Le buzzer du Magis Club n'a qu'une note : les effets se distinguent par
 -- leur rythme. Les bips sont planifies et emis au fil des appels a get_key()
 -- et sleep() : un motif ne bloque jamais le programme.
---   Mode (fichier ~/.minitel_son, hors du depot) : "bip", "sox", "les2", "aucun"
+-- Le Magis Club ignore les bips trop rapproches : tous les motifs sont
+-- construits a partir d'un ecart minimal entre deux bips, mesure a l'oreille
+-- avec le calibrage de l'outil AUDIO.
+--   Fichier ~/.minitel_son (hors du depot) : ligne 1 = mode ("bip", "sox",
+--   "les2", "aucun"), ligne 2 = ecart minimal en secondes
 local SOUND_FILE = (os.getenv("HOME") or "/tmp") .. "/.minitel_son"
 local SOUND_MODES = { bip = true, sox = true, les2 = true, aucun = true }
+local DEFAULT_GAP = 0.35
 
-local function read_sound_mode()
+local function read_sound_settings()
     local f = io.open(SOUND_FILE, "r")
-    local m = f and f:read("*l")
-    if f then f:close() end
-    return SOUND_MODES[m] and m or "les2"
+    local m, g
+    if f then m = f:read("*l"); g = tonumber(f:read("*l") or ""); f:close() end
+    if not SOUND_MODES[m] then m = "les2" end
+    if not g or g < 0.05 or g > 2 then g = DEFAULT_GAP end
+    return m, g
 end
-M.sound_mode = read_sound_mode()
+M.sound_mode, M.bip_gap = read_sound_settings()
+
+local function save_sound_settings()
+    local f = io.open(SOUND_FILE, "w")
+    if f then f:write(M.sound_mode .. "\n" .. M.bip_gap .. "\n"); f:close() end
+end
+
+-- Motifs : instants des bips, en secondes depuis le debut de l'effet, en
+-- multiples de l'ecart minimal g
+local function build_patterns(g)
+    return {
+        hit    = { 0 },                       -- un bip : validation, action
+        blip   = { 0 },
+        pickup = { 0, g },                    -- deux bips : objet, bonus
+        damage = { 0, g, 2 * g },             -- trois bips au plus vite : choc
+        lose   = { 0, 2.5 * g, 5 * g },       -- trois bips lents : echec
+        win    = { 0, g, 2 * g, 4 * g },      -- trois bips, un silence, un bip : victoire
+    }
+end
+M.BIP_PATTERNS = build_patterns(M.bip_gap)
 
 function M.set_sound_mode(mode)
     if not SOUND_MODES[mode] then return false end
     M.sound_mode = mode
-    local f = io.open(SOUND_FILE, "w")
-    if f then f:write(mode .. "\n"); f:close() end
+    save_sound_settings()
     return true
 end
 
--- Motifs : instants des bips, en secondes depuis le debut de l'effet
-M.BIP_PATTERNS = {
-    hit    = { 0 },                       -- un bip : validation, action
-    blip   = { 0 },
-    pickup = { 0, 0.12 },                 -- deux bips vifs : objet, bonus
-    win    = { 0, 0.12, 0.24, 0.6 },      -- trois bips puis un quatrieme : victoire
-    lose   = { 0, 0.45, 0.9 },            -- trois bips lents : echec
-    damage = { 0, 0.07, 0.14 },           -- rafale serree : choc
-}
+function M.set_bip_gap(gap)
+    M.bip_gap = gap
+    M.BIP_PATTERNS = build_patterns(gap)
+    save_sound_settings()
+end
 
 local function mono_time()
     local f = io.open("/proc/uptime", "r")
@@ -223,7 +244,7 @@ end
 function M.beep_pattern(pattern)
     local now = mono_time()
     local last = bip_queue[#bip_queue]
-    local start = last and math.max(now, last + 0.12) or now
+    local start = last and math.max(now, last + M.bip_gap) or now
     for _, dt in ipairs(pattern) do table.insert(bip_queue, start + dt) end
     pump_bips()
 end

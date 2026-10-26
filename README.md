@@ -309,17 +309,19 @@ Le système dispose de deux sources sonores, que la fonction `minitel.play_sound
 * le **bip du Minitel**, déclenché par le caractère de contrôle **BEL** (code 7). Son buzzer n'a **qu'une seule note** : les effets se distinguent donc par leur **rythme** ;
 * la **synthèse SoX** du Raspberry Pi (commande `play`), qui sort par la **sortie audio du Pi**, où l'on branche un petit haut-parleur amplifié. La voie audio de la prise péri-informatique ne permet pas de la faire entendre par le Minitel (§ 2.6).
 
-| Effet demandé | Bip du Minitel (instants des bips) | Synthèse SoX |
-| :------------ | :--------------------------------- | :----------- |
-| `"hit"` (et tout nom inconnu) | 1 bip : validation, action | Carrée, 0,05 s, 880 Hz |
-| `"pickup"` | 2 bips vifs (0 ; 0,12 s) : objet, bonus | Carrée, 0,15 s, glissando 440 → 1200 Hz |
-| `"win"` | 3 bips puis un quatrième (0 ; 0,12 ; 0,24 ; 0,6 s) : victoire | Carrée, 0,15 s, glissando 440 → 1200 Hz |
-| `"damage"` | Rafale serrée (0 ; 0,07 ; 0,14 s) : choc | Dent de scie, 0,3 s, 300 → 100 Hz |
-| `"lose"` | 3 bips lents (0 ; 0,45 ; 0,9 s) : échec | Dent de scie, 0,3 s, 300 → 100 Hz |
+**Des bips assez espacés.** Le Magis Club ignore les bips trop rapprochés : dans les essais, deux bips à 0,12 seconde d'intervalle ne produisaient aucun son, alors que des bips espacés de 0,35 seconde ou plus s'entendaient. Tous les motifs sont donc construits sur un **écart minimal** *g*, de 0,35 seconde par défaut, que l'on mesure à l'oreille avec le calibrage de l'outil AUDIO (§ 2.6).
 
-**Aucun effet ne bloque le programme.** Le son SoX est lancé en tâche de fond. Les bips d'un motif sont planifiés, puis envoyés à l'heure par `minitel.get_key()` et `minitel.sleep()`, que tous les programmes appellent sans cesse. Si un programme reste longtemps sans les appeler (pendant le lancement d'un autre programme, par exemple), les bips en retard de plus d'un quart de seconde sont abandonnés plutôt que joués en rafale. Un programme peut aussi jouer son propre rythme avec `minitel.beep_pattern({ 0, 0.2, 0.4 })`.
+| Effet demandé | Bip du Minitel (instants des bips) | Avec *g* = 0,35 s | Synthèse SoX |
+| :------------ | :--------------------------------- | :---------------- | :----------- |
+| `"hit"` (et tout nom inconnu) | 1 bip : validation, action | 0 | Carrée, 0,05 s, 880 Hz |
+| `"pickup"` | 2 bips : objet, bonus | 0 ; 0,35 | Carrée, 0,15 s, glissando 440 → 1200 Hz |
+| `"damage"` | 3 bips au plus vite (0 ; *g* ; 2*g*) : choc | 0 ; 0,35 ; 0,7 | Dent de scie, 0,3 s, 300 → 100 Hz |
+| `"lose"` | 3 bips lents (0 ; 2,5*g* ; 5*g*) : échec | 0 ; 0,875 ; 1,75 | Dent de scie, 0,3 s, 300 → 100 Hz |
+| `"win"` | 3 bips, un silence, un bip (0 ; *g* ; 2*g* ; 4*g*) : victoire | 0 ; 0,35 ; 0,7 ; 1,4 | Carrée, 0,15 s, glissando 440 → 1200 Hz |
 
-**Le mode sonore** se choisit dans l'outil **AUDIO** de 3615 OUTILS (touche `5`, § 2.6). Il est mémorisé dans le fichier `~/.minitel_son`, en dehors du dépôt, et vaut pour tous les programmes :
+**Aucun effet ne bloque le programme.** Le son SoX est lancé en tâche de fond. Les bips d'un motif sont planifiés, puis envoyés à l'heure par `minitel.get_key()` et `minitel.sleep()`, que tous les programmes appellent sans cesse. Si un programme reste longtemps sans les appeler (pendant le lancement d'un autre programme, par exemple), les bips en retard de plus d'un quart de seconde sont abandonnés plutôt que joués en rafale. Un programme peut aussi jouer son propre rythme avec `minitel.beep_pattern({ 0, 0.4, 0.8 })` ; deux motifs joués coup sur coup sont séparés d'au moins *g*.
+
+**Le mode sonore** se choisit dans l'outil **AUDIO** de 3615 OUTILS (touche `5`, § 2.6). Il est mémorisé, avec l'écart *g*, dans le fichier `~/.minitel_son`, en dehors du dépôt, et vaut pour tous les programmes :
 
 | Mode | Effet |
 | :--- | :---- |
@@ -368,6 +370,7 @@ Le schéma de la carte CPU du Magis Club (feuillet « Interface ligne », [annex
 | **3. Voie de la ligne** | Joue un son pendant 20 secondes, le temps d'appuyer sur la touche **Connexion/Fin** du Minitel pour mettre la ligne en service, d'écouter, puis de raccrocher. Cet essai suppose que la sortie du Pi est câblée sur la broche 6. |
 | **4. Motifs** | Fait entendre, l'un après l'autre, les motifs de bips des cinq effets sonores (§ 2.5). |
 | **5. Mode sonore** | Fait défiler les modes : bip + SoX, bip seulement, SoX seulement, silence. Le choix est mémorisé pour tous les programmes. |
+| **6. Calibrage** | Fait entendre huit paires de bips, de A (0,10 s d'écart) à H (0,70 s). Tapez la lettre de la première paire où vous entendez nettement **deux** bips : cet écart devient l'écart minimal *g* de tous les motifs (§ 2.5). `R` fait réécouter la série. |
 
 Après chaque essai, l'outil demande si un son a été entendu. Avant l'essai 3, il demande de **débrancher le cordon téléphonique** : sans cela, le son partirait sur la ligne. Si l'écran repasse en 40 colonnes pendant la connexion, tapez de nouveau `Ctrl`+`Esc`, `T`, `A`.
 
@@ -731,7 +734,7 @@ et se termine par `minitel.cleanup()`.
 | `minitel.cleanup()` | Remet les marges de défilement à zéro, réaffiche le curseur, efface l'écran, rétablit le terminal (`stty sane`). |
 | `minitel.sleep(secondes)` | Pause (par la commande `sleep` du système, avec repli sur une attente active). Les boucles principales utilisent typiquement `minitel.sleep(0.01)` à `0.05`. |
 | `minitel.play_sound(effet)` | Joue un effet sans bloquer : `"hit"`, `"win"`, `"pickup"`, `"lose"`, `"damage"`, en bips du Minitel et/ou en synthèse SoX selon le mode sonore (§ 2.5). |
-| `minitel.beep_pattern(instants)` | Joue un rythme de bips du Minitel, par exemple `{ 0, 0.2, 0.4 }` (instants en secondes). |
+| `minitel.beep_pattern(instants)` | Joue un rythme de bips du Minitel, par exemple `{ 0, 0.4, 0.8 }` (instants en secondes). Les bips plus rapprochés que l'écart minimal `minitel.bip_gap` risquent de ne pas s'entendre (§ 2.5). |
 | `minitel.get_key()` | Lit le clavier **sans attendre**. Renvoie un nom de touche (§ 2.3), un caractère, ou `nil` si rien n'a été frappé. |
 | `minitel.get_screen_text()` | Contenu de l'écran (24 lignes de texte séparées par des retours à la ligne). |
 | `minitel.print_screen_to_pastebin()` | Déclenche l'impression d'écran (normalement appelée par `get_key()` lui-même). |

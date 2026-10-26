@@ -85,7 +85,8 @@ local function draw_menu()
     io.write("\x1b[10;4H\x1b[7m 2 \x1b[0m SORTIE AUDIO DU RASPBERRY PI (jack)      " .. status_text(results.pi))
     io.write("\x1b[12;4H\x1b[7m 3 \x1b[0m VOIE AUDIO DE LA LIGNE (broche 6)        " .. status_text(results.ligne))
     io.write("\x1b[14;4H\x1b[7m 4 \x1b[0m ECOUTER LES MOTIFS DE BIPS DES PROGRAMMES")
-    io.write("\x1b[16;4H\x1b[7m 5 \x1b[0m MODE SONORE : \x1b[1m" .. MODE_LABELS[minitel.sound_mode] .. "\x1b[0m\x1b[K")
+    io.write("\x1b[15;4H\x1b[7m 5 \x1b[0m MODE SONORE : \x1b[1m" .. MODE_LABELS[minitel.sound_mode] .. "\x1b[0m\x1b[K")
+    io.write(string.format("\x1b[16;4H\x1b[7m 6 \x1b[0m CALIBRER L'ECART ENTRE DEUX BIPS : \x1b[1m%.2f S\x1b[0m\x1b[K", minitel.bip_gap))
 
     -- Conclusion d'apres les essais deja faits
     local advice
@@ -103,7 +104,7 @@ local function draw_menu()
     local lines = minitel.wrap(advice, 64, 2)
     io.write("\x1b[18;3H\x1b[1mBILAN :\x1b[0m " .. lines[1] .. "\x1b[19;12H" .. lines[2])
 
-    io.write("\x1b[24;1H\x1b[7m" .. minitel.center("[1] [2] [3] ESSAIS  |  [4] MOTIFS  |  [5] MODE  |  [RETOUR] QUITTER", 80) .. "\x1b[0m")
+    io.write("\x1b[24;1H\x1b[7m" .. minitel.center("[1-3] ESSAIS | [4] MOTIFS | [5] MODE | [6] CALIBRAGE | [RETOUR] QUITTER", 80) .. "\x1b[0m")
     io.flush()
 end
 
@@ -177,20 +178,59 @@ local function test_motifs()
     clear_zone()
     local demo = {
         { "hit",    "VALIDATION, ACTION   (1 bip)" },
-        { "pickup", "OBJET, BONUS         (2 bips vifs)" },
-        { "damage", "CHOC                 (rafale serree)" },
+        { "pickup", "OBJET, BONUS         (2 bips)" },
+        { "damage", "CHOC                 (3 bips au plus vite)" },
         { "lose",   "ECHEC                (3 bips lents)" },
-        { "win",    "VICTOIRE             (3 bips + 1)" },
+        { "win",    "VICTOIRE             (3 bips, silence, 1 bip)" },
     }
     io.write("\x1b[18;4H\x1b[1mMOTIFS DU BIP DU MINITEL\x1b[0m   (une seule note : seul le rythme change)")
     for i, d in ipairs(demo) do
+        local pattern = minitel.BIP_PATTERNS[d[1]]
         io.write(string.format("\x1b[%d;6H> %s", 18 + i, d[2]))
         io.flush()
-        minitel.beep_pattern(minitel.BIP_PATTERNS[d[1]])
-        minitel.sleep(1.6)
+        minitel.beep_pattern(pattern)
+        -- Le motif entier, plus une seconde de silence avant le suivant
+        minitel.sleep(pattern[#pattern] + 1.2)
         io.write(string.format("\x1b[%d;6H ", 18 + i))
     end
     io.flush()
+end
+
+-- [6] Le Magis Club ignore les bips trop rapproches : on fait entendre des
+-- paires de bips de plus en plus espacees, l'utilisateur choisit la premiere
+-- ou il entend nettement deux bips, et tous les motifs s'y adaptent.
+local CALIB_GAPS = { 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50, 0.70 }
+
+local function calibrate()
+    clear_zone()
+    io.write("\x1b[18;4H\x1b[1mCALIBRAGE :\x1b[0m ecoutez chaque paire et retenez la premiere ou")
+    io.write("\x1b[19;4Hvous entendez nettement DEUX bips.")
+    io.flush()
+    minitel.sleep(1.5)
+    for i, gap in ipairs(CALIB_GAPS) do
+        local letter = string.char(64 + i)
+        local y, x = 20 + math.floor((i - 1) / 4), 4 + ((i - 1) % 4) * 18
+        io.write(string.format("\x1b[%d;%dH\x1b[7m %s : %.2f S \x1b[0m", y, x, letter, gap))
+        io.flush()
+        minitel.beep_pattern({ 0, gap })
+        minitel.sleep(gap + 1.5)
+        io.write(string.format("\x1b[%d;%dH %s : %.2f S ", y, x, letter, gap))
+        io.flush()
+    end
+    io.write("\x1b[23;4H\x1b[7m LETTRE DE LA PREMIERE PAIRE ENTENDUE EN DEUX BIPS (A-H), [R] REECOUTER \x1b[0m")
+    io.flush()
+    while true do
+        local k = wait_key()
+        local idx = (#k == 1) and (string.byte(string.upper(k)) - 64) or 0
+        if CALIB_GAPS[idx] then
+            minitel.set_bip_gap(CALIB_GAPS[idx])
+            return
+        elseif k == "r" or k == "R" then
+            return calibrate()
+        elseif k == "RETOUR" or k == "ESC" then
+            return
+        end
+    end
 end
 
 -- [5] Choix du mode sonore, memorise pour tous les programmes
@@ -210,6 +250,7 @@ while true do
     elseif k == "3" then test_ligne(); draw_menu()
     elseif k == "4" then test_motifs(); draw_menu()
     elseif k == "5" then change_mode(); draw_menu()
+    elseif k == "6" then calibrate(); draw_menu()
     elseif k == "RETOUR" or k == "ESC" or k == "SOMMAIRE" then break
     end
 end
