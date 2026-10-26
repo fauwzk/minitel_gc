@@ -363,17 +363,8 @@ function M.switch_to_80(mode)
     -- PRO3 START CLAVIER ETEN : clavier etendu (fleches, touches de fonction)
     pro_command("\x1b\x3b\x69\x59\x41", "\x1b\x3b..", 0.4)
     -- PRO2 TELINFO : passage en Teleinformatique, acquitte par CSI ? z
-    local ok = pro_command("\x1b\x3a\x31\x7d", "\x1b%[%?z", 1.0) ~= nil or M.detect_mode() == "80"
-    if ok then M.echo_off_80() end
-    return ok
-end
-
--- En Teleinformatique, l'echo local ne depend plus des aiguillages Videotex
--- (le Minitel le remet en changeant de mode) : on le coupe par le mode SRM de
--- la norme ISO 6429 / VT100, CSI 12 h, equivalent de Fnct T E.
-function M.echo_off_80()
-    orig_write("\x1b[12h")
-    io.flush()
+    if pro_command("\x1b\x3a\x31\x7d", "\x1b%[%?z", 1.0) then return true end
+    return M.detect_mode() == "80"
 end
 
 -- =====================================================================

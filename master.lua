@@ -669,7 +669,6 @@ local state = "BOOT"
 -- Fin de l'initialisation, le Minitel etant en 80 colonnes : autotest de
 -- demarrage, qui fait au passage le test reseau dont depend la mise a jour
 local function finish_boot(link_status)
-    minitel.echo_off_80()
     os.execute("touch /tmp/minitel_warmboot")
     net_info = run_boot_sequence(link_status)
     if net_info.connected then

@@ -158,8 +158,6 @@ Redémarrez ensuite le Raspberry Pi (`sudo reboot`).
 | État Vidéotex | 40 colonnes, ou mixte | Il coupe l'écho local (`PRO3`, `ESC ; 60 58 52`), active le clavier étendu (`PRO3`, `ESC ; 69 59 41`), puis fait passer le Minitel en téléinformatique (`PRO2`, `ESC : 31 7D`). Le Minitel acquitte par `ESC [ ? z`. Un Minitel en mode mixte repasse d'abord en Vidéotex. |
 | Aucune | Inconnu | Il affiche l'écran d'initialisation à la main ci-dessous. |
 
-En changeant de mode, le Minitel rétablit l'écho local. Une fois en 80 colonnes, le système le coupe donc à nouveau avec la commande VT100 `ESC [ 1 2 h` (mode SRM), l'équivalent de `Ctrl`+`Esc`, `T`, `E`. Il envoie cette commande à chaque démarrage à froid, y compris après l'initialisation à la main.
-
 Chaque commande Vidéotex part d'abord en 7 bits avec parité paire, le réglage d'un Minitel à 1200 bauds. Sans réponse, elle repart en 8 bits sans parité, le réglage à 9600 bauds. Cette détection a lieu deux fois : sur l'écran de démarrage du Raspberry Pi, puis à l'ouverture du portail. Quand tout se passe bien, on ne voit donc jamais l'écran d'instructions.
 
 **L'écran de démarrage du Raspberry Pi.** Le service `minitel-boot` démarre dès que l'adaptateur USB-série apparaît, bien avant la session. Il met le Minitel en 80 colonnes, puis suit le démarrage de Linux en direct :
@@ -1212,7 +1210,7 @@ Codes de contrôle utiles : `8` Retour arrière, `13` Retour chariot (`[ENVOI]`)
 | :------- | :------------- | :----- |
 | L'écran reste en 40 colonnes, caractères étranges | Le Minitel est encore en mode Vidéotex, et n'a pas répondu à la détection automatique | Refaire la séquence du § 1.4 (`Ctrl`+`Esc`, `T`, `A`…). |
 | Pas d'écran de démarrage du Pi, le portail arrive directement | Service `minitel-boot` absent | `sudo ./install_ecran_demarrage.sh` depuis le dépôt, puis `sudo reboot`. État : `systemctl status minitel-boot`. |
-| Chaque touche s'affiche deux fois | L'écho local est actif, et le Minitel a ignoré la commande `ESC [ 1 2 h` | `Ctrl`+`Esc`, `T`, `E`. |
+| Chaque touche s'affiche deux fois | L'écho local est actif (par exemple si le Minitel l'a remis en passant en 80 colonnes) | `Ctrl`+`Esc`, `T`, `E`. |
 | Les flèches ne font rien | Clavier non étendu | `Ctrl`+`Esc`, `C`, `E`, ou utilisez `Z` `Q` `S` `D`. |
 | Caractères incohérents en continu | Vitesses différentes entre le Minitel et le Pi | Régler le Minitel sur 9600 bauds. |
 | Écran noir, rien ne se passe | Session non ouverte sur le port série | Vérifier que `/dev/ttyUSB0` existe (`ls /dev/ttyUSB*`) et que le service est actif : `systemctl status serial-getty@ttyUSB0`. |
