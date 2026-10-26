@@ -11,6 +11,15 @@ local minitel = require("minitel")
 minitel.init()
 
 local PID_FILE = "/tmp/minitel_audio_test.pid"
+
+-- Modes sonores de minitel.play_sound, dans l'ordre ou [5] les fait defiler
+local MODE_ORDER = { "les2", "bip", "sox", "aucun" }
+local MODE_LABELS = {
+    les2  = "BIP DU MINITEL + SOX (PAR DEFAUT)",
+    bip   = "BIP DU MINITEL SEULEMENT",
+    sox   = "SOX SEULEMENT (HAUT-PARLEUR DU PI)",
+    aucun = "SILENCE",
+}
 local results = { bip = nil, pi = nil, ligne = nil }
 
 -- La sortie ecran passe par minitel.lua ; le caractere BEL n'y laisse pas de trace
@@ -75,6 +84,8 @@ local function draw_menu()
     io.write("\x1b[8;4H\x1b[7m 1 \x1b[0m BIP DU MINITEL (caractere BEL)            " .. status_text(results.bip))
     io.write("\x1b[10;4H\x1b[7m 2 \x1b[0m SORTIE AUDIO DU RASPBERRY PI (jack)      " .. status_text(results.pi))
     io.write("\x1b[12;4H\x1b[7m 3 \x1b[0m VOIE AUDIO DE LA LIGNE (broche 6)        " .. status_text(results.ligne))
+    io.write("\x1b[14;4H\x1b[7m 4 \x1b[0m ECOUTER LES MOTIFS DE BIPS DES PROGRAMMES")
+    io.write("\x1b[16;4H\x1b[7m 5 \x1b[0m MODE SONORE : \x1b[1m" .. MODE_LABELS[minitel.sound_mode] .. "\x1b[0m\x1b[K")
 
     -- Conclusion d'apres les essais deja faits
     local advice
@@ -89,16 +100,15 @@ local function draw_menu()
     else
         advice = "Faites les essais dans l'ordre : 1, puis 2, puis 3."
     end
-    local lines = minitel.wrap(advice, 72, 2)
-    io.write("\x1b[15;3H\x1b[1mBILAN :\x1b[0m")
-    io.write("\x1b[16;5H" .. lines[1] .. "\x1b[17;5H" .. lines[2])
+    local lines = minitel.wrap(advice, 64, 2)
+    io.write("\x1b[18;3H\x1b[1mBILAN :\x1b[0m " .. lines[1] .. "\x1b[19;12H" .. lines[2])
 
-    io.write("\x1b[24;1H\x1b[7m" .. minitel.center("[1] [2] [3] ESSAIS   |   [RETOUR] QUITTER", 80) .. "\x1b[0m")
+    io.write("\x1b[24;1H\x1b[7m" .. minitel.center("[1] [2] [3] ESSAIS  |  [4] MOTIFS  |  [5] MODE  |  [RETOUR] QUITTER", 80) .. "\x1b[0m")
     io.flush()
 end
 
 local function clear_zone()
-    for y = 19, 23 do io.write(string.format("\x1b[%d;1H\x1b[K", y)) end
+    for y = 18, 23 do io.write(string.format("\x1b[%d;1H\x1b[K", y)) end
 end
 
 -- ESSAI 1 : le Minitel emet lui-meme un bip quand il recoit le caractere BEL
@@ -162,12 +172,44 @@ local function test_ligne()
     if r ~= nil then results.ligne = r end
 end
 
+-- [4] Fait entendre le motif de chaque effet sonore utilise par les programmes
+local function test_motifs()
+    clear_zone()
+    local demo = {
+        { "hit",    "VALIDATION, ACTION   (1 bip)" },
+        { "pickup", "OBJET, BONUS         (2 bips vifs)" },
+        { "damage", "CHOC                 (rafale serree)" },
+        { "lose",   "ECHEC                (3 bips lents)" },
+        { "win",    "VICTOIRE             (3 bips + 1)" },
+    }
+    io.write("\x1b[18;4H\x1b[1mMOTIFS DU BIP DU MINITEL\x1b[0m   (une seule note : seul le rythme change)")
+    for i, d in ipairs(demo) do
+        io.write(string.format("\x1b[%d;6H> %s", 18 + i, d[2]))
+        io.flush()
+        minitel.beep_pattern(minitel.BIP_PATTERNS[d[1]])
+        minitel.sleep(1.6)
+        io.write(string.format("\x1b[%d;6H ", 18 + i))
+    end
+    io.flush()
+end
+
+-- [5] Choix du mode sonore, memorise pour tous les programmes
+local function change_mode()
+    local idx = 1
+    for i, m in ipairs(MODE_ORDER) do if m == minitel.sound_mode then idx = i end end
+    local nxt = MODE_ORDER[idx % #MODE_ORDER + 1]
+    minitel.set_sound_mode(nxt)
+    minitel.play_sound("hit")
+end
+
 draw_menu()
 while true do
     local k = wait_key()
     if k == "1" then test_bip(); draw_menu()
     elseif k == "2" then test_pi(); draw_menu()
     elseif k == "3" then test_ligne(); draw_menu()
+    elseif k == "4" then test_motifs(); draw_menu()
+    elseif k == "5" then change_mode(); draw_menu()
     elseif k == "RETOUR" or k == "ESC" or k == "SOMMAIRE" then break
     end
 end

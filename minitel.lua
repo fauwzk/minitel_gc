@@ -155,7 +155,92 @@ function M.cleanup()
     end
 end
 
+-- =====================================================================
+-- SON : BIP DU MINITEL (CARACTERE BEL) ET SYNTHESE SOX DU RASPBERRY PI
+-- =====================================================================
+-- Le buzzer du Magis Club n'a qu'une note : les effets se distinguent par
+-- leur rythme. Les bips sont planifies et emis au fil des appels a get_key()
+-- et sleep() : un motif ne bloque jamais le programme.
+--   Mode (fichier ~/.minitel_son, hors du depot) : "bip", "sox", "les2", "aucun"
+local SOUND_FILE = (os.getenv("HOME") or "/tmp") .. "/.minitel_son"
+local SOUND_MODES = { bip = true, sox = true, les2 = true, aucun = true }
+
+local function read_sound_mode()
+    local f = io.open(SOUND_FILE, "r")
+    local m = f and f:read("*l")
+    if f then f:close() end
+    return SOUND_MODES[m] and m or "les2"
+end
+M.sound_mode = read_sound_mode()
+
+function M.set_sound_mode(mode)
+    if not SOUND_MODES[mode] then return false end
+    M.sound_mode = mode
+    local f = io.open(SOUND_FILE, "w")
+    if f then f:write(mode .. "\n"); f:close() end
+    return true
+end
+
+-- Motifs : instants des bips, en secondes depuis le debut de l'effet
+M.BIP_PATTERNS = {
+    hit    = { 0 },                       -- un bip : validation, action
+    blip   = { 0 },
+    pickup = { 0, 0.12 },                 -- deux bips vifs : objet, bonus
+    win    = { 0, 0.12, 0.24, 0.6 },      -- trois bips puis un quatrieme : victoire
+    lose   = { 0, 0.45, 0.9 },            -- trois bips lents : echec
+    damage = { 0, 0.07, 0.14 },           -- rafale serree : choc
+}
+
+local function mono_time()
+    local f = io.open("/proc/uptime", "r")
+    if f then
+        local up = tonumber((f:read("*l") or ""):match("^([%d%.]+)"))
+        f:close()
+        if up then return up end
+    end
+    return os.clock()
+end
+
+local bip_queue = {}   -- instants (temps monotone) des bips a venir, tries
+
+local function bel()
+    orig_write("\a")
+    io.flush()
+end
+
+-- Emet les bips dont l'heure est venue ; ceux qui ont trop de retard sont
+-- abandonnes plutot que joues en rafale
+local function pump_bips()
+    if #bip_queue == 0 then return end
+    local now = mono_time()
+    while bip_queue[1] and bip_queue[1] <= now do
+        local t = table.remove(bip_queue, 1)
+        if now - t < 0.25 then bel() end
+    end
+end
+
+-- Joue un motif de bips (liste d'instants) a la suite de ceux en attente
+function M.beep_pattern(pattern)
+    local now = mono_time()
+    local last = bip_queue[#bip_queue]
+    local start = last and math.max(now, last + 0.12) or now
+    for _, dt in ipairs(pattern) do table.insert(bip_queue, start + dt) end
+    pump_bips()
+end
+
 function M.sleep(seconds)
+    -- Les bips planifies pendant la pause partent a l'heure
+    while bip_queue[1] do
+        local wait = bip_queue[1] - mono_time()
+        if wait >= seconds then break end
+        if wait > 0 then M.sleep_raw(wait); seconds = seconds - wait end
+        pump_bips()
+    end
+    M.sleep_raw(seconds)
+end
+
+function M.sleep_raw(seconds)
+    if seconds <= 0 then return end
     local ok = os.execute(string.format("sleep %.3f 2>/dev/null", seconds))
     if not ok then
         local t0 = os.clock()
@@ -164,6 +249,13 @@ function M.sleep(seconds)
 end
 
 function M.play_sound(effect)
+    local mode = M.sound_mode
+    if mode == "aucun" then return end
+    if mode == "bip" or mode == "les2" then
+        M.beep_pattern(M.BIP_PATTERNS[effect] or M.BIP_PATTERNS.hit)
+    end
+    if mode == "bip" then return end
+
     local freq_cmd, dur, wave = "880", "0.05", "square"
     if effect == "win" or effect == "pickup" then
         wave = "square"; dur = "0.15"; freq_cmd = "440-1200"
@@ -264,6 +356,7 @@ end
 -- 3. GESTION DU CLAVIER (AVEC DETECTION IMPRESSION VT100 / CTRL+P / F12)
 -- =====================================================================
 function M.get_key()
+    pump_bips()
     local c = io.read(1)
     if not c then return nil end
     

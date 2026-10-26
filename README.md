@@ -302,17 +302,33 @@ Par convention, tous les programmes du système partagent la même mise en page 
  Ligne 24   [Z/S] CHOIX | [ENVOI] VALIDER | [RETOUR] MENU     <- touches
 ```
 
-### 2.5 La synthèse sonore
+### 2.5 Le son
 
-Le Minitel ne sait pas fabriquer de musique : le son est **synthétisé par le Raspberry Pi**, avec le synthétiseur en ligne de commande **SoX** (commande `play`), et sort par la **sortie audio du Raspberry Pi**, où l'on branche un petit haut-parleur amplifié. La voie audio de la prise péri-informatique ne permet pas de le faire entendre par le Minitel (§ 2.6). La fonction `minitel.play_sound(effet)` lance `play` **en tâche de fond**, si bien que le programme continue de tourner pendant que le son est joué.
+Le système dispose de deux sources sonores, que la fonction `minitel.play_sound(effet)` sait utiliser ensemble ou séparément :
 
-| Effet demandé | Forme d'onde | Durée | Fréquence |
-| :------------ | :----------- | :---- | :-------- |
-| `"hit"` (et tout nom inconnu) | Carrée | 0,05 s | 880 Hz (bip) |
-| `"win"`, `"pickup"` | Carrée | 0,15 s | Glissando montant 440 → 1200 Hz |
-| `"lose"`, `"damage"` | Dent de scie | 0,3 s | Glissando descendant 300 → 100 Hz |
+* le **bip du Minitel**, déclenché par le caractère de contrôle **BEL** (code 7). Son buzzer n'a **qu'une seule note** : les effets se distinguent donc par leur **rythme** ;
+* la **synthèse SoX** du Raspberry Pi (commande `play`), qui sort par la **sortie audio du Pi**, où l'on branche un petit haut-parleur amplifié. La voie audio de la prise péri-informatique ne permet pas de la faire entendre par le Minitel (§ 2.6).
 
-Si SoX n'est pas installé, les sons sont simplement ignorés. Le séquenceur **3615 PROTRACKER** (§ 5.6) pousse SoX bien plus loin : il mixe en temps réel trois voix mélodiques et une boîte à rythmes. L'instruction `BEEP` du MICRO-BASIC joue l'effet `"hit"`.
+| Effet demandé | Bip du Minitel (instants des bips) | Synthèse SoX |
+| :------------ | :--------------------------------- | :----------- |
+| `"hit"` (et tout nom inconnu) | 1 bip : validation, action | Carrée, 0,05 s, 880 Hz |
+| `"pickup"` | 2 bips vifs (0 ; 0,12 s) : objet, bonus | Carrée, 0,15 s, glissando 440 → 1200 Hz |
+| `"win"` | 3 bips puis un quatrième (0 ; 0,12 ; 0,24 ; 0,6 s) : victoire | Carrée, 0,15 s, glissando 440 → 1200 Hz |
+| `"damage"` | Rafale serrée (0 ; 0,07 ; 0,14 s) : choc | Dent de scie, 0,3 s, 300 → 100 Hz |
+| `"lose"` | 3 bips lents (0 ; 0,45 ; 0,9 s) : échec | Dent de scie, 0,3 s, 300 → 100 Hz |
+
+**Aucun effet ne bloque le programme.** Le son SoX est lancé en tâche de fond. Les bips d'un motif sont planifiés, puis envoyés à l'heure par `minitel.get_key()` et `minitel.sleep()`, que tous les programmes appellent sans cesse. Si un programme reste longtemps sans les appeler (pendant le lancement d'un autre programme, par exemple), les bips en retard de plus d'un quart de seconde sont abandonnés plutôt que joués en rafale. Un programme peut aussi jouer son propre rythme avec `minitel.beep_pattern({ 0, 0.2, 0.4 })`.
+
+**Le mode sonore** se choisit dans l'outil **AUDIO** de 3615 OUTILS (touche `5`, § 2.6). Il est mémorisé dans le fichier `~/.minitel_son`, en dehors du dépôt, et vaut pour tous les programmes :
+
+| Mode | Effet |
+| :--- | :---- |
+| **Bip + SoX** (par défaut) | Les deux sources à la fois. |
+| **Bip seulement** | Le Minitel bipe, le Pi reste muet. |
+| **SoX seulement** | Le haut-parleur du Pi, sans bip du Minitel. |
+| **Silence** | Aucun son. |
+
+Si SoX n'est pas installé, la synthèse est simplement ignorée. Le séquenceur **3615 PROTRACKER** (§ 5.6) pousse SoX bien plus loin : il mixe en temps réel trois voix mélodiques et une boîte à rythmes. L'instruction `BEEP` du MICRO-BASIC joue l'effet `"hit"`.
 
 ### 2.6 La voie audio du Magis Club
 
@@ -340,16 +356,18 @@ Le schéma de la carte CPU du Magis Club (feuillet « Interface ligne », [annex
 
 **Les sources de son qui fonctionnent.**
 
-1. **Le bip du Minitel.** Le Minitel émet un bip quand il reçoit le caractère de contrôle **BEL** (code 7). Ce son est intégré, sans aucun câblage, mais il n'a qu'une seule note : il convient aux signaux (erreur, validation), pas à la musique.
+1. **Le bip du Minitel.** Le Minitel émet un bip quand il reçoit le caractère de contrôle **BEL** (code 7). Ce son est intégré, sans aucun câblage, mais il n'a qu'une seule note : il convient aux signaux (erreur, validation), pas à la musique. Le système varie les effets par le **rythme** des bips (§ 2.5).
 2. **Un haut-parleur sur le Raspberry Pi.** Pour les effets de SoX et la musique du PROTRACKER, branchez un **petit haut-parleur amplifié** sur la sortie audio du Pi (jack 3,5 mm, ou carte son USB pour les modèles qui n'en ont pas). Une enceinte USB de bureau convient ; un module amplificateur de quelques watts et un haut-parleur de 8 Ω peuvent aussi se loger dans un boîtier près du Minitel.
 
-**L'outil de diagnostic AUDIO.** Le programme `utils/audio_init.lua`, dans 3615 OUTILS, fait trois essais et affiche un bilan :
+**L'outil de diagnostic AUDIO.** Le programme `utils/audio_init.lua`, dans 3615 OUTILS, fait trois essais et affiche un bilan ; il permet aussi d'écouter les motifs de bips et de choisir le mode sonore :
 
 | Essai | Ce qu'il fait |
 | :---- | :------------ |
 | **1. Bip du Minitel** | Envoie trois caractères BEL. |
 | **2. Sortie du Raspberry Pi** | Indique la carte son détectée et joue un la à 440 Hz pendant 3 secondes, à écouter au casque ou sur le haut-parleur branché au Pi. |
 | **3. Voie de la ligne** | Joue un son pendant 20 secondes, le temps d'appuyer sur la touche **Connexion/Fin** du Minitel pour mettre la ligne en service, d'écouter, puis de raccrocher. Cet essai suppose que la sortie du Pi est câblée sur la broche 6. |
+| **4. Motifs** | Fait entendre, l'un après l'autre, les motifs de bips des cinq effets sonores (§ 2.5). |
+| **5. Mode sonore** | Fait défiler les modes : bip + SoX, bip seulement, SoX seulement, silence. Le choix est mémorisé pour tous les programmes. |
 
 Après chaque essai, l'outil demande si un son a été entendu. Avant l'essai 3, il demande de **débrancher le cordon téléphonique** : sans cela, le son partirait sur la ligne. Si l'écran repasse en 40 colonnes pendant la connexion, tapez de nouveau `Ctrl`+`Esc`, `T`, `A`.
 
@@ -712,7 +730,8 @@ et se termine par `minitel.cleanup()`.
 | `minitel.init()` | Configure la liaison (`raw`, `-echo`, lecture non bloquante) et masque le curseur. |
 | `minitel.cleanup()` | Remet les marges de défilement à zéro, réaffiche le curseur, efface l'écran, rétablit le terminal (`stty sane`). |
 | `minitel.sleep(secondes)` | Pause (par la commande `sleep` du système, avec repli sur une attente active). Les boucles principales utilisent typiquement `minitel.sleep(0.01)` à `0.05`. |
-| `minitel.play_sound(effet)` | Joue un effet en tâche de fond : `"hit"`, `"win"`, `"pickup"`, `"lose"`, `"damage"` (§ 2.5). |
+| `minitel.play_sound(effet)` | Joue un effet sans bloquer : `"hit"`, `"win"`, `"pickup"`, `"lose"`, `"damage"`, en bips du Minitel et/ou en synthèse SoX selon le mode sonore (§ 2.5). |
+| `minitel.beep_pattern(instants)` | Joue un rythme de bips du Minitel, par exemple `{ 0, 0.2, 0.4 }` (instants en secondes). |
 | `minitel.get_key()` | Lit le clavier **sans attendre**. Renvoie un nom de touche (§ 2.3), un caractère, ou `nil` si rien n'a été frappé. |
 | `minitel.get_screen_text()` | Contenu de l'écran (24 lignes de texte séparées par des retours à la ligne). |
 | `minitel.print_screen_to_pastebin()` | Déclenche l'impression d'écran (normalement appelée par `get_key()` lui-même). |
