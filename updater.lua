@@ -360,6 +360,9 @@ minitel.play_sound("pickup")
 
 local pull_ok, pull_err = run_git("pull")
 restore_local_files()
+-- La carte SD garde les ecritures en memoire quelques secondes : une coupure
+-- de courant a ce moment laisse des fichiers vides (programmes et objets git)
+os.execute("sync")
 
 if not pull_ok then
     show_error(pull_err)
@@ -392,6 +395,7 @@ minitel.cleanup()
 
 -- Reboot agressif pour recharger le master.lua
 os.execute("touch /tmp/minitel_warmboot")
+os.execute("sync")
 os.execute("stty -F /dev/ttyUSB0 sane 2>/dev/null")
 os.execute("killall -9 lua5.3 2>/dev/null")
 os.execute("sudo systemctl restart serial-getty@ttyUSB0.service 2>/dev/null")

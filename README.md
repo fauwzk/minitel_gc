@@ -158,6 +158,8 @@ Redémarrez ensuite le Raspberry Pi (`sudo reboot`).
 | État Vidéotex | 40 colonnes, ou mixte | Il coupe l'écho local (`PRO3`, `ESC ; 60 58 52`), active le clavier étendu (`PRO3`, `ESC ; 69 59 41`), puis fait passer le Minitel en téléinformatique (`PRO2`, `ESC : 31 7D`). Le Minitel acquitte par `ESC [ ? z`. Un Minitel en mode mixte repasse d'abord en Vidéotex. |
 | Aucune | Inconnu | Il affiche l'écran d'initialisation à la main ci-dessous. |
 
+En changeant de mode, le Minitel rétablit l'écho local. Une fois en 80 colonnes, le système le coupe donc à nouveau avec la commande VT100 `ESC [ 1 2 h` (mode SRM), l'équivalent de `Ctrl`+`Esc`, `T`, `E`. Il envoie cette commande à chaque démarrage à froid, y compris après l'initialisation à la main.
+
 Chaque commande Vidéotex part d'abord en 7 bits avec parité paire, le réglage d'un Minitel à 1200 bauds. Sans réponse, elle repart en 8 bits sans parité, le réglage à 9600 bauds. Cette détection a lieu deux fois : sur l'écran de démarrage du Raspberry Pi, puis à l'ouverture du portail. Quand tout se passe bien, on ne voit donc jamais l'écran d'instructions.
 
 **L'écran de démarrage du Raspberry Pi.** Le service `minitel-boot` démarre dès que l'adaptateur USB-série apparaît, bien avant la session. Il met le Minitel en 80 colonnes, puis suit le démarrage de Linux en direct :
@@ -651,6 +653,8 @@ Le système se met à jour depuis son dépôt Git. Le programme est lancé autom
         |
        OUI -> "MISE A JOUR REUSSIE", la session redemarre
 ```
+
+Après le `git pull`, puis juste avant de redémarrer la session, le programme lance `sync`, qui force l'écriture sur la carte SD. Sans lui, une coupure de courant dans les secondes qui suivent une mise à jour peut laisser des fichiers vides.
 
 Le système **ne redémarre que si quelque chose a réellement changé** : un nouveau commit a été téléchargé, ou les options 1 et 3 ont modifié les fichiers. Dans tous les autres cas (déjà à jour, envoi réussi, annulation, erreur réseau), vous revenez directement au portail, à l'endroit où vous l'aviez quitté.
 
@@ -1210,7 +1214,7 @@ Codes de contrôle utiles : `8` Retour arrière, `13` Retour chariot (`[ENVOI]`)
 | :------- | :------------- | :----- |
 | L'écran reste en 40 colonnes, caractères étranges | Le Minitel est encore en mode Vidéotex, et n'a pas répondu à la détection automatique | Refaire la séquence du § 1.4 (`Ctrl`+`Esc`, `T`, `A`…). |
 | Pas d'écran de démarrage du Pi, le portail arrive directement | Service `minitel-boot` absent | `sudo ./install_ecran_demarrage.sh` depuis le dépôt, puis `sudo reboot`. État : `systemctl status minitel-boot`. |
-| Chaque touche s'affiche deux fois | L'écho local est actif (par exemple si le Minitel l'a remis en passant en 80 colonnes) | `Ctrl`+`Esc`, `T`, `E`. |
+| Chaque touche s'affiche deux fois | L'écho local est actif, et le Minitel a ignoré la commande `ESC [ 1 2 h` | `Ctrl`+`Esc`, `T`, `E`. |
 | Les flèches ne font rien | Clavier non étendu | `Ctrl`+`Esc`, `C`, `E`, ou utilisez `Z` `Q` `S` `D`. |
 | Caractères incohérents en continu | Vitesses différentes entre le Minitel et le Pi | Régler le Minitel sur 9600 bauds. |
 | Écran noir, rien ne se passe | Session non ouverte sur le port série | Vérifier que `/dev/ttyUSB0` existe (`ls /dev/ttyUSB*`) et que le service est actif : `systemctl status serial-getty@ttyUSB0`. |
@@ -1221,6 +1225,7 @@ Codes de contrôle utiles : `8` Retour arrière, `13` Retour chariot (`[ENVOI]`)
 | Ronflement continu dans le haut-parleur du Pi | Boucle de masse | Alimentez le haut-parleur depuis le Pi (USB) plutôt que par une autre alimentation. |
 | L'entrée MISE À JOUR n'apparaît pas | Le `ping` vers `1.1.1.1` échoue | Vérifier le réseau avec CONFIG RÉSEAU ; l'état est retesté toutes les 30 s. |
 | La mise à jour signale un « conflit local » | Des fichiers suivis par Git ont été modifiés sur le Pi | Choisir l'option 3 (renommer) pour garder vos versions, ou 1 pour revenir à l'officielle (§ 3.5). |
+| La session s'ouvre et se ferme en boucle, le Minitel bipe, puis plus rien. `git` signale `object file ... is empty` | Fichiers vidés par une coupure de courant pendant une écriture : `master.lua` vide s'arrête aussitôt | En SSH : mettre le dépôt de côté (`sudo mv /home/minitel/minitel_gc /home/minitel/minitel_gc_casse`), le recloner (`sudo -u minitel git clone https://github.com/fauwzk/minitel_gc.git /home/minitel/minitel_gc`), y recopier les `.bas` et `.cfg` non vides, puis `sync` et `sudo systemctl restart serial-getty@ttyUSB0`. |
 | Un programme a planté, le terminal est figé | `minitel.cleanup()` n'a pas été appelé | Taper `reset` à l'aveugle puis `[ENVOI]`, ou se déconnecter : la session se relance seule. |
 | 3615 SANTE : « UNZIP ABSENT » | Paquet manquant | `sudo apt install unzip`. |
 
