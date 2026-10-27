@@ -50,7 +50,7 @@ Un second volume, le **[Manuel de programmation MICRO-BASIC](docs/MANUEL_BASIC.m
 | **2** | [Le matériel](#chapitre-2--le-matériel) | Liaison série, clavier, écran VT100, son et audio, fiche technique |
 | **3** | [L'architecture logicielle](#chapitre-3--larchitecture-logicielle) | Démarrage, arborescence, portail, lanceurs, mises à jour |
 | **4** | [Le moteur graphique et le SDK](#chapitre-4--le-moteur-graphique-et-le-sdk-minitellua) | Delta-drawing, framebuffer, référence de `minitel.lua` |
-| **5** | [Les logiciels du poste de travail](#chapitre-5--les-logiciels-du-poste-de-travail-utils) | Éditeur, tableur, télématique, santé, musique |
+| **5** | [Les logiciels du poste de travail](#chapitre-5--les-logiciels-du-poste-de-travail-utils) | Éditeur, tableur, télématique, santé, musique, réseau Wi-Fi |
 | **6** | [La salle d'arcade](#chapitre-6--la-salle-darcade-jeux) | Les 15 cartouches de jeux |
 | **7** | [Le langage MICRO-BASIC](#chapitre-7--le-langage-micro-basic) | Présentation et renvoi au second manuel |
 | **8** | [Guide du développeur](#chapitre-8--guide-du-développeur) | Écrire sa propre cartouche Lua |
@@ -450,7 +450,7 @@ Le connecteur GPIO à 40 broches du Raspberry Pi est accessible depuis le **MICR
 | Son | Bip intégré du Minitel (caractère BEL) ; synthèse SoX sur le Raspberry Pi, vers un haut-parleur branché sur sa sortie audio |
 | Langage utilisateur | MICRO-BASIC V6.1 (numéros de ligne, GPIO, PWM, ADC) |
 | Stockage | Carte micro-SD (programmes `.bas`, documents, sauvegardes) |
-| Réseau | Wi-Fi / Ethernet du Raspberry Pi, configuré par `nmtui` |
+| Réseau | Wi-Fi / Ethernet du Raspberry Pi, configuré par 3615 RESEAU (§ 5.8) ou `nmtui` |
 | Mise en veille | Écran de veille après 90 s d'inactivité au portail |
 
 <div style="page-break-after: always;"></div>
@@ -488,7 +488,7 @@ Du moment où l'on branche le Raspberry Pi jusqu'à l'affichage du portail, chaq
                                         |
      -> updater.lua                     +--> launcher_jeux.lua  -> jeux/*.lua
        |                                +--> launcher_utils.lua -> utils/*.lua
-       +------------------------------> +--> edit.lua, nmtui, bash, reboot...
+       +------------------------------> +--> edit.lua, reseau.lua, bash, reboot...
 ```
 
 Le portail est lancé par `exec` : il **remplace** le shell. Quand il se termine (par exemple après une mise à jour qui a installé une nouvelle version), la session se ferme, et `serial-getty` en rouvre aussitôt une nouvelle, qui relance le portail. Un portail planté se relance donc tout seul.
@@ -516,7 +516,7 @@ Le portail est lancé par `exec` : il **remplace** le shell. Quand il se termine
 |   |-- music/               Morceaux du tracker (*.MOD)
 |   |-- sante/               Export Apple Health et cache (ignore par Git)
 |   '-- pictochat.cfg        Adresse du serveur et pseudo (PICTO, BATAILLE, QUIZZ)
-|-- outils/                  Outils de diagnostic et prototypes (hors menus)
+|-- outils/                  Outils de diagnostic, prototypes, terminal du Minitel
 |-- screenshots/             Captures d'ecran (creees par Ctrl+P)
 |
 |-- server.py                Serveur 3615 PICTO (messagerie, port 8085)
@@ -537,8 +537,8 @@ Le portail est l'écran d'accueil. Il est organisé en **double panneau** : à g
 | 02 | **3615 OUTILS** | Ouvre le lanceur du poste de travail. |
 | 03 | **MAGIS EDIT** | Lance directement l'éditeur de texte. |
 | 04 | **MISE À JOUR GIT** | Synchronise le système avec le dépôt (n'apparaît **que si le réseau répond**). |
-| 05 | **CONFIG RÉSEAU** | Ouvre `nmtui`, l'outil texte de NetworkManager (Wi-Fi, Ethernet). |
-| 06 | **TERMINAL BASH** | Ouvre un shell Linux. Tapez `exit` pour revenir. |
+| 05 | **CONFIG RÉSEAU** | Ouvre **3615 RESEAU** (§ 5.8) : état de l'Ethernet et du Wi-Fi, connexion à un réseau Wi-Fi. |
+| 06 | **TERMINAL BASH** | Ouvre un shell Linux réglé pour le Minitel (voir ci-dessous). Tapez `exit` pour revenir. |
 | 07 | **REDÉMARRAGE** | `sudo reboot` |
 | 08 | **EXTINCTION** | `sudo poweroff`. À utiliser avant de couper le courant, pour protéger la carte SD. |
 
@@ -549,6 +549,17 @@ Le portail est l'écran d'accueil. Il est organisé en **double panneau** : à g
 | `R` | **Recherche globale** : tapez une partie du nom d'un script ; le premier fichier `.lua` correspondant (sur deux niveaux de dossiers) est lancé. |
 | `[REPETITION]` | Redessiner l'écran. |
 | `H` | Basculer entre le **mode turbo** (par défaut) et le mode direct pour le panneau de droite (voir ci-dessous). |
+
+**Le terminal Bash sur le Minitel.** Le Minitel comprend le VT100, mais ni les couleurs, ni l'UTF-8, ni les caractères graphiques DEC. Avec ces derniers, les cadres de `nmtui`, `htop` ou `whiptail` s'affichent en lettres (`lqqqk`). Le portail lance donc le shell par `outils/shell_minitel.sh`, qui règle la session :
+
+| Réglage | Effet |
+| :------ | :---- |
+| `TERM=minitel` | Un type de terminal créé une fois pour toutes dans `~/.terminfo` : le `vt100` sans ses graphismes. Les programmes en mode texte dessinent alors leurs cadres avec `+`, `-` et `\|`. |
+| `LANG=C` | Messages en anglais, caractères ASCII seulement : ni accents, ni symboles UTF-8 (puces de `systemctl`, guillemets). |
+| `NO_COLOR`, `SYSTEMD_COLORS=0`, `ls`/`grep`/`ip` sans couleur | Plus de séquences de couleur, que le Minitel affiche mal. |
+| `stty rows 24 cols 80` | Le shell connaît la taille de l'écran. |
+
+Le même réglage sert à `nmtui` quand on l'ouvre depuis 3615 RESEAU (touche `N`). Pour en profiter avec un autre programme, tapez par exemple `bash outils/shell_minitel.sh htop` depuis le dépôt.
 
 **Une navigation économe.** À 9600 bauds, chaque caractère compte, et le portail n'envoie que le strict nécessaire :
 
@@ -968,6 +979,28 @@ L'import agrège les mesures jour par jour dans `utils/sante/cache_sante.lua`, s
 
 `[SUITE]` passe à l'onglet suivant, `[GUIDE]` affiche une aide.
 
+### 5.8 3615 RESEAU — Wi-Fi et Ethernet (`reseau.lua`)
+
+L'outil de connexion du Raspberry Pi, pensé pour le Minitel : il remplace `nmtui`, dont les fenêtres passent mal à 9600 bauds. Il s'ouvre depuis **CONFIG RÉSEAU** dans le portail, ou depuis 3615 OUTILS. Tout passe par `nmcli`, la commande de NetworkManager, avec les mêmes droits que `nmtui`.
+
+<p align="center"><img src="docs/captures/app-reseau.svg" width="640" alt="3615 RESEAU"><br><sub><b>Fig. 5.14</b> — 3615 RESEAU juste après une connexion Wi-Fi (exemple).</sub></p>
+
+* **En haut**, l'état des deux interfaces : Ethernet (câble débranché, débit) et Wi-Fi (réseau utilisé), avec l'adresse IP, la passerelle, le DNS et l'adresse MAC, puis le test d'accès à Internet. L'état est relu toutes les 15 secondes.
+* **En bas**, les réseaux Wi-Fi à proximité, du plus fort au plus faible, un par nom. `*` marque le réseau utilisé, `+` un réseau enregistré, dont le mot de passe est déjà connu. La sécurité `ENTREPR.` désigne un réseau d'entreprise (identifiant et mot de passe, 802.1X) : configurez-le avec `nmtui`.
+
+| Touche | Fonction |
+| :----- | :------- |
+| `Z` / `S` ou flèches | Choisir un réseau. |
+| `[ENVOI]` | Se connecter au réseau choisi. Un réseau enregistré se connecte directement. Sinon, le mot de passe est demandé, masqué par des `*` ; `[GUIDE]` l'affiche ou le masque. |
+| `D` | Déconnecter le Wi-Fi, après confirmation. |
+| `O` | Oublier le réseau choisi et son mot de passe, après confirmation. |
+| `C` | Se connecter à un réseau caché, dont on tape le nom. |
+| `A` | Relancer la recherche des réseaux (quelques secondes). |
+| `N` | Ouvrir `nmtui` pour les réglages avancés (adresse IP fixe, DNS…), dans le terminal réglé pour le Minitel. |
+| `[RETOUR]` | Revenir au portail. |
+
+Une connexion attend au plus 30 secondes. Les erreurs courantes s'affichent en clair : `MOT DE PASSE REFUSE`, `RESEAU INTROUVABLE`, `DELAI DEPASSE`, `DROITS INSUFFISANTS`.
+
 <div style="page-break-after: always;"></div>
 
 ## CHAPITRE 6 : LA SALLE D'ARCADE (`/jeux`)
@@ -1245,7 +1278,8 @@ Codes de contrôle utiles : `8` Retour arrière, `13` Retour chariot (`[ENVOI]`)
 | Rien n'en sort alors que la sortie du Pi est câblée sur les broches 6 et 8 | Ces broches mènent à la ligne téléphonique, pas au haut-parleur du Minitel | Branchez un haut-parleur amplifié sur la sortie du Pi (§ 2.6). |
 | Ronflement continu dans le haut-parleur du Pi | Boucle de masse | Alimentez le haut-parleur depuis le Pi (USB) plutôt que par une autre alimentation. |
 | La mise à jour affiche `SCRIPTS MAJ : ... ECHEC` | Un script de `maj/` a échoué | Lire `/var/lib/minitel/maj.log`. Le script sera retenté à la prochaine mise à jour. |
-| L'entrée MISE À JOUR n'apparaît pas | Le `ping` vers `1.1.1.1` échoue | Vérifier le réseau avec CONFIG RÉSEAU ; l'état est retesté toutes les 30 s. |
+| Les cadres de `nmtui`, `htop`… s'affichent en lettres (`lqqqk`), ou en couleurs illisibles | Programme lancé hors du terminal réglé pour le Minitel | Le lancer par `bash outils/shell_minitel.sh <programme>` depuis le dépôt (§ 3.3). |
+| L'entrée MISE À JOUR n'apparaît pas | Le `ping` vers `1.1.1.1` échoue | Vérifier le réseau avec CONFIG RÉSEAU (3615 RESEAU, § 5.8) ; l'état est retesté toutes les 30 s. |
 | La mise à jour signale un « conflit local » | Des fichiers suivis par Git ont été modifiés sur le Pi | Choisir l'option 3 (renommer) pour garder vos versions, ou 1 pour revenir à l'officielle (§ 3.5). |
 | La session s'ouvre et se ferme en boucle, le Minitel bipe, puis plus rien. `git` signale `object file ... is empty` | Fichiers vidés par une coupure de courant pendant une écriture : `master.lua` vide s'arrête aussitôt | En SSH : mettre le dépôt de côté (`sudo mv /home/minitel/minitel_gc /home/minitel/minitel_gc_casse`), le recloner (`sudo -u minitel git clone https://github.com/fauwzk/minitel_gc.git /home/minitel/minitel_gc`), y recopier les `.bas` et `.cfg` non vides, puis `sync` et `sudo systemctl restart serial-getty@ttyUSB0`. |
 | Un programme a planté, le terminal est figé | `minitel.cleanup()` n'a pas été appelé | Taper `reset` à l'aveugle puis `[ENVOI]`, ou se déconnecter : la session se relance seule. |

@@ -1,0 +1,9 @@
+# Reglages de la session Bash lancee depuis le portail (shell_minitel.sh)
+[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
+
+# Pas de couleurs, meme si ~/.bashrc en demande
+unset LS_COLORS
+alias ls='ls --color=never'
+alias grep='grep --color=never'
+alias ip='ip -color=never'
+PS1='\u@\h:\w\$ '

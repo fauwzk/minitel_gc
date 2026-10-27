@@ -165,9 +165,9 @@ local function build_options()
 
     table.insert(options, {
         display = "CONFIG RESEAU",
-        title = "INTERFACE NMTUI",
+        title = "3615 RESEAU",
         type = "ADMINISTRATION IP/WIFI",
-        cmd = "TERM=vt100 nmtui",
+        cmd = "lua5.3 utils/reseau.lua",
         art = {
             "          ( ( ( ) ) )     ",
             "             \\ | /        ",
@@ -175,14 +175,14 @@ local function build_options()
             "             / | \\        ",
             "         [ ETH0 / WLAN ]  "
         },
-        desc = "Configurez les connexions Wi-Fi, les parametres Ethernet et le routage reseau de l'hote Linux."
+        desc = "Etat de l'Ethernet et du Wi-Fi, recherche des reseaux et connexion avec mot de passe. [N] ouvre nmtui pour les reglages avances."
     })
 
     table.insert(options, {
         display = "TERMINAL BASH",
         title = "CONSOLE LINUX",
         type = "ACCES DIRECT HOTE",
-        cmd = "bash",
+        cmd = "bash outils/shell_minitel.sh",
         art = {
             "   .--------------------. ",
             "   | minitel@host:~$ _  | ",
