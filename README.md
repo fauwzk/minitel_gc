@@ -510,7 +510,8 @@ Le portail est lancé par `exec` : il **remplace** le shell. Quand il se termine
 |-- boot_minitel.lua         Ecran de demarrage du Pi sur le Minitel (§ 1.4)
 |-- install_scripts_maj.sh   Autorise les scripts de mise a jour (§ 3.5)
 |-- install_web.sh           Service de l'interface web d'administration (§ 3.9)
-|-- web/                     Interface web : admin.py (serveur), static/ (page)
+|-- web/                     Interface web : admin.py (serveur), static/ (page,
+|                            et vendor/ : xterm.js et CodeMirror)
 |-- maj/                     Scripts de mise a jour, joues une fois en root
 |
 |-- jeux/                    Cartouches de jeux (*.lua) + leurs reglages (*.cfg)
@@ -811,7 +812,7 @@ Ce script installe le service `minitel-web`, qui lance `web/admin.py` sous le co
 sudo -u minitel -H python3 web/admin.py --mot-de-passe
 ```
 
-Le serveur n'utilise que la bibliothèque standard de Python. La page charge le terminal (xterm.js) et l'éditeur (CodeMirror) depuis le site `cdn.jsdelivr.net` : l'ordinateur qui l'affiche doit avoir accès à Internet. Pour retirer l'interface, tapez `sudo ./install_web.sh --retirer`.
+Le serveur n'utilise que la bibliothèque standard de Python. Le terminal (xterm.js 5.3) et l'éditeur (CodeMirror 5.65) sont servis par le Raspberry Pi lui-même, depuis `web/static/vendor/` (licence MIT) : l'interface fonctionne sans accès à Internet, sur un réseau local isolé par exemple. Le navigateur les garde en cache une semaine. Pour retirer l'interface, tapez `sudo ./install_web.sh --retirer`.
 
 > **Sécurité.** L'interface donne la main sur le Raspberry Pi : terminal, mises à jour du système en root. Elle est protégée par un mot de passe (empreinte PBKDF2 dans `~/.minitel_web`, session de 12 heures, une minute d'attente après cinq essais ratés). Les requêtes qui modifient quelque chose doivent venir de la page elle-même. Mais elle n'est **pas chiffrée** (HTTP) : gardez-la sur votre réseau local, et n'ouvrez jamais le port 8080 sur Internet.
 

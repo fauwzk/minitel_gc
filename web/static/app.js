@@ -73,6 +73,10 @@ document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () 
 // Une session = un pseudo-terminal sur le Pi relie par WebSocket.
 function openTerminal(kind, arg, el, stateEl, onEnd) {
   el.innerHTML = "";
+  if (typeof Terminal === "undefined") {
+    toast("Le terminal (xterm.js) n'a pas pu être chargé : rechargez la page.", true);
+    return { term: null, ws: null, close: () => {} };
+  }
   const term = new Terminal({
     cols: 80, rows: 24, cursorBlink: true, convertEol: false,
     fontFamily: '"JetBrains Mono", "Cascadia Mono", Consolas, monospace', fontSize: 15,
@@ -99,7 +103,16 @@ function openTerminal(kind, arg, el, stateEl, onEnd) {
       if (onEnd) onEnd(msg.code);
     }
   };
-  ws.onclose = () => { if (stateEl && stateEl.textContent === "en cours") setState("fermé"); };
+  let opened = false;
+  ws.addEventListener("open", () => { opened = true; });
+  ws.onclose = (ev) => {
+    if (!opened) {
+      setState("refusé", "err");
+      term.write("\x1b[31mConnexion au terminal impossible (code " + ev.code + ").\x1b[0m\r\n" +
+        "Rechargez la page et reconnectez-vous ; sinon, sur le Pi :\r\n" +
+        "  journalctl -u minitel-web -n 30\r\n");
+    } else if (stateEl && stateEl.textContent === "en cours") setState("fermé");
+  };
   ws.onerror = () => setState("refusé", "err");
   term.onData((d) => { if (ws.readyState === 1) ws.send(JSON.stringify({ type: "entree", data: d })); });
   if (fit) { const ro = new ResizeObserver(sendSize); ro.observe(el); }

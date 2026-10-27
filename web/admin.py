@@ -55,6 +55,7 @@ PHOTO_RE = re.compile(r"^[A-Za-z0-9_. -]{1,80}$")
 sessions = {}          # jeton -> fin de validite
 failures = {}          # adresse -> (nombre d'echecs, instant du dernier)
 lock = threading.Lock()
+terminals = [0]        # sessions de terminal ouvertes
 
 
 # =====================================================================
@@ -321,6 +322,8 @@ def run_terminal(sock, kind, arg):
         os.chdir(REPO)
         try:
             os.execvpe(argv[0], argv, env)
+        except OSError as e:
+            os.write(2, ("Impossible de lancer %s : %s\r\n" % (argv[0], e.strerror)).encode())
         finally:
             os._exit(127)
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
@@ -344,7 +347,7 @@ def run_terminal(sock, kind, arg):
             alive[0] = False
             try:
                 _, status = os.waitpid(pid, 0)
-                code = os.waitstatus_to_exitcode(status)
+                code = os.WEXITSTATUS(status) if os.WIFEXITED(status) else -os.WTERMSIG(status)
             except ChildProcessError:
                 code = None
             try:
@@ -403,7 +406,7 @@ class Handler(BaseHTTPRequestHandler):
         sys.stderr.write("%s %s\n" % (self.address_string(), fmt % args))
 
     # --- reponses ---
-    def send(self, code, body=b"", ctype="application/json; charset=utf-8", headers=None):
+    def send(self, code, body=b"", ctype="application/json; charset=utf-8", headers=None, cache="no-store"):
         if isinstance(body, (dict, list)):
             body = json.dumps(body, ensure_ascii=False).encode("utf-8")
         elif isinstance(body, str):
@@ -411,7 +414,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", cache)
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         for k, v in (headers or {}).items():
@@ -601,25 +604,74 @@ class Handler(BaseHTTPRequestHandler):
         full = os.path.normpath(os.path.join(STATIC, path.lstrip("/")))
         if not full.startswith(STATIC + os.sep) or not os.path.isfile(full):
             return self.error(404, "page introuvable")
+        # les bibliotheques (700 Ko) ne changent pas : le navigateur les garde
+        cache = "public, max-age=604800" if path.startswith("/vendor/") else "no-store"
         with open(full, "rb") as f:
-            self.send(200, f.read(), MIME.get(os.path.splitext(full)[1], "application/octet-stream"))
+            self.send(200, f.read(), MIME.get(os.path.splitext(full)[1], "text/plain; charset=utf-8"), cache=cache)
 
     def websocket(self, path):
         m = re.match(r"^/ws/terminal/(shell|maj|systeme|basic)(?:/([A-Za-z0-9_-]{1,40}))?$", path)
-        origin = self.headers.get("Origin", "")
-        host = self.headers.get("Host", "")
-        if not m or not self.logged_in() or urllib.parse.urlparse(origin).netloc != host:
-            return self.error(403, "terminal refuse")
+        if os.path.getmtime(__file__) != STARTED_MTIME:
+            return self.error(503, "le serveur redemarre apres une mise a jour : reessayez dans quelques secondes")
+        origin = urllib.parse.urlparse(self.headers.get("Origin", "")).netloc.lower()
+        host = self.headers.get("Host", "").lower()
         key = self.headers.get("Sec-WebSocket-Key", "")
+        refus = None
+        if not m:
+            refus = "terminal inconnu"
+        elif not self.logged_in():
+            refus = "connexion requise"
+        elif origin != host:
+            refus = "origine %r differente de l'hote %r" % (origin, host)
+        elif not key or "websocket" not in self.headers.get("Upgrade", "").lower():
+            refus = "requete WebSocket invalide"
+        if refus:
+            sys.stderr.write("terminal refuse : %s\n" % refus)
+            return self.error(403, "terminal refuse : " + refus)
         accept = base64.b64encode(hashlib.sha1((key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode()).digest()).decode()
-        self.send_response(101)
-        self.send_header("Upgrade", "websocket")
-        self.send_header("Connection", "Upgrade")
-        self.send_header("Sec-WebSocket-Accept", accept)
-        self.end_headers()
+        # Reponse ecrite a la main : le serveur repond en HTTP/1.0, que
+        # certains navigateurs (Firefox) refusent pour une WebSocket
+        self.log_request(101)
+        self.wfile.write(("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\n"
+                          "Connection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n" % accept).encode("ascii"))
         self.wfile.flush()
-        run_terminal(self.connection, m.group(1), m.group(2))
         self.close_connection = True
+        with lock:
+            terminals[0] += 1
+        try:
+            run_terminal(self.connection, m.group(1), m.group(2))
+        except Exception as e:
+            sys.stderr.write("terminal %s : %r\n" % (m.group(1), e))
+            try:
+                ws_send(self.connection, json.dumps({"type": "sortie", "data": "\r\nErreur du serveur : %s\r\n" % e}))
+                ws_send(self.connection, json.dumps({"type": "fin", "code": None}))
+            except OSError:
+                pass
+        finally:
+            with lock:
+                terminals[0] -= 1
+
+
+# Une mise a jour du depot remplace ce fichier sans arreter le service : le
+# serveur se relance alors lui-meme, des qu'aucun terminal n'est ouvert (la
+# mise a jour peut avoir ete lancee depuis l'un d'eux). Les sessions sont
+# perdues : il faut se reconnecter.
+STARTED_MTIME = os.path.getmtime(__file__)
+
+
+def watch_for_update():
+    while True:
+        time.sleep(5)
+        try:
+            changed = os.path.getmtime(__file__) != STARTED_MTIME
+        except OSError:
+            continue
+        with lock:
+            idle = terminals[0] == 0
+        if changed and idle:
+            sys.stderr.write("admin.py a change : redemarrage du serveur\n")
+            sys.stderr.flush()
+            os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)] + sys.argv[1:])
 
 
 def main():
@@ -648,6 +700,7 @@ def main():
         print("Attention : aucun mot de passe. Tapez : python3 web/admin.py --mot-de-passe", file=sys.stderr)
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     server.daemon_threads = True
+    threading.Thread(target=watch_for_update, daemon=True).start()
     print("Interface web du Minitel sur le port %d" % PORT, file=sys.stderr)
     server.serve_forever()
 

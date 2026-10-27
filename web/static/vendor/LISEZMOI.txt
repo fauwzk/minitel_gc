@@ -1,0 +1,10 @@
+Bibliotheques tierces servies par l'interface web, sans acces a Internet.
+Copies exactes des paquets npm, sous licence MIT (fichiers LICENSE) :
+
+  xterm/xterm.js, xterm.css         xterm@5.3.0            terminal
+  xterm/xterm-addon-fit.js          xterm-addon-fit@0.8.0  taille du terminal
+  codemirror/codemirror.js, .css    codemirror@5.65.16     editeur de code
+  codemirror/simple.js              codemirror@5.65.16     (addon/mode/simple.js)
+
+Pour changer de version : remplacer ces fichiers par ceux du paquet npm
+(par exemple https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js).
