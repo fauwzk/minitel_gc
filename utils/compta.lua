@@ -24,6 +24,7 @@ local function input_string(prompt)
         minitel.sleep(0.01)
     end
 end
+input_string = minitel.with_cursor(input_string)
 
 -- Evalue une expression mathématique sous forme de chaîne ("2+2")
 local function eval_math(expr)

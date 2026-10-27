@@ -122,16 +122,59 @@ end
 -- du premier d'entre eux
 local bytes_pending, pending_since = 0, 0
 
+-- Le Minitel en 80 colonnes ignore toutes les commandes qui cachent le
+-- curseur (utils/test_curseur.lua). A defaut, le SDK le gare dans le coin bas
+-- droit quand le programme attend une touche (M.get_key sans touche), et le
+-- remet a sa place, suivie par le framebuffer, avant l'ecriture suivante. Un
+-- programme qui veut son curseur (saisie de texte) envoie ESC [ ? 25 h comme
+-- sur un terminal ordinaire ; ESC [ ? 25 l permet de nouveau de le garer.
+-- En mode PC le terminal cache le curseur lui-meme : rien a faire, sauf si
+-- MINITEL_GARER est fixe (pour tester).
+local PARK_ROW, PARK_COL = 24, 80
+local park_enabled = not is_pc or os.getenv("MINITEL_GARER") ~= nil
+local cursor_wanted = false -- le programme a demande un curseur visible
+local parked = false        -- le curseur est au coin, pas a sa place
+local drawn = false         -- quelque chose a ete ecrit depuis qu'il est gare
+
 -- Surcharge transparente de io.write pour alimenter le Framebuffer
 io.write = function(...)
     local args = {...}
+    if parked then
+        parked = false
+        orig_write(string.format("\x1b[%d;%dH", cur_y, math.min(80, cur_x)))
+    end
     for _, v in ipairs(args) do
         local s = tostring(v)
         if bytes_pending == 0 then pending_since = uptime_now() end
         bytes_pending = bytes_pending + #s
+        if string.find(s, "\x1b[?25", 1, true) then
+            local last_on = select(2, string.find(s, ".*\x1b%[%?25h")) or 0
+            local last_off = select(2, string.find(s, ".*\x1b%[%?25l")) or 0
+            if last_on ~= last_off then cursor_wanted = last_on > last_off end
+        end
+        drawn = true
         feed_vram(s)
     end
     return orig_write(...)
+end
+
+-- Enveloppe une fonction de saisie de texte : le curseur reste a sa place
+-- (visible) pendant qu'elle tourne.
+--   input_string = minitel.with_cursor(input_string)
+function M.with_cursor(fn)
+    return function(...)
+        io.write("\x1b[?25h")
+        local r = table.pack(fn(...))
+        io.write("\x1b[?25l")
+        return table.unpack(r, 1, r.n)
+    end
+end
+
+local function park_cursor()
+    if not park_enabled or cursor_wanted or parked or not drawn then return end
+    orig_write(string.format("\x1b[%d;%dH", PARK_ROW, PARK_COL))
+    io.flush()
+    parked, drawn = true, false
 end
 
 -- Le port serie garde en memoire ce qu'on lui ecrit et rend la main tout de
@@ -181,11 +224,13 @@ function M.init()
     end
     orig_write("\x1b[?25l")
     io.flush()
+    cursor_wanted = false
 end
 
 function M.cleanup()
     orig_write("\x1b[r\x1b[0m\x1b[?25h\x1b[2J\x1b[H")
     io.flush()
+    cursor_wanted, parked, drawn = true, false, false
     clear_vram()
     if is_pc then
         os.execute("stty sane 2>/dev/null")
@@ -475,7 +520,10 @@ end
 function M.get_key()
     pump_bips()
     local c = io.read(1)
-    if not c then return nil end
+    if not c then
+        park_cursor()
+        return nil
+    end
     
     local function read_next()
         for i = 1, 50000 do 

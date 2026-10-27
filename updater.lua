@@ -69,6 +69,7 @@ local function prompt_input(prompt_text)
         minitel.sleep(0.01)
     end
 end
+prompt_input = minitel.with_cursor(prompt_input)
 
 local function show_error(err_msg)
     minitel.play_sound("damage")

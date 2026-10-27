@@ -23,6 +23,7 @@ local function input_string(prompt)
         minitel.sleep(0.01)
     end
 end
+input_string = minitel.with_cursor(input_string)
 
 while true do
     io.write("\x1b[2J\x1b[H")

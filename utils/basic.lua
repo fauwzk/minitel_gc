@@ -473,6 +473,7 @@ local function input_string(prompt, initial_text, history)
         minitel.sleep(0.01)
     end
 end
+input_string = minitel.with_cursor(input_string)
 
 -- =====================================================================
 -- 4. MISE A JOUR DE L'INTERFACE & MONITEUR GPIO / PWM / ADC ('GPIOMON')

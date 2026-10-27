@@ -863,6 +863,7 @@ Au chargement, `minitel.lua` remplace discrètement la fonction d'écriture stan
 * Les programmes n'ont rien à faire de particulier : ils écrivent comme d'habitude.
 * `minitel.get_screen_text()` renvoie à tout moment le contenu exact de l'écran, en texte.
 * C'est ce mécanisme qui permet l'**impression d'écran** (§ 3.7) et la **restauration** de l'écran après la fenêtre d'impression.
+* Il sert aussi à **garer le curseur**. En 80 colonnes, le Minitel ignore toutes les commandes qui cachent le curseur : elles ont été essayées une à une avec 3615 OUTILS > TEST_CURSEUR. Quand un programme attend une touche (`minitel.get_key()` sans touche), le SDK envoie donc le curseur dans le coin en bas à droite. Avant l'écriture suivante, il le remet à la position que tient à jour la copie de l'écran. Un programme qui a besoin de son curseur pour une saisie de texte envoie `ESC [ ? 25 h`, comme sur un terminal ordinaire, ou enveloppe sa fonction de saisie avec `minitel.with_cursor` ; `ESC [ ? 25 l` permet de nouveau de garer le curseur. En mode PC, le terminal cache le curseur lui-même : rien n'est garé, sauf si la variable `MINITEL_GARER` est fixée (pour les essais).
 
 ### 4.4 Référence des fonctions du SDK
 
@@ -887,6 +888,7 @@ et se termine par `minitel.cleanup()`.
 | `minitel.beep_pattern(instants)` | Joue un rythme de bips du Minitel, par exemple `{ 0, 0.4, 0.8 }` (instants en secondes). Les bips plus rapprochés que l'écart minimal `minitel.bip_gap` risquent de ne pas s'entendre (§ 2.5). |
 | `minitel.get_key()` | Lit le clavier **sans attendre**. Renvoie un nom de touche (§ 2.3), un caractère, ou `nil` si rien n'a été frappé. |
 | `minitel.get_screen_text()` | Contenu de l'écran (24 lignes de texte séparées par des retours à la ligne). |
+| `minitel.with_cursor(fonction)` | Enveloppe une fonction de saisie de texte : pendant qu'elle tourne, le curseur reste visible, à sa place, au lieu d'être garé dans le coin (§ 4.3). |
 | `minitel.print_screen_to_pastebin()` | Déclenche l'impression d'écran (normalement appelée par `get_key()` lui-même). |
 
 #### Mise en forme du texte
