@@ -138,7 +138,7 @@ Le script `install_minitel.sh` déroule dix étapes. Comprendre ce qu'il fait vo
 | **7** | Démarrage silencieux | Retire la console série du noyau de `cmdline.txt` et ajoute `quiet splash` : les messages de démarrage de Linux ne polluent plus l'écran du Minitel. |
 | **8** | Volume audio | Règle les mixeurs ALSA à 85 %. |
 | **9** | Écran de démarrage | Lance `install_ecran_demarrage.sh`, qui installe le service `minitel-boot` : pendant que Linux démarre, le Minitel affiche l'écran de démarrage du Raspberry Pi (§ 1.4). |
-| **10** | Scripts de mise à jour | Lance `install_scripts_maj.sh`, qui permet à la mise à jour de jouer en root les scripts `maj/*.sh` du dépôt (§ 3.5). Les scripts déjà présents sont notés comme faits. |
+| **10** | Scripts de mise à jour | Lance `install_scripts_maj.sh`, qui permet à la mise à jour de jouer en root les scripts `maj/*.sh` du dépôt (§ 3.5), puis les joue tous une première fois. |
 
 Redémarrez ensuite le Raspberry Pi (`sudo reboot`).
 
@@ -677,7 +677,7 @@ Le système **ne redémarre que si quelque chose a réellement changé** : un no
 
 | Élément | Rôle |
 | :------ | :--- |
-| `maj/NNNN_description.sh` | Un script, par exemple `0001_ecran_demarrage.sh`, qui réinstalle le service de l'écran de démarrage. Le numéro fixe l'ordre. |
+| `maj/NNNN_description.sh` | Un script, par exemple `0001_ecran_demarrage.sh`, qui réinstalle le service de l'écran de démarrage, ou `0002_droits_reseau.sh`, qui donne au compte `minitel` le droit de gérer le réseau (§ 5.8). Le numéro fixe l'ordre. |
 | `/usr/local/sbin/minitel-maj` | Le lanceur, installé hors du dépôt par `install_scripts_maj.sh`. Le compte `minitel` a le droit de le lancer en root par `sudo`, et seulement lui (`/etc/sudoers.d/011_minitel_maj`). |
 | `/var/lib/minitel/maj_faites` | La liste des scripts réussis. Un script en échec n'y est pas inscrit : il est retenté à la mise à jour suivante, même si elle n'apporte rien de nouveau. |
 | `/var/lib/minitel/maj.log` | La sortie de chaque script, datée. C'est là qu'il faut regarder après un `ECHEC`. |
@@ -1001,6 +1001,8 @@ L'outil de connexion du Raspberry Pi, pensé pour le Minitel : il remplace `nmtu
 
 Une connexion attend au plus 30 secondes. Les erreurs courantes s'affichent en clair : `MOT DE PASSE REFUSE`, `RESEAU INTROUVABLE`, `DELAI DEPASSE`, `DROITS INSUFFISANTS`.
 
+**Les droits.** NetworkManager ne laisse gérer le réseau qu'aux sessions ouvertes devant l'écran et le clavier du Raspberry Pi. La session du Minitel, ouverte sur le port série, n'en fait pas partie. Le script de mise à jour `maj/0002_droits_reseau.sh` ajoute donc une règle polkit, qui donne ce droit au compte `minitel` (`/etc/polkit-1/rules.d/50-minitel-reseau.rules`, plus un fichier `.pkla` pour les anciennes versions de polkit). Il est joué à la mise à jour, si les scripts de mise à jour sont activés (§ 3.5).
+
 <div style="page-break-after: always;"></div>
 
 ## CHAPITRE 6 : LA SALLE D'ARCADE (`/jeux`)
@@ -1278,6 +1280,7 @@ Codes de contrôle utiles : `8` Retour arrière, `13` Retour chariot (`[ENVOI]`)
 | Rien n'en sort alors que la sortie du Pi est câblée sur les broches 6 et 8 | Ces broches mènent à la ligne téléphonique, pas au haut-parleur du Minitel | Branchez un haut-parleur amplifié sur la sortie du Pi (§ 2.6). |
 | Ronflement continu dans le haut-parleur du Pi | Boucle de masse | Alimentez le haut-parleur depuis le Pi (USB) plutôt que par une autre alimentation. |
 | La mise à jour affiche `SCRIPTS MAJ : ... ECHEC` | Un script de `maj/` a échoué | Lire `/var/lib/minitel/maj.log`. Le script sera retenté à la prochaine mise à jour. |
+| 3615 RESEAU affiche `DROITS INSUFFISANTS (POLKIT)` | La règle polkit du compte `minitel` n'est pas installée | Activer les scripts de mise à jour (`sudo ./install_scripts_maj.sh`) puis lancer la mise à jour, ou directement : `sudo DEPOT=$PWD bash maj/0002_droits_reseau.sh` depuis le dépôt. |
 | Les cadres de `nmtui`, `htop`… s'affichent en lettres (`lqqqk`), ou en couleurs illisibles | Programme lancé hors du terminal réglé pour le Minitel | Le lancer par `bash outils/shell_minitel.sh <programme>` depuis le dépôt (§ 3.3). |
 | L'entrée MISE À JOUR n'apparaît pas | Le `ping` vers `1.1.1.1` échoue | Vérifier le réseau avec CONFIG RÉSEAU (3615 RESEAU, § 5.8) ; l'état est retesté toutes les 30 s. |
 | La mise à jour signale un « conflit local » | Des fichiers suivis par Git ont été modifiés sur le Pi | Choisir l'option 3 (renommer) pour garder vos versions, ou 1 pour revenir à l'officielle (§ 3.5). |

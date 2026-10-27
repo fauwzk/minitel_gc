@@ -87,9 +87,9 @@ bash /home/minitel/minitel_gc/install_ecran_demarrage.sh
 
 echo "> 10. SCRIPTS DE MISE A JOUR (LANCES EN ROOT PAR updater.lua)..."
 bash /home/minitel/minitel_gc/install_scripts_maj.sh
-# Une installation neuve est deja a jour : les scripts existants sont notes
-# comme faits, seuls ceux des prochaines mises a jour seront joues
-ls /home/minitel/minitel_gc/maj/*.sh 2>/dev/null | xargs -r -n1 basename >> /var/lib/minitel/maj_faites
+# Les scripts deja livres reglent aussi une installation neuve (droits reseau,
+# ecran de demarrage...) : on les joue tous une premiere fois
+/usr/local/sbin/minitel-maj
 
 echo "====================================================================="
 echo " INSTALLATION TERMINEE ! "
