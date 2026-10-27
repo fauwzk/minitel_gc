@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="3615 TRAIN - desserte d&#x27;un train">
+<rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
+<rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
+<g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
+<rect x="18.0" y="19.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="181.2" y="33.0" fill="rgb(18,22,17)" textLength="441.6" lengthAdjust="spacingAndGlyphs">* * *  3615 TRAIN  -  DESSERTE DU TRAIN  * * *</text>
+<text x="37.2" y="71.0" fill="rgb(232,240,228)" font-weight="bold" textLength="57.6" lengthAdjust="spacingAndGlyphs">TER K5</text>
+<text x="114.0" y="71.0" fill="rgb(183,196,177)" textLength="508.8" lengthAdjust="spacingAndGlyphs">N. 839586  SNCF   DEPART 18:36   VOIE --   DANS 22 MN</text>
+<text x="37.2" y="90.0" fill="rgb(183,196,177)" textLength="86.4" lengthAdjust="spacingAndGlyphs">DIRECTION</text>
+<text x="133.2" y="90.0" fill="rgb(232,240,228)" font-weight="bold" textLength="57.6" lengthAdjust="spacingAndGlyphs">TROYES</text>
+<rect x="18.0" y="95.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="75.6" y="109.0" fill="rgb(18,22,17)" textLength="259.2" lengthAdjust="spacingAndGlyphs">ARR.    DEP.     LIGNE GARE</text>
+<text x="152.4" y="128.0" fill="rgb(183,196,177)" textLength="115.2" lengthAdjust="spacingAndGlyphs">18:36      O</text>
+<text x="296.4" y="128.0" fill="rgb(232,240,228)" font-weight="bold" textLength="76.8" lengthAdjust="spacingAndGlyphs">CHAUMONT</text>
+<text x="75.6" y="147.0" fill="rgb(183,196,177)" textLength="336.0" lengthAdjust="spacingAndGlyphs">18:56   18:57      o   BAR-SUR-AUBE</text>
+<text x="75.6" y="166.0" fill="rgb(183,196,177)" textLength="307.2" lengthAdjust="spacingAndGlyphs">19:09   19:09      o   VENDEUVRE</text>
+<text x="75.6" y="185.0" fill="rgb(183,196,177)" textLength="278.4" lengthAdjust="spacingAndGlyphs">19:26              O   TROYES</text>
+<rect x="18.0" y="456.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="470.0" fill="rgb(18,22,17)" textLength="480.0" lengthAdjust="spacingAndGlyphs">HAUT/BAS : DEFILER    RETOUR : TABLEAU DES DEPARTS</text>
+</g></svg>

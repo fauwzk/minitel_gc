@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="3615 TRAIN - trajet avec correspondance">
+<rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
+<rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
+<g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
+<rect x="18.0" y="19.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="181.2" y="33.0" fill="rgb(18,22,17)" textLength="432.0" lengthAdjust="spacingAndGlyphs">* * *  3615 TRAIN  -  DETAIL DU TRAJET  * * *</text>
+<text x="37.2" y="71.0" fill="rgb(232,240,228)" font-weight="bold" textLength="76.8" lengthAdjust="spacingAndGlyphs">CHAUMONT</text>
+<text x="133.2" y="71.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">&gt;</text>
+<text x="162.0" y="71.0" fill="rgb(232,240,228)" font-weight="bold" textLength="86.4" lengthAdjust="spacingAndGlyphs">PARIS-EST</text>
+<text x="37.2" y="90.0" fill="rgb(183,196,177)" textLength="384.0" lengthAdjust="spacingAndGlyphs">LE 28/10   DUREE 3H39   1 CORRESPONDANCE</text>
+<text x="18.0" y="109.0" fill="rgb(183,196,177)" textLength="768.0" lengthAdjust="spacingAndGlyphs">--------------------------------------------------------------------------------</text>
+<text x="37.2" y="128.0" fill="rgb(232,240,228)" font-weight="bold" textLength="48.0" lengthAdjust="spacingAndGlyphs">04:07</text>
+<text x="104.4" y="128.0" fill="rgb(183,196,177)" textLength="451.2" lengthAdjust="spacingAndGlyphs">O  CHAUMONT                            CAR K940</text>
+<text x="104.4" y="147.0" fill="rgb(183,196,177)" textLength="182.4" lengthAdjust="spacingAndGlyphs">|  DIRECTION TROYES</text>
+<text x="37.2" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="48.0" lengthAdjust="spacingAndGlyphs">05:47</text>
+<text x="104.4" y="166.0" fill="rgb(183,196,177)" textLength="86.4" lengthAdjust="spacingAndGlyphs">O  TROYES</text>
+<text x="104.4" y="185.0" fill="rgb(183,196,177)" textLength="220.8" lengthAdjust="spacingAndGlyphs">:  CORRESPONDANCE 24 MN</text>
+<text x="37.2" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="48.0" lengthAdjust="spacingAndGlyphs">06:11</text>
+<text x="104.4" y="204.0" fill="rgb(183,196,177)" textLength="432.0" lengthAdjust="spacingAndGlyphs">O  TROYES                              TER K4</text>
+<text x="104.4" y="223.0" fill="rgb(183,196,177)" textLength="211.2" lengthAdjust="spacingAndGlyphs">|  DIRECTION PARIS-EST</text>
+<text x="37.2" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="48.0" lengthAdjust="spacingAndGlyphs">07:46</text>
+<text x="104.4" y="242.0" fill="rgb(183,196,177)" textLength="115.2" lengthAdjust="spacingAndGlyphs">O  PARIS-EST</text>
+<text x="37.2" y="432.0" fill="rgb(183,196,177)" textLength="134.4" lengthAdjust="spacingAndGlyphs">ARRIVEE PREVUE</text>
+<text x="181.2" y="432.0" fill="rgb(232,240,228)" font-weight="bold" textLength="124.8" lengthAdjust="spacingAndGlyphs">28/10 A 07:46</text>
+<rect x="18.0" y="456.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="470.0" fill="rgb(18,22,17)" textLength="249.6" lengthAdjust="spacingAndGlyphs">RETOUR : LISTE DES TRAJETS</text>
+</g></svg>

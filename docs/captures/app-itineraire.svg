@@ -1,65 +1,76 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="3615 ITINERAIRE">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="3615 ITINERAIRE - carte et feuille de route">
 <rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
 <rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
 <g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
-<rect x="18.0" y="19.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
-<text x="181.2" y="33.0" fill="rgb(18,22,17)" textLength="441.6" lengthAdjust="spacingAndGlyphs">3615 ITINERAIRE : JOINVILLE (52) -&gt; REIMS (51)</text>
-<text x="27.6" y="71.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
-<rect x="37.2" y="57.0" width="729.6" height="19.0" fill="rgb(232,240,228)"/>
-<text x="181.2" y="71.0" fill="rgb(18,22,17)" textLength="432.0" lengthAdjust="spacingAndGlyphs">DISTANCE : 137 KM | DUREE : 01H49 | 27 ETAPES</text>
-<text x="766.8" y="71.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
-<text x="27.6" y="90.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="766.8" y="90.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="109.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<rect x="37.2" y="95.0" width="729.6" height="19.0" fill="rgb(232,240,228)"/>
-<text x="56.4" y="109.0" fill="rgb(18,22,17)" textLength="393.6" lengthAdjust="spacingAndGlyphs">N.  | DIST.   | DIRECTION &amp; VOIE A SUIVRE</text>
-<text x="766.8" y="109.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="128.0" fill="rgb(232,240,228)" font-weight="bold" textLength="748.8" lengthAdjust="spacingAndGlyphs">+----------------------------------------------------------------------------+</text>
-<text x="27.6" y="147.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="766.8" y="147.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<rect x="37.2" y="152.0" width="720.0" height="19.0" fill="rgb(232,240,228)"/>
-<text x="37.2" y="166.0" fill="rgb(18,22,17)" textLength="451.2" lengthAdjust="spacingAndGlyphs">&gt; 01. [ 122 M ] DEPART SUR RUE DU QUAI DU CANAL</text>
-<text x="757.2" y="166.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">^</text>
-<text x="766.8" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="185.0" fill="rgb(183,196,177)" textLength="595.2" lengthAdjust="spacingAndGlyphs">02. [ 1.5 KM] TOURNER TOUT DROIT SUR D 60 (AVENUE DE LORRAINE)</text>
-<rect x="757.2" y="171.0" width="9.6" height="19.0" fill="rgb(232,240,228)"/>
-<text x="757.2" y="185.0" fill="rgb(18,22,17)" textLength="9.6" lengthAdjust="spacingAndGlyphs">#</text>
-<text x="766.8" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="204.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">03. [ 279 M ] TOURNER A DROITE SUR LA VOIE                               :</text>
-<text x="766.8" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="223.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">04. [  26 KM] TOURNER TOUT DROIT SUR D 520                               :</text>
-<text x="766.8" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="242.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">05. [ 565 M ] ROND-POINT (SORTIE 2) -&gt; N 4 [DIR. PARIS, BAR-LE-DUC]      :</text>
-<text x="766.8" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="261.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">06. [ 688 M ] BIFURQUER LEGER. A GAUCHE -&gt; N 4 [DIR. PARIS, TROYES]      :</text>
-<text x="766.8" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="280.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">07. [  33 KM] REJOINDRE N 4                                              :</text>
-<text x="766.8" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="299.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="299.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">08. [ 9.9 KM] ROND-POINT (SORTIE 1) -&gt; N 44 [DIR. CHALONS EN C., REIMS]  :</text>
-<text x="766.8" y="299.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="318.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="318.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">09. [  14 KM] TOURNER TOUT DROIT SUR N 44                                :</text>
-<text x="766.8" y="318.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="337.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">10. [ 2.4 KM] ROND-POINT (SORTIE 2) -&gt; N 44 [DIR. REIMS, CHEALONS-EN-CHA :</text>
-<text x="766.8" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="356.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="356.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">11. [ 1.6 KM] CONTINUER SUR N44                                          :</text>
-<text x="766.8" y="356.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="375.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="375.0" fill="rgb(183,196,177)" textLength="710.4" lengthAdjust="spacingAndGlyphs">12. [  13 KM] CONTINUER SUR N 44                                         v</text>
-<text x="766.8" y="375.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="394.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="766.8" y="394.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="413.0" fill="rgb(232,240,228)" font-weight="bold" textLength="748.8" lengthAdjust="spacingAndGlyphs">+----------------------------------------------------------------------------+</text>
-<rect x="18.0" y="456.0" width="748.8" height="19.0" fill="rgb(232,240,228)"/>
-<text x="27.6" y="470.0" fill="rgb(18,22,17)" textLength="729.6" lengthAdjust="spacingAndGlyphs">[Z/S] DEFILER | [ENVOI] DETAIL ETAPE | [N] NOUVEAU TRAJET | [RETOUR] QUITTER</text>
+<text x="37.2" y="33.0" fill="rgb(183,196,177)" textLength="528.0" lengthAdjust="spacingAndGlyphs">CARBURANT ~ 8,9 L (6,5 L/100 KM)   PAUSE CONSEILLEE : 0</text>
+<text x="18.0" y="52.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
+<rect x="27.6" y="38.0" width="307.2" height="19.0" fill="rgb(232,240,228)"/>
+<text x="152.4" y="52.0" fill="rgb(18,22,17)" textLength="48.0" lengthAdjust="spacingAndGlyphs">CARTE</text>
+<text x="334.8" y="52.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
+<rect x="363.6" y="38.0" width="412.8" height="19.0" fill="rgb(232,240,228)"/>
+<text x="373.2" y="52.0" fill="rgb(18,22,17)" textLength="307.2" lengthAdjust="spacingAndGlyphs">N. DIR   DIST.  FEUILLE DE ROUTE</text>
+<text x="18.0" y="71.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="66.0" y="71.0" fill="rgb(183,196,177)" textLength="268.8" lengthAdjust="spacingAndGlyphs">B*                        ^N</text>
+<text x="334.8" y="71.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="373.2" y="71.0" fill="rgb(183,196,177)" textLength="403.2" lengthAdjust="spacingAndGlyphs">1 [A]   120 M PARTEZ PAR RUE DU QUAI DU CA</text>
+<text x="18.0" y="90.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="85.2" y="90.0" fill="rgb(183,196,177)" textLength="19.2" lengthAdjust="spacingAndGlyphs">**</text>
+<text x="334.8" y="90.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="373.2" y="90.0" fill="rgb(183,196,177)" textLength="403.2" lengthAdjust="spacingAndGlyphs">2  ^   1,5 KM CONTINUEZ TOUT DROIT SUR D 6</text>
+<text x="18.0" y="109.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="104.4" y="109.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">*</text>
+<text x="334.8" y="109.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="373.2" y="109.0" fill="rgb(183,196,177)" textLength="403.2" lengthAdjust="spacingAndGlyphs">3  -&gt;   280 M TOURNEZ A DROITE SUR LA ROUT</text>
+<text x="18.0" y="128.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="104.4" y="128.0" fill="rgb(183,196,177)" textLength="28.8" lengthAdjust="spacingAndGlyphs">***</text>
+<text x="334.8" y="128.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="373.2" y="128.0" fill="rgb(183,196,177)" textLength="403.2" lengthAdjust="spacingAndGlyphs">4  ^    26 KM CONTINUEZ TOUT DROIT SUR D 5</text>
+<text x="18.0" y="147.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="123.6" y="147.0" fill="rgb(183,196,177)" textLength="19.2" lengthAdjust="spacingAndGlyphs">**</text>
+<text x="334.8" y="147.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="373.2" y="147.0" fill="rgb(183,196,177)" textLength="403.2" lengthAdjust="spacingAndGlyphs">5 (O)   560 M AU ROND-POINT, PRENEZ LA SOR</text>
+<text x="18.0" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="133.2" y="166.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">*</text>
+<text x="334.8" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="373.2" y="166.0" fill="rgb(183,196,177)" textLength="403.2" lengthAdjust="spacingAndGlyphs">6 &lt;^    690 M A L&#x27;EMBRANCHEMENT, GARDEZ LE</text>
+<text x="18.0" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="142.8" y="185.0" fill="rgb(183,196,177)" textLength="19.2" lengthAdjust="spacingAndGlyphs">**</text>
+<text x="334.8" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<rect x="363.6" y="171.0" width="412.8" height="19.0" fill="rgb(232,240,228)"/>
+<text x="373.2" y="185.0" fill="rgb(18,22,17)" textLength="326.4" lengthAdjust="spacingAndGlyphs">7 &lt;^    33 KM INSEREZ-VOUS SUR N 4</text>
+<text x="18.0" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="162.0" y="204.0" fill="rgb(183,196,177)" textLength="19.2" lengthAdjust="spacingAndGlyphs">**</text>
+<text x="334.8" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="373.2" y="204.0" fill="rgb(183,196,177)" textLength="403.2" lengthAdjust="spacingAndGlyphs">8 (O)  9,9 KM AU ROND-POINT, PRENEZ LA SOR</text>
+<text x="18.0" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="171.6" y="223.0" fill="rgb(183,196,177)" textLength="19.2" lengthAdjust="spacingAndGlyphs">**</text>
+<text x="334.8" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="373.2" y="223.0" fill="rgb(183,196,177)" textLength="403.2" lengthAdjust="spacingAndGlyphs">9  ^    14 KM CONTINUEZ TOUT DROIT SUR N 4</text>
+<text x="18.0" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="181.2" y="242.0" fill="rgb(183,196,177)" textLength="19.2" lengthAdjust="spacingAndGlyphs">**</text>
+<text x="334.8" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="363.6" y="242.0" fill="rgb(183,196,177)" textLength="412.8" lengthAdjust="spacingAndGlyphs">10 (O)  2,4 KM AU ROND-POINT, PRENEZ LA SOR</text>
+<text x="18.0" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="200.4" y="261.0" fill="rgb(183,196,177)" textLength="57.6" lengthAdjust="spacingAndGlyphs">******</text>
+<rect x="258.0" y="247.0" width="9.6" height="19.0" fill="rgb(232,240,228)"/>
+<text x="258.0" y="261.0" fill="rgb(18,22,17)" textLength="9.6" lengthAdjust="spacingAndGlyphs">X</text>
+<text x="334.8" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="363.6" y="261.0" fill="rgb(183,196,177)" textLength="307.2" lengthAdjust="spacingAndGlyphs">11  ^   1,6 KM CONTINUEZ SUR N44</text>
+<text x="18.0" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="267.6" y="280.0" fill="rgb(183,196,177)" textLength="19.2" lengthAdjust="spacingAndGlyphs">**</text>
+<text x="334.8" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="363.6" y="280.0" fill="rgb(183,196,177)" textLength="316.8" lengthAdjust="spacingAndGlyphs">12  ^    13 KM CONTINUEZ SUR N 44</text>
+<text x="18.0" y="299.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="277.2" y="299.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">*</text>
+<text x="334.8" y="299.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="363.6" y="299.0" fill="rgb(183,196,177)" textLength="403.2" lengthAdjust="spacingAndGlyphs">13  ^&gt;   300 M TOURNEZ LEGEREMENT A DROITE</text>
+<text x="18.0" y="318.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="286.8" y="318.0" fill="rgb(183,196,177)" textLength="9.6" lengthAdjust="spacingAndGlyphs">A</text>
+<text x="334.8" y="318.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
+<text x="363.6" y="318.0" fill="rgb(183,196,177)" textLength="412.8" lengthAdjust="spacingAndGlyphs">14  ^    400 M CONTINUEZ TOUT DROIT SUR N 4</text>
+<text x="18.0" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="326.4" lengthAdjust="spacingAndGlyphs">+--------------------------------+</text>
+<text x="363.6" y="356.0" fill="rgb(232,240,228)" font-weight="bold" textLength="374.4" lengthAdjust="spacingAndGlyphs">ETAPE 7/27  -  KM 29  -  26 MN DE ROUTE</text>
+<text x="37.2" y="375.0" fill="rgb(183,196,177)" textLength="192.0" lengthAdjust="spacingAndGlyphs">INSEREZ-VOUS SUR N 4</text>
+<rect x="18.0" y="418.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="432.0" fill="rgb(18,22,17)" textLength="681.6" lengthAdjust="spacingAndGlyphs">HAUT/BAS:ETAPE  ENVOI:GUIDAGE  I:INVERSER  N:NOUVEAU TRAJET  RETOUR:FIN</text>
 </g></svg>

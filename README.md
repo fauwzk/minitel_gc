@@ -777,7 +777,7 @@ docker compose up -d
 | Programme | Service interrogé |
 | :-------- | :---------------- |
 | 3615 CARBURANT | Prix des carburants, `data.economie.gouv.fr` (données publiques) |
-| 3615 TRAIN | Tableau des départs, `transport.opendata.ch` |
+| 3615 TRAIN | Départs, dessertes et trajets, `transport.opendata.ch` |
 | 3615 ITINÉRAIRE | Géocodage `api-adresse.data.gouv.fr` et calcul d'itinéraire OSRM |
 | 3615 MÉTÉO | `wttr.in` |
 | 3615 MAGIS INFOS | Flux RSS de cinq journaux (Korben, Next, Numerama, franceinfo, Le Monde) |
@@ -901,6 +901,7 @@ et se termine par `minitel.cleanup()`.
 | `minitel.submit_record(jeu, valeur, sens, unité, détail)` | Propose un résultat au tableau des records (`jeux/records.cfg`). `sens` vaut `"high"` (plus grand = mieux), `"low"` (plus petit = mieux, pour un temps) ou `"sum"` (compteur de victoires). Rend `true` si c'est un nouveau record. |
 | `minitel.get_record(jeu)` | Le record actuel d'un jeu, ou `nil`. |
 | `minitel.wrap(texte, largeur, lignes_max)` | Découpe un paragraphe mot à mot. Renvoie un tableau de lignes déjà complétées à `largeur` ; avec `lignes_max`, le tableau a toujours exactement ce nombre de lignes. |
+| `minitel.json_decode(texte)` | Décode la réponse JSON d'un service en ligne (objets, tableaux, chaînes avec accents, nombres). Rend `nil` si le texte n'est pas du JSON valide. Utilisé par 3615 TRAIN, ITINÉRAIRE et WIKIPEDIA. |
 
 #### Composants d'interface
 
@@ -989,13 +990,22 @@ Ces programmes interrogent Internet au moment où vous les consultez. Ils commen
 
 * **3615 CARBURANT** (`carburants.lua`). Prix instantanés du gazole, du SP98 et de l'E10 d'après les données publiques du ministère de l'Économie. Si aucune station n'existe pour le code postal saisi, la recherche s'élargit au département. `[ENVOI]` affiche la fiche détaillée d'une station, `[N]` change de code postal, `[A]` actualise.
 
-<p align="center"><img src="docs/captures/app-train.svg" width="640" alt="3615 TRAIN"><br><sub><b>Fig. 5.6</b> — 3615 TRAIN : le tableau des départs d'une gare.</sub></p>
+<p align="center"><img src="docs/captures/app-train.svg" width="640" alt="3615 TRAIN"><br><img src="docs/captures/app-train-desserte.svg" width="316" alt="Desserte d'un train"> <img src="docs/captures/app-train-trajet.svg" width="316" alt="Trajet avec correspondance"><br><sub><b>Fig. 5.6</b> — 3615 TRAIN : le tableau des départs, la desserte d'un train et un trajet avec correspondance.</sub></p>
 
-* **3615 TRAIN** (`train.lua`). Tableau des prochains départs d'une gare : heure, destination, numéro du train, voie et retard éventuel.
+* **3615 TRAIN** (`train.lua`). Les horaires des trains en direct, à la manière des panneaux de gare.
+  * **L'accueil** propose le tableau des départs (`1`), un trajet (`2`) ou l'une des six dernières gares consultées (`A` à `F`, gardées dans `utils/train.cfg`). La gare se cherche par son nom ; si plusieurs gares correspondent, le serveur en propose une liste.
+  * **Le tableau des départs** s'affiche ligne par ligne, chaque ligne défilant d'abord en lettres au hasard comme un panneau à palettes. Une horloge tourne en haut à droite. La colonne INFORMATION donne le temps avant le départ (« DANS 12 MN »), « A QUAI », ou le retard, qui clignote. Les trains partis quittent le tableau, et celui-ci s'actualise seul toutes les minutes (`R` pour tout de suite). Sous le tableau, la desserte du train choisi (flèches haut et bas) défile avec ses heures.
+  * **`[ENVOI]`** ouvre la fiche du train : toutes ses gares, avec heure d'arrivée et de départ, sur une ligne du temps.
+  * **`T`** cherche un trajet vers une autre gare : six propositions, avec date, heures, durée, correspondances et trains. `[ENVOI]` détaille un trajet, correspondances et temps de changement compris.
 
-<p align="center"><img src="docs/captures/app-itineraire.svg" width="640" alt="3615 ITINERAIRE"><br><sub><b>Fig. 5.7</b> — 3615 ITINÉRAIRE : distance, durée et feuille de route détaillée.</sub></p>
+<p align="center"><img src="docs/captures/app-itineraire.svg" width="640" alt="3615 ITINERAIRE"><br><img src="docs/captures/app-itineraire-guidage.svg" width="640" alt="Guidage"><br><sub><b>Fig. 5.7</b> — 3615 ITINÉRAIRE : la carte du trajet et la feuille de route, puis le guidage étape par étape.</sub></p>
 
-* **3615 ITINÉRAIRE** (`itiniraire.lua`). Calcul d'un trajet routier entre deux communes : distance, durée, puis la feuille de route étape par étape, à faire défiler.
+* **3615 ITINÉRAIRE** (`itiniraire.lua`). Calcul d'un trajet routier entre deux communes, façon Mappy télématique.
+  * **Le résumé** donne la distance, la durée, l'heure d'arrivée si l'on part maintenant, une estimation de la consommation (6,5 L aux 100 km) et le nombre de pauses conseillées (une toutes les deux heures).
+  * **La carte** trace la route en étoiles entre le départ `A` et l'arrivée `B`, le nord en haut. Un `X` y montre l'étape choisie dans la feuille de route, à droite, et se déplace avec elle.
+  * **La feuille de route** donne pour chaque étape un pictogramme (`<-`, `->`, `(O)` pour un rond-point...), la distance et la consigne. La consigne complète et le kilométrage cumulé s'affichent en dessous.
+  * **`[ENVOI]` lance le guidage** : une grande flèche, « DANS 560 M », la consigne, l'étape suivante et une jauge du trajet parcouru. `[SUITE]` passe à l'étape suivante, la flèche haut revient à la précédente.
+  * **`I`** calcule le trajet retour, **`N`** un nouveau trajet. Le dernier trajet est gardé dans `utils/itiniraire.cfg` : l'accueil propose de le refaire (`R`) ou de le faire à l'envers (`I`).
 * **3615 MÉTÉO** (`meteo.lua`). Prévisions pour une ville (ou détection automatique si on laisse le champ vide).
 * **3615 MAGIS INFOS** (`info.lua`). Les derniers articles de cinq journaux : Korben, Next, Numerama, franceinfo et Le Monde ; `F` (ou `[SUITE]`) passe à la source suivante, `A` actualise. Chaque titre est suivi de sa date et de ses premiers mots. `[ENVOI]` ouvre l'article, débarrassé de sa mise en forme HTML, en minuscules et majuscules, avec ses paragraphes, ses intertitres en gras et ses listes à puces. L'en-tête donne la source, la date et le temps de lecture. L'article se lit page par page : `[SUITE]` pour la page suivante, `[RETOUR]` pour la précédente, `[SOMMAIRE]` pour revenir aux titres, et une jauge indique où l'on en est. Pour changer de journaux, créez `utils/info_flux.cfg` avec une ligne `NOM|ADRESSE DU FLUX RSS` par source.
 

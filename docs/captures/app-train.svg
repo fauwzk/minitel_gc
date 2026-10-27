@@ -1,63 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="3615 TRAIN">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 804 492" width="804" height="492" role="img" aria-label="3615 TRAIN - tableau des departs">
 <rect x="0" y="0" width="804" height="492" rx="14" fill="rgb(42,45,41)"/>
 <rect x="6" y="6" width="792" height="480" rx="10" fill="rgb(18,22,17)"/>
 <g font-family="'DejaVu Sans Mono','Consolas','Courier New',monospace" font-size="16" xml:space="preserve">
 <rect x="18.0" y="19.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
-<text x="248.4" y="33.0" fill="rgb(18,22,17)" textLength="297.6" lengthAdjust="spacingAndGlyphs">3615 TRAIN - GARE DE : CHAUMONT</text>
-<text x="27.6" y="71.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
-<rect x="37.2" y="57.0" width="729.6" height="19.0" fill="rgb(232,240,228)"/>
-<text x="258.0" y="71.0" fill="rgb(18,22,17)" textLength="278.4" lengthAdjust="spacingAndGlyphs">PANNEAU DES PROCHAINS DEPARTS</text>
-<text x="766.8" y="71.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">+</text>
-<text x="27.6" y="90.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="766.8" y="90.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="109.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<rect x="37.2" y="95.0" width="729.6" height="19.0" fill="rgb(232,240,228)"/>
-<text x="56.4" y="109.0" fill="rgb(18,22,17)" textLength="681.6" lengthAdjust="spacingAndGlyphs">HEURE | DESTINATION                        | TRAIN          | VOIE/ETAT</text>
-<text x="766.8" y="109.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="128.0" fill="rgb(232,240,228)" font-weight="bold" textLength="748.8" lengthAdjust="spacingAndGlyphs">+----------------------------------------------------------------------------+</text>
-<text x="27.6" y="147.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="766.8" y="147.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<rect x="37.2" y="152.0" width="729.6" height="19.0" fill="rgb(232,240,228)"/>
-<text x="37.2" y="166.0" fill="rgb(18,22,17)" textLength="729.6" lengthAdjust="spacingAndGlyphs">&gt; 13:55 | TROYES                             | TER K4         | A L&#x27;HEURE  &lt;</text>
-<text x="766.8" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="185.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">13:58 | MULHOUSE                           | TER K4         | A L&#x27;HEURE</text>
-<text x="766.8" y="185.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="204.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">14:08 | VITTEL                             | TER K6         | A L&#x27;HEURE</text>
-<text x="766.8" y="204.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="223.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">14:13 | REIMS                              | TER C72+       | A L&#x27;HEURE</text>
-<text x="766.8" y="223.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="242.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">15:23 | PARIS-EST                          | TER K4         | A L&#x27;HEURE</text>
-<text x="766.8" y="242.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="261.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">15:23 | PARIS-EST                          | TER K4         | A L&#x27;HEURE</text>
-<text x="766.8" y="261.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="280.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">17:44 | CULMONT - CHALINDREY               | TER K4         | A L&#x27;HEURE</text>
-<text x="766.8" y="280.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="299.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="299.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">17:55 | PARIS-EST                          | TER K4         | A L&#x27;HEURE</text>
-<text x="766.8" y="299.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="318.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="318.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">17:55 | PARIS-EST                          | TER K6         | A L&#x27;HEURE</text>
-<text x="766.8" y="318.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="337.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">18:02 | REIMS                              | TER C72+       | A L&#x27;HEURE</text>
-<text x="766.8" y="337.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="356.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="356.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">19:07 | MULHOUSE                           | TER K4         | A L&#x27;HEURE</text>
-<text x="766.8" y="356.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="375.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="375.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">19:07 | CULMONT - CHALINDREY               | TER K4         | A L&#x27;HEURE</text>
-<text x="766.8" y="375.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="394.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="56.4" y="394.0" fill="rgb(183,196,177)" textLength="681.6" lengthAdjust="spacingAndGlyphs">19:49 | PARIS-EST                          | TER K4         | A L&#x27;HEURE</text>
-<text x="766.8" y="394.0" fill="rgb(232,240,228)" font-weight="bold" textLength="9.6" lengthAdjust="spacingAndGlyphs">|</text>
-<text x="27.6" y="413.0" fill="rgb(232,240,228)" font-weight="bold" textLength="748.8" lengthAdjust="spacingAndGlyphs">+----------------------------------------------------------------------------+</text>
-<rect x="18.0" y="456.0" width="758.4" height="19.0" fill="rgb(232,240,228)"/>
-<text x="27.6" y="470.0" fill="rgb(18,22,17)" textLength="739.2" lengthAdjust="spacingAndGlyphs">[Z/S] CURSEUR | [ENVOI] DETAILS | [N] NOUVELLE GARE | [A]CTUALISER | [RETOUR]</text>
+<text x="171.6" y="33.0" fill="rgb(18,22,17)" textLength="460.8" lengthAdjust="spacingAndGlyphs">* * *  3615 TRAIN  -  TABLEAU DES DEPARTS  * * *</text>
+<text x="37.2" y="52.0" fill="rgb(232,240,228)" font-weight="bold" textLength="163.2" lengthAdjust="spacingAndGlyphs">DEPARTS  CHAUMONT</text>
+<text x="690.0" y="52.0" fill="rgb(232,240,228)" font-weight="bold" textLength="76.8" lengthAdjust="spacingAndGlyphs">18:13:42</text>
+<rect x="18.0" y="76.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="90.0" fill="rgb(18,22,17)" textLength="681.6" lengthAdjust="spacingAndGlyphs">HEURE  TRAIN      DESTINATION                         VOIE  INFORMATION</text>
+<text x="27.6" y="109.0" fill="rgb(183,196,177)" textLength="662.4" lengthAdjust="spacingAndGlyphs">18:16  TER K4     CULMONT - CHALINDREY                --    DANS 2 MN</text>
+<text x="27.6" y="128.0" fill="rgb(183,196,177)" textLength="672.0" lengthAdjust="spacingAndGlyphs">18:35  CAR P920   JOINVILLE                           --    DANS 21 MN</text>
+<rect x="18.0" y="133.0" width="729.6" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="147.0" fill="rgb(18,22,17)" textLength="672.0" lengthAdjust="spacingAndGlyphs">18:36  TER K5     TROYES                              --    DANS 22 MN</text>
+<text x="27.6" y="166.0" fill="rgb(183,196,177)" textLength="537.6" lengthAdjust="spacingAndGlyphs">19:06  TER K4     MULHOUSE                            --</text>
+<text x="603.6" y="166.0" fill="rgb(232,240,228)" font-weight="bold" textLength="105.6" lengthAdjust="spacingAndGlyphs">RETARD 5 MN</text>
+<text x="27.6" y="185.0" fill="rgb(183,196,177)" textLength="672.0" lengthAdjust="spacingAndGlyphs">19:06  TER K4     CULMONT - CHALINDREY                --    DANS 52 MN</text>
+<text x="27.6" y="204.0" fill="rgb(183,196,177)" textLength="662.4" lengthAdjust="spacingAndGlyphs">19:35  TER K72    REIMS                               --    A L&#x27;HEURE</text>
+<text x="27.6" y="223.0" fill="rgb(183,196,177)" textLength="662.4" lengthAdjust="spacingAndGlyphs">19:50  TER K4     PARIS-EST                           --    A L&#x27;HEURE</text>
+<text x="27.6" y="242.0" fill="rgb(183,196,177)" textLength="662.4" lengthAdjust="spacingAndGlyphs">20:55  CAR C72+   CULMONT - CHALINDREY                --    A L&#x27;HEURE</text>
+<text x="27.6" y="261.0" fill="rgb(183,196,177)" textLength="662.4" lengthAdjust="spacingAndGlyphs">21:06  TER K4     MULHOUSE                            --    A L&#x27;HEURE</text>
+<text x="27.6" y="280.0" fill="rgb(183,196,177)" textLength="662.4" lengthAdjust="spacingAndGlyphs">23:25  CAR K4     CULMONT - CHALINDREY                --    A L&#x27;HEURE</text>
+<text x="27.6" y="299.0" fill="rgb(183,196,177)" textLength="662.4" lengthAdjust="spacingAndGlyphs">04:07  CAR K940   TROYES                              --    A L&#x27;HEURE</text>
+<text x="27.6" y="318.0" fill="rgb(183,196,177)" textLength="662.4" lengthAdjust="spacingAndGlyphs">06:07  TER K5     DIJON                               --    A L&#x27;HEURE</text>
+<text x="27.6" y="337.0" fill="rgb(183,196,177)" textLength="662.4" lengthAdjust="spacingAndGlyphs">06:10  TER C72    REIMS                               --    A L&#x27;HEURE</text>
+<text x="18.0" y="356.0" fill="rgb(183,196,177)" textLength="768.0" lengthAdjust="spacingAndGlyphs">--------------------------------------------------------------------------------</text>
+<text x="37.2" y="375.0" fill="rgb(183,196,177)" textLength="595.2" lengthAdjust="spacingAndGlyphs">DESSERTE : BAR-SUR-AUBE 18:56 - VENDEUVRE 19:09 - TROYES 19:26</text>
+<text x="37.2" y="432.0" fill="rgb(183,196,177)" textLength="220.8" lengthAdjust="spacingAndGlyphs">ACTUALISATION DANS 32 S</text>
+<rect x="18.0" y="456.0" width="768.0" height="19.0" fill="rgb(232,240,228)"/>
+<text x="27.6" y="470.0" fill="rgb(18,22,17)" textLength="710.4" lengthAdjust="spacingAndGlyphs">HAUT/BAS:TRAIN  ENVOI:DESSERTE  T:TRAJET  G:GARE  R:ACTUALISER  RETOUR:FIN</text>
 </g></svg>
