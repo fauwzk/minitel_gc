@@ -50,7 +50,7 @@ Un second volume, le **[Manuel de programmation MICRO-BASIC](docs/MANUEL_BASIC.m
 | **2** | [Le matériel](#chapitre-2--le-matériel) | Liaison série, clavier, écran VT100, son et audio, fiche technique |
 | **3** | [L'architecture logicielle](#chapitre-3--larchitecture-logicielle) | Démarrage, arborescence, portail, lanceurs, mises à jour |
 | **4** | [Le moteur graphique et le SDK](#chapitre-4--le-moteur-graphique-et-le-sdk-minitellua) | Delta-drawing, framebuffer, référence de `minitel.lua` |
-| **5** | [Les logiciels du poste de travail](#chapitre-5--les-logiciels-du-poste-de-travail-utils) | Éditeur, tableur, télématique, santé, musique, réseau Wi-Fi, éphéméride, Wikipédia |
+| **5** | [Les logiciels du poste de travail](#chapitre-5--les-logiciels-du-poste-de-travail-utils) | Éditeur, tableur, télématique, santé, musique, réseau Wi-Fi, éphéméride, Wikipédia, photos |
 | **6** | [La salle d'arcade](#chapitre-6--la-salle-darcade-jeux) | Les 15 cartouches de jeux et le tableau des records |
 | **7** | [Le langage MICRO-BASIC](#chapitre-7--le-langage-micro-basic) | Présentation et renvoi au second manuel |
 | **8** | [Guide du développeur](#chapitre-8--guide-du-développeur) | Écrire sa propre cartouche Lua |
@@ -129,7 +129,7 @@ Le script `install_minitel.sh` déroule dix étapes. Comprendre ce qu'il fait vo
 
 | Étape | Action | Détail technique |
 | :---: | :----- | :--------------- |
-| **1** | Dépendances | `apt-get install lua5.3 git sox alsa-utils network-manager coreutils` |
+| **1** | Dépendances | `apt-get install lua5.3 git sox alsa-utils network-manager coreutils imagemagick` |
 | **2** | Utilisateur `minitel` | Création du compte, ajout aux groupes `dialout` (port série), `audio`, `video`, `plugdev`. **Le mot de passe est supprimé** pour permettre la connexion automatique. |
 | **3** | Droits `sudo` | Le compte `minitel` peut lancer `reboot` et `poweroff` sans mot de passe, et rien d'autre (`/etc/sudoers.d/010_minitel`). |
 | **4** | Clonage du dépôt | `git clone` dans `/home/minitel/minitel_gc`. |
@@ -705,6 +705,8 @@ Pour les désactiver, tapez `sudo ./install_scripts_maj.sh --retirer`. Tant qu'i
 | `jeux/records.cfg` | Les jeux | Le meilleur résultat de chaque jeu, avec sa date et le nombre de parties (§ 6.7). |
 | `jeux/nordschleife.rec` | NORDSCHLEIFE | Le meilleur tour de chaque voiture. |
 | `utils/ephemeride.cfg` | ÉPHÉMÉRIDE | Le lieu choisi pour le lever et le coucher du soleil. |
+| `utils/info_flux.cfg` | MAGIS INFOS | Facultatif : les journaux à suivre, une ligne `NOM|ADRESSE` par flux RSS. |
+| `photos/` | PHOTOS | Vos photos. Le dossier est ignoré par Git : la mise à jour ne l'envoie ni ne l'efface. |
 | `utils/ephemeride_saints.txt`, `ephemeride_histoire.txt` | ÉPHÉMÉRIDE | Les fêtes du calendrier, et les événements « ce jour-là dans l'histoire ». |
 | `utils/prog_basic/*.bas` | MICRO-BASIC | Programmes BASIC, en texte brut. |
 | `utils/music/*.MOD` | PROTRACKER | Morceaux (tables Lua). |
@@ -748,7 +750,7 @@ docker compose up -d
 | 3615 TRAIN | Tableau des départs, `transport.opendata.ch` |
 | 3615 ITINÉRAIRE | Géocodage `api-adresse.data.gouv.fr` et calcul d'itinéraire OSRM |
 | 3615 MÉTÉO | `wttr.in` |
-| 3615 MAGIS INFOS | Flux RSS d'un site d'actualité technologique |
+| 3615 MAGIS INFOS | Flux RSS de cinq journaux (Korben, Next, Numerama, franceinfo, Le Monde) |
 | 3615 QUIZZ (solo) | Questions générées par `quizzapi.jomoreschi.fr` |
 | 3615 DÉCRYPTAGE | Liste de mots français (téléchargée une fois, puis conservée) |
 | Impression d'écran | `dpaste.com` / `paste.rs` |
@@ -932,9 +934,9 @@ Ces programmes interrogent Internet au moment où vous les consultez. Ils commen
 
 * **3615 ITINÉRAIRE** (`itiniraire.lua`). Calcul d'un trajet routier entre deux communes : distance, durée, puis la feuille de route étape par étape, à faire défiler.
 * **3615 MÉTÉO** (`meteo.lua`). Prévisions pour une ville (ou détection automatique si on laisse le champ vide).
-* **3615 MAGIS INFOS** (`info.lua`). Les titres d'un journal d'actualité technologique ; `[ENVOI]` ouvre l'article, débarrassé de sa mise en forme HTML et reformaté en 80 colonnes.
+* **3615 MAGIS INFOS** (`info.lua`). Les derniers articles de cinq journaux : Korben, Next, Numerama, franceinfo et Le Monde ; `F` (ou `[SUITE]`) passe à la source suivante, `A` actualise. Chaque titre est suivi de sa date et de ses premiers mots. `[ENVOI]` ouvre l'article, débarrassé de sa mise en forme HTML, en minuscules et majuscules, avec ses paragraphes, ses intertitres en gras et ses listes à puces. L'en-tête donne la source, la date et le temps de lecture. L'article se lit page par page : `[SUITE]` pour la page suivante, `[RETOUR]` pour la précédente, `[SOMMAIRE]` pour revenir aux titres, et une jauge indique où l'on en est. Pour changer de journaux, créez `utils/info_flux.cfg` avec une ligne `NOM|ADRESSE DU FLUX RSS` par source.
 
-<p align="center"><img src="docs/captures/app-info.svg" width="640" alt="3615 MAGIS INFOS"><br><sub><b>Fig. 5.8</b> — 3615 MAGIS INFOS : la liste des articles.</sub></p>
+<p align="center"><img src="docs/captures/app-info.svg" width="640" alt="3615 MAGIS INFOS"><br><sub><b>Fig. 5.8</b> — 3615 MAGIS INFOS : un article, page par page.</sub></p>
 
 * **3615 PICTO** (`picto.lua`). Messagerie instantanée à quatre salons (A à D), dans l'esprit du PictoChat de la Nintendo DS : pseudos, compteur de connectés, petits dessins ASCII. Nécessite le serveur décrit au § 3.8. À chaque lancement, l'adresse du serveur et le pseudo sont proposés pour confirmation, pré-remplis avec les valeurs mémorisées dans `utils/pictochat.cfg`.
 
@@ -1038,6 +1040,29 @@ Tapez un mot, choisissez l'article parmi les neuf premiers résultats, puis lise
 <p align="center"><img src="docs/captures/app-wiki.svg" width="640" alt="3615 WIKIPEDIA"><br><sub><b>Fig. 5.16</b> — La première page de l'article « Minitel ».</sub></p>
 
 Le texte vient de l'API de **fr.wikipedia.org**, en texte brut : ni images, ni tableaux, ni références. Les titres de sections sont en gras et les sections vides sont retirées. Une page envoie environ 1 700 caractères, soit moins de deux secondes. Les textes de Wikipédia sont sous licence CC BY-SA. Il faut une connexion à Internet.
+
+### 5.11 3615 PHOTOS — la visionneuse (`photos.lua`)
+
+Vos photos, affichées en caractères. La liste rassemble les images JPEG, PNG, GIF, BMP et WebP du dossier `photos/` du dépôt et des clés USB branchées sur le Raspberry Pi (`/media`). Pour y copier des photos depuis un ordinateur :
+
+```bash
+scp *.jpg minitel@<adresse du Pi>:minitel_gc/photos/
+```
+
+<p align="center"><img src="docs/captures/app-photos.svg" width="640" alt="3615 PHOTOS"><br><sub><b>Fig. 5.17</b> — 3615 PHOTOS : l'image d'essai d'ImageMagick.</sub></p>
+
+**Comment l'image est fabriquée.** ImageMagick réduit la photo, en niveaux de gris, à la taille de l'écran : au plus 78 colonnes sur 21 lignes, en tenant compte des cases du Minitel, deux fois plus hautes que larges. Chaque case reçoit ensuite l'un de onze niveaux de luminosité. Les six plus sombres sont des caractères plus ou moins pleins (espace, `.`, `:`, `+`, `*`, `#`), les cinq plus clairs les mêmes caractères en vidéo inverse, jusqu'à la case entièrement blanche. Une **diffusion d'erreur** (algorithme de Floyd-Steinberg) reporte sur les cases voisines l'écart entre le gris voulu et le niveau choisi : les dégradés gardent leurs nuances. Une photo envoie environ 2 000 caractères, soit 2 secondes.
+
+| Touche | Fonction |
+| :----- | :------- |
+| `Z` / `S`, `[ENVOI]` | Choisir une photo, l'afficher. |
+| `Q` / `D` | Photo précédente / suivante. |
+| `M` | Mode : NORMAL, CONTRASTE (niveaux étirés, pour une photo terne), NEGATIF. |
+| `T` | Diffusion d'erreur oui / non. Sans elle, l'image est plus nette mais en aplats. |
+| `P` | Diaporama : une photo toutes les 12 secondes ; une touche l'arrête. |
+| `[RETOUR]` | Revenir à la liste. |
+
+ImageMagick est installé par `install_minitel.sh` ; sur un système déjà installé, le script de mise à jour `maj/0003_imagemagick.sh` s'en charge (§ 3.5), ou bien `sudo apt install imagemagick`.
 
 <div style="page-break-after: always;"></div>
 

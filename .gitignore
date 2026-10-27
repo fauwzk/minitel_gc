@@ -3,3 +3,6 @@ utils/sante/
 
 # Manuels PDF generes localement (publies dans la release "manuels" par l'action GitHub)
 impression/
+
+# Photos de la visionneuse 3615 PHOTOS : personnelles, jamais envoyees ni effacees par Git
+photos/

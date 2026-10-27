@@ -10,7 +10,7 @@ fi
 
 echo "> 1. MISE A JOUR ET INSTALLATION DES DEPENDANCES..."
 apt-get update
-apt-get install -y lua5.3 git sox alsa-utils network-manager coreutils
+apt-get install -y lua5.3 git sox alsa-utils network-manager coreutils imagemagick
 
 echo "> 2. CREATION ET DEBLOCAGE DE L'UTILISATEUR 'minitel'..."
 if id "minitel" &>/dev/null; then
