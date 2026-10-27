@@ -85,7 +85,10 @@ sudo -u minitel amixer -q sset PCM 85% unmute 2>/dev/null || true
 echo "> 9. ECRAN DE DEMARRAGE DU RASPBERRY PI SUR LE MINITEL..."
 bash /home/minitel/minitel_gc/install_ecran_demarrage.sh
 
-echo "> 10. SCRIPTS DE MISE A JOUR (LANCES EN ROOT PAR updater.lua)..."
+echo "> 10. INTERFACE WEB D'ADMINISTRATION (PORT 8080)..."
+bash /home/minitel/minitel_gc/install_web.sh
+
+echo "> 11. SCRIPTS DE MISE A JOUR (LANCES EN ROOT PAR updater.lua)..."
 bash /home/minitel/minitel_gc/install_scripts_maj.sh
 # Les scripts deja livres reglent aussi une installation neuve (droits reseau,
 # ecran de demarrage...) : on les joue tous une premiere fois

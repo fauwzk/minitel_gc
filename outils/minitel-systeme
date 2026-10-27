@@ -1,0 +1,22 @@
+#!/bin/bash
+# =====================================================================
+# MISE A JOUR DU SYSTEME (lancee en root depuis l'interface web)
+# =====================================================================
+# Installe dans /usr/local/sbin par install_web.sh. Le compte minitel peut
+# la lancer par sudo, sans mot de passe, et rien d'autre en root.
+export DEBIAN_FRONTEND=noninteractive
+echo "=== apt-get update"
+apt-get update || exit 1
+echo
+echo "=== apt-get full-upgrade"
+apt-get -y -o Dpkg::Options::=--force-confold full-upgrade || exit 1
+echo
+echo "=== apt-get autoremove"
+apt-get -y autoremove
+sync
+echo
+if [ -f /var/run/reboot-required ]; then
+    echo ">>> Un redemarrage du Raspberry Pi est conseille."
+else
+    echo ">>> Systeme a jour."
+fi

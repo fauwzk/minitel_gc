@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magis Club - Administration</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============================ CONNEXION ============================ -->
+<section id="login" class="login" hidden>
+  <form id="login-form" class="login-card">
+    <div class="brand big"><span class="logo">3615</span> MAGIS CLUB</div>
+    <p class="muted">Administration du Raspberry Pi</p>
+    <label for="pw">Mot de passe</label>
+    <input id="pw" type="password" autocomplete="current-password" required>
+    <button type="submit" class="primary">Se connecter</button>
+    <p id="login-msg" class="msg"></p>
+  </form>
+</section>
+
+<!-- ============================ APPLICATION ========================== -->
+<div id="app" class="app" hidden>
+  <nav class="side">
+    <div class="brand"><span class="logo">3615</span> MAGIS CLUB</div>
+    <button class="tab active" data-tab="tableau">Tableau de bord</button>
+    <button class="tab" data-tab="terminal">Terminal</button>
+    <button class="tab" data-tab="maj">Mises à jour</button>
+    <button class="tab" data-tab="basic">MICRO-BASIC</button>
+    <button class="tab" data-tab="photos">Photos</button>
+    <button class="tab" data-tab="reglages">Réglages</button>
+    <div class="side-foot"><button id="logout" class="ghost">Déconnexion</button></div>
+  </nav>
+
+  <main>
+    <!-- Tableau de bord -->
+    <section id="tab-tableau" class="page">
+      <header class="page-head">
+        <h1>Tableau de bord</h1>
+        <div class="actions">
+          <button id="refresh-info" class="ghost">Actualiser</button>
+          <button id="reboot" class="danger">Redémarrer le Pi</button>
+        </div>
+      </header>
+      <div id="info" class="cards"></div>
+    </section>
+
+    <!-- Terminal -->
+    <section id="tab-terminal" class="page" hidden>
+      <header class="page-head">
+        <h1>Terminal</h1>
+        <div class="actions">
+          <span id="term-state" class="pill">fermé</span>
+          <button id="term-open" class="primary">Nouvelle session</button>
+        </div>
+      </header>
+      <p class="muted">Session Bash du compte <code>minitel</code>, dans le dossier du dépôt. Elle se ferme avec <code>exit</code> ou en quittant l'onglet.</p>
+      <div id="term-shell" class="term big"></div>
+    </section>
+
+    <!-- Mises a jour -->
+    <section id="tab-maj" class="page" hidden>
+      <header class="page-head"><h1>Mises à jour</h1></header>
+      <div class="cards two">
+        <div class="card">
+          <h2>Le Minitel (dépôt minitel_gc)</h2>
+          <p class="muted">Vérifie le serveur Git, puis lance le programme de mise à jour du Minitel : vos programmes BASIC, sauvegardes et records sont conservés.</p>
+          <div class="actions">
+            <button id="git-check" class="ghost">Vérifier</button>
+            <button id="run-maj" class="primary">Mettre à jour le Minitel</button>
+          </div>
+          <div id="git-result"></div>
+        </div>
+        <div class="card">
+          <h2>Le système (Raspberry Pi OS)</h2>
+          <p class="muted">Installe les mises à jour des paquets du système (<code>apt</code>). Comptez quelques minutes ; redémarrez le Pi si le noyau a changé.</p>
+          <div class="actions"><button id="run-systeme" class="primary">Mettre à jour le système</button></div>
+          <p id="systeme-note" class="msg"></p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row-between"><h2 id="maj-title">Sortie</h2><span id="maj-state" class="pill">en attente</span></div>
+        <div id="term-maj" class="term"></div>
+      </div>
+    </section>
+
+    <!-- MICRO-BASIC -->
+    <section id="tab-basic" class="page" hidden>
+      <header class="page-head">
+        <h1>MICRO-BASIC</h1>
+        <div class="actions">
+          <button id="bas-new" class="ghost">Nouveau</button>
+          <label class="ghost button">Importer .bas<input id="bas-import" type="file" accept=".bas,.txt" hidden></label>
+        </div>
+      </header>
+      <div class="basic">
+        <aside class="card list-card">
+          <h2>Programmes</h2>
+          <ul id="bas-list" class="list"></ul>
+        </aside>
+        <div class="card editor-card">
+          <div class="toolbar">
+            <input id="bas-name" placeholder="NOM" maxlength="40" spellcheck="false">
+            <button id="bas-save" class="primary">Enregistrer</button>
+            <button id="bas-run" class="accent">Exécuter sur le Pi</button>
+            <button id="bas-renum" class="ghost">Renuméroter</button>
+            <button id="bas-download" class="ghost">Télécharger</button>
+            <button id="bas-delete" class="danger ghost">Supprimer</button>
+            <span id="bas-dirty" class="pill"></span>
+          </div>
+          <textarea id="bas-editor"></textarea>
+          <div id="bas-lint" class="lint"></div>
+        </div>
+      </div>
+      <div id="bas-run-card" class="card" hidden>
+        <div class="row-between"><h2>Exécution sur le Raspberry Pi</h2>
+          <div class="actions"><span id="bas-run-state" class="pill"></span><button id="bas-run-close" class="ghost">Fermer</button></div></div>
+        <p class="muted">Le vrai interpréteur du Minitel, en 80 colonnes. Les touches du clavier sont transmises : flèches, Entrée (ENVOI), Échap (RETOUR). Tapez <code>EXIT</code> pour quitter.</p>
+        <div id="term-basic" class="term"></div>
+      </div>
+    </section>
+
+    <!-- Photos -->
+    <section id="tab-photos" class="page" hidden>
+      <header class="page-head">
+        <h1>Photos</h1>
+        <div class="actions"><label class="primary button">Envoyer des photos<input id="ph-input" type="file" accept="image/*" multiple hidden></label></div>
+      </header>
+      <div id="ph-drop" class="drop">Déposez vos photos ici (JPEG, PNG, GIF, BMP, WebP) : elles vont dans le dossier <code>photos/</code> de 3615 PHOTOS.</div>
+      <p id="ph-msg" class="msg"></p>
+      <div id="ph-grid" class="grid"></div>
+      <div id="ph-preview" class="card" hidden>
+        <div class="row-between"><h2 id="ph-preview-title">Rendu sur le Minitel</h2><button id="ph-preview-close" class="ghost">Fermer</button></div>
+        <pre id="ph-preview-screen" class="minitel-screen"></pre>
+      </div>
+    </section>
+
+    <!-- Reglages -->
+    <section id="tab-reglages" class="page" hidden>
+      <header class="page-head"><h1>Réglages</h1></header>
+      <form id="pw-form" class="card narrow">
+        <h2>Mot de passe de l'interface</h2>
+        <label for="pw-old">Mot de passe actuel</label>
+        <input id="pw-old" type="password" autocomplete="current-password" required>
+        <label for="pw-new">Nouveau mot de passe (8 caractères au moins)</label>
+        <input id="pw-new" type="password" autocomplete="new-password" minlength="8" required>
+        <button class="primary" type="submit">Changer</button>
+        <p id="pw-msg" class="msg"></p>
+      </form>
+      <div class="card narrow">
+        <h2>Sécurité</h2>
+        <p class="muted">Cette interface donne la main sur le Raspberry Pi : terminal, mises à jour du système en root. Elle n'est pas chiffrée (HTTP). Gardez-la sur votre réseau local et n'ouvrez jamais son port (8080) sur Internet.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/mode/simple.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

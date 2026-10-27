@@ -6,3 +6,6 @@ impression/
 
 # Photos de la visionneuse 3615 PHOTOS : personnelles, jamais envoyees ni effacees par Git
 photos/
+
+# Cache de Python (interface web)
+__pycache__/

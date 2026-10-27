@@ -1164,9 +1164,23 @@ local function shell()
     -- Historique des lignes tapees a l'invite (fleches haut / bas), 50 au plus
     local history = {}
 
+    -- lua5.3 utils/basic.lua NOM : charge le programme NOM puis le lance
+    -- (bouton EXECUTER de l'interface web)
+    local pending = {}
+    if arg and arg[1] and arg[1]:match("^[%w_%-]+$") then
+        pending = { 'LOAD "' .. arg[1] .. '"', "RUN" }
+    end
+
     while true do
         update_ui()
-        local line, was_empty = input_string("\x1b[K> ", nil, history)
+        local line, was_empty
+        if #pending > 0 then
+            line, was_empty = table.remove(pending, 1), false
+            io.write("\x1b[K> " .. line .. "\r\n")
+            io.flush()
+        else
+            line, was_empty = input_string("\x1b[K> ", nil, history)
+        end
         if line ~= "ABORT" and line ~= "" and line ~= history[#history] then
             table.insert(history, line)
             if #history > 50 then table.remove(history, 1) end

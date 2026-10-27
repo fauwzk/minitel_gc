@@ -9,6 +9,9 @@ if f_check then
     f_check:close()
     is_pc = false
 end
+-- Programme lance ailleurs que sur le Minitel (terminal de l'interface web) :
+-- il ne doit surtout pas toucher au port serie de la session du Minitel
+if os.getenv("MINITEL_PC") then is_pc = true end
 
 -- =====================================================================
 -- 0. FRAMEBUFFER VIRTUEL 80x24 (CAPTURE D'ECRAN EN TEMPS REEL)

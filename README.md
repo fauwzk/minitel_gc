@@ -48,7 +48,7 @@ Un second volume, le **[Manuel de programmation MICRO-BASIC](docs/MANUEL_BASIC.m
 | :------: | :---- | :------ |
 | **1** | [Mise en service](#chapitre-1--mise-en-service) | Matériel requis, câblage de la prise DIN 8, installation, premier démarrage |
 | **2** | [Le matériel](#chapitre-2--le-matériel) | Liaison série, clavier, écran VT100, son et audio, fiche technique |
-| **3** | [L'architecture logicielle](#chapitre-3--larchitecture-logicielle) | Démarrage, arborescence, portail, lanceurs, mises à jour |
+| **3** | [L'architecture logicielle](#chapitre-3--larchitecture-logicielle) | Démarrage, arborescence, portail, lanceurs, mises à jour, interface web |
 | **4** | [Le moteur graphique et le SDK](#chapitre-4--le-moteur-graphique-et-le-sdk-minitellua) | Delta-drawing, framebuffer, référence de `minitel.lua` |
 | **5** | [Les logiciels du poste de travail](#chapitre-5--les-logiciels-du-poste-de-travail-utils) | Éditeur, tableur, télématique, santé, musique, réseau Wi-Fi, éphéméride, Wikipédia, photos |
 | **6** | [La salle d'arcade](#chapitre-6--la-salle-darcade-jeux) | Les 15 cartouches de jeux et le tableau des records |
@@ -125,7 +125,7 @@ Sur un Raspberry Pi fraîchement installé (Raspberry Pi OS), récupérez le scr
 sudo ./install_minitel.sh
 ```
 
-Le script `install_minitel.sh` déroule dix étapes. Comprendre ce qu'il fait vous aidera en cas de panne :
+Le script `install_minitel.sh` déroule onze étapes. Comprendre ce qu'il fait vous aidera en cas de panne :
 
 | Étape | Action | Détail technique |
 | :---: | :----- | :--------------- |
@@ -138,7 +138,8 @@ Le script `install_minitel.sh` déroule dix étapes. Comprendre ce qu'il fait vo
 | **7** | Démarrage silencieux | Retire la console série du noyau de `cmdline.txt` et ajoute `quiet splash` : les messages de démarrage de Linux ne polluent plus l'écran du Minitel. |
 | **8** | Volume audio | Règle les mixeurs ALSA à 85 %. |
 | **9** | Écran de démarrage | Lance `install_ecran_demarrage.sh`, qui installe le service `minitel-boot` : pendant que Linux démarre, le Minitel affiche l'écran de démarrage du Raspberry Pi (§ 1.4). |
-| **10** | Scripts de mise à jour | Lance `install_scripts_maj.sh`, qui permet à la mise à jour de jouer en root les scripts `maj/*.sh` du dépôt (§ 3.5), puis les joue tous une première fois. |
+| **10** | Interface web | Lance `install_web.sh` : le service `minitel-web` (port 8080) et la mise à jour du système qu'il peut lancer. Il demande le mot de passe de l'interface (§ 3.9). |
+| **11** | Scripts de mise à jour | Lance `install_scripts_maj.sh`, qui permet à la mise à jour de jouer en root les scripts `maj/*.sh` du dépôt (§ 3.5), puis les joue tous une première fois. |
 
 Redémarrez ensuite le Raspberry Pi (`sudo reboot`).
 
@@ -508,6 +509,8 @@ Le portail est lancé par `exec` : il **remplace** le shell. Quand il se termine
 |-- install_ecran_demarrage.sh  Service de l'ecran de demarrage du Pi
 |-- boot_minitel.lua         Ecran de demarrage du Pi sur le Minitel (§ 1.4)
 |-- install_scripts_maj.sh   Autorise les scripts de mise a jour (§ 3.5)
+|-- install_web.sh           Service de l'interface web d'administration (§ 3.9)
+|-- web/                     Interface web : admin.py (serveur), static/ (page)
 |-- maj/                     Scripts de mise a jour, joues une fois en root
 |
 |-- jeux/                    Cartouches de jeux (*.lua) + leurs reglages (*.cfg)
@@ -677,12 +680,37 @@ Le système **ne redémarre que si quelque chose a réellement changé** : un no
 
 | Élément | Rôle |
 | :------ | :--- |
-| `maj/NNNN_description.sh` | Un script, par exemple `0001_ecran_demarrage.sh`, qui réinstalle le service de l'écran de démarrage, ou `0002_droits_reseau.sh`, qui donne au compte `minitel` le droit de gérer le réseau (§ 5.8). Le numéro fixe l'ordre. |
+| `maj/NNNN_description.sh` | Un script, par exemple `0001_ecran_demarrage.sh`, qui réinstalle le service de l'écran de démarrage, `0002_droits_reseau.sh`, qui donne au compte `minitel` le droit de gérer le réseau (§ 5.8), ou `0004_interface_web.sh`, qui installe l'interface web (§ 3.9). Le numéro fixe l'ordre. |
 | `/usr/local/sbin/minitel-maj` | Le lanceur, installé hors du dépôt par `install_scripts_maj.sh`. Le compte `minitel` a le droit de le lancer en root par `sudo`, et seulement lui (`/etc/sudoers.d/011_minitel_maj`). |
 | `/var/lib/minitel/maj_faites` | La liste des scripts réussis. Un script en échec n'y est pas inscrit : il est retenté à la mise à jour suivante, même si elle n'apporte rien de nouveau. |
 | `/var/lib/minitel/maj.log` | La sortie de chaque script, datée. C'est là qu'il faut regarder après un `ECHEC`. |
 
-Le lanceur ne joue que les scripts **tels que le dépôt les a livrés**. Un script ajouté ou modifié à la main sur le Pi est ignoré (`IGNORE` dans le bilan). Un script ne doit rien demander au clavier, et doit pouvoir être rejoué sans dommage, puisqu'il l'est après un échec. Il est lancé depuis la racine du dépôt, dont le chemin est dans la variable `$DEPOT`.
+Le lanceur ne joue que les scripts **tels que le dépôt les a livrés**. Un script ajouté ou modifié à la main sur le Pi est ignoré (`IGNORE` dans le bilan). Un script ne lit pas le clavier lui-même (il tourne sans terminal), et doit pouvoir être rejoué sans dommage, puisqu'il l'est après un échec. Il est lancé depuis la racine du dépôt, dont le chemin est dans la variable `$DEPOT`.
+
+**Les questions.** Un script peut toutefois demander un paramètre à l'utilisateur, par exemple un mot de passe. Il déclare chaque question dans son en-tête :
+
+```bash
+# QUESTION: MOT_DE_PASSE_WEB|Choisissez le mot de passe de l'interface web :|secret,confirmer,min=8,si_absent=/home/minitel/.minitel_web
+```
+
+Avant de jouer les scripts, la mise à jour pose leurs questions à l'écran, dans une fenêtre : sur le Minitel, ou dans le terminal de l'interface web (§ 3.9). `[RETOUR]` passe une question.
+
+| Option | Effet |
+| :----- | :---- |
+| `secret` | La saisie s'affiche en `*`. |
+| `confirmer` | La réponse est demandée deux fois. |
+| `min=N` | Il faut au moins N caractères. |
+| `facultatif` | Une réponse vide est acceptée. |
+| `si_absent=CHEMIN` | La question n'est posée que si ce fichier n'existe pas (le mot de passe déjà choisi n'est pas redemandé). |
+
+Le script lit ensuite les réponses :
+
+```bash
+. "$DEPOT/maj/lib/reponses.sh"
+mdp=$(reponse MOT_DE_PASSE_WEB)
+```
+
+La réponse est vide si la question a été passée ou n'a pas été posée. Les réponses transitent par le fichier `/tmp/minitel_maj_reponses`, lisible par le seul compte `minitel` (et par root, qui joue les scripts), effacé dès que les scripts ont tourné. Elles ne sont jamais écrites dans le journal.
 
 Sur un système installé avant l'arrivée de ces scripts, activez-les une fois, depuis le dépôt :
 
@@ -707,6 +735,7 @@ Pour les désactiver, tapez `sudo ./install_scripts_maj.sh --retirer`. Tant qu'i
 | `utils/ephemeride.cfg` | ÉPHÉMÉRIDE | Le lieu choisi pour le lever et le coucher du soleil. |
 | `utils/info_flux.cfg` | MAGIS INFOS | Facultatif : les journaux à suivre, une ligne `NOM|ADRESSE` par flux RSS. |
 | `photos/` | PHOTOS | Vos photos. Le dossier est ignoré par Git : la mise à jour ne l'envoie ni ne l'efface. |
+| `~/.minitel_web` | Interface web | L'empreinte du mot de passe de l'interface (PBKDF2), hors du dépôt, lisible par le seul compte `minitel`. |
 | `utils/ephemeride_saints.txt`, `ephemeride_histoire.txt` | ÉPHÉMÉRIDE | Les fêtes du calendrier, et les événements « ce jour-là dans l'histoire ». |
 | `utils/prog_basic/*.bas` | MICRO-BASIC | Programmes BASIC, en texte brut. |
 | `utils/music/*.MOD` | PROTRACKER | Morceaux (tables Lua). |
@@ -754,6 +783,37 @@ docker compose up -d
 | 3615 QUIZZ (solo) | Questions générées par `quizzapi.jomoreschi.fr` |
 | 3615 DÉCRYPTAGE | Liste de mots français (téléchargée une fois, puis conservée) |
 | Impression d'écran | `dpaste.com` / `paste.rs` |
+
+### 3.9 L'interface web d'administration
+
+Le Raspberry Pi se gère aussi depuis un ordinateur du même réseau, dans un navigateur, à l'adresse **`http://<adresse du Pi>:8080`**. L'adresse du Pi s'affiche dans l'autotest de démarrage, dans 3615 RESEAU et sur le tableau de bord de l'interface.
+
+| Onglet | Ce qu'on y fait |
+| :----- | :-------------- |
+| **Tableau de bord** | Modèle, système, noyau, durée depuis le démarrage ; charge, température, mémoire et carte SD en jauges ; adresses IP et réseau Wi-Fi ; état des services (session du Minitel, écran de démarrage, interface web, NetworkManager) ; version du dépôt ; outils présents. Bouton de redémarrage du Pi. |
+| **Terminal** | Une session Bash du compte `minitel`, dans le navigateur, comme en SSH. Elle s'adapte à la taille de la fenêtre. |
+| **Mises à jour** | *Le Minitel* : vérifie le serveur Git et liste les nouveautés, puis lance le programme de mise à jour habituel (§ 3.5) dans un terminal 80 × 24, avec ses écrans et ses choix. *Le système* : `apt update` puis `apt full-upgrade`, avec la sortie en direct. |
+| **MICRO-BASIC** | Les programmes de `utils/prog_basic/`, dans un éditeur avec la coloration de la syntaxe du MICRO-BASIC : numéros de ligne, instructions, fonctions, opérateurs en toutes lettres (`EQ`, `PLUS`…), chaînes, `REM`. Le texte se tape en majuscules, sauf entre guillemets. Une vérification signale les lignes sans numéro, les numéros en double, les `GOTO`/`GOSUB` vers une ligne qui n'existe pas, les instructions inconnues et les `FOR`/`NEXT` ou `WHILE`/`WEND` dépareillés. Boutons : Enregistrer (aussi `Ctrl`+`S`), **Exécuter sur le Pi**, Renuméroter (de 10 en 10, `GOTO` et `GOSUB` compris), Télécharger, Importer un `.bas`, Supprimer. |
+| **Photos** | Envoyer des photos par glisser-déposer vers `photos/` (§ 5.11), les voir en vignettes, les supprimer, et voir leur **rendu sur le Minitel**, calculé comme dans 3615 PHOTOS. |
+| **Réglages** | Changer le mot de passe de l'interface. |
+
+**Exécuter sur le Pi.** Le bouton enregistre le programme, puis le lance dans le **vrai interpréteur** du Minitel (`lua5.3 utils/basic.lua NOM`, qui charge le programme et fait `RUN`), affiché en 80 colonnes dans la page. Les touches du clavier sont transmises : flèches, Entrée pour `[ENVOI]`, Échap pour `[RETOUR]`. Les instructions `OUT`, `PWM` ou `IN` agissent sur les vraies broches du Pi. Le programme tourne à côté du Minitel, sans le perturber : les programmes lancés par l'interface reçoivent la variable `MINITEL_PC`, qui leur interdit de toucher au port série.
+
+**Installation.** `install_minitel.sh` l'installe. Sur un système déjà installé, le script de mise à jour `maj/0004_interface_web.sh` s'en charge (§ 3.5) : la mise à jour vous demande alors de choisir le mot de passe de l'interface, deux fois, sur le Minitel. Sinon, depuis le dépôt :
+
+```bash
+sudo ./install_web.sh
+```
+
+Ce script installe le service `minitel-web`, qui lance `web/admin.py` sous le compte `minitel`, et le programme `/usr/local/sbin/minitel-systeme` (la mise à jour d'`apt`), que le compte `minitel` peut lancer en root par `sudo`, et rien d'autre. Il demande ensuite le **mot de passe** de l'interface. Tant qu'il n'y en a pas, l'interface refuse toute connexion. Pour le choisir ou le changer depuis le Pi :
+
+```bash
+sudo -u minitel -H python3 web/admin.py --mot-de-passe
+```
+
+Le serveur n'utilise que la bibliothèque standard de Python. La page charge le terminal (xterm.js) et l'éditeur (CodeMirror) depuis le site `cdn.jsdelivr.net` : l'ordinateur qui l'affiche doit avoir accès à Internet. Pour retirer l'interface, tapez `sudo ./install_web.sh --retirer`.
+
+> **Sécurité.** L'interface donne la main sur le Raspberry Pi : terminal, mises à jour du système en root. Elle est protégée par un mot de passe (empreinte PBKDF2 dans `~/.minitel_web`, session de 12 heures, une minute d'attente après cinq essais ratés). Les requêtes qui modifient quelque chose doivent venir de la page elle-même. Mais elle n'est **pas chiffrée** (HTTP) : gardez-la sur votre réseau local, et n'ouvrez jamais le port 8080 sur Internet.
 
 <div style="page-break-after: always;"></div>
 

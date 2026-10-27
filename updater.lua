@@ -206,7 +206,11 @@ end
 -- par install_scripts_maj.sh, joue ceux qui ne l'ont pas encore ete.
 local MAJ_RUNNER = "/usr/local/sbin/minitel-maj"
 local MAJ_DONE = "/var/lib/minitel/maj_faites"
+-- Reponses aux questions des scripts : lisible par le seul compte minitel
+-- (et root, qui joue les scripts), effacee des que les scripts ont tourne
+local MAJ_ANSWERS = "/tmp/minitel_maj_reponses"
 
+-- Scripts pas encore joues (chemins maj/NNNN_xxx.sh)
 local function pending_scripts()
     local done = {}
     local f = io.open(MAJ_DONE, "r")
@@ -214,23 +218,126 @@ local function pending_scripts()
         for l in f:lines() do done[l] = true end
         f:close()
     end
-    local count = 0
+    local list = {}
     local p = io.popen("ls maj/*.sh 2>/dev/null")
     for l in p:lines() do
-        if not done[string.match(l, "([^/]+)$")] then count = count + 1 end
+        if not done[string.match(l, "([^/]+)$")] then list[#list + 1] = l end
     end
     p:close()
-    return count
+    return list
 end
 
--- Rend nil s'il n'y avait rien a jouer, sinon le bilan des scripts
+-- Un script peut demander un parametre a l'utilisateur par une ligne d'en-tete :
+--   # QUESTION: NOM|Texte de la question|options
+-- options, separees par des virgules : secret (saisie masquee), confirmer
+-- (deux fois), min=N (longueur minimale), facultatif (reponse vide permise),
+-- si_absent=CHEMIN (ne demander que si ce fichier n'existe pas).
+local function script_questions(path)
+    local qs = {}
+    local f = io.open(path, "r")
+    if not f then return qs end
+    local n = 0
+    for l in f:lines() do
+        n = n + 1
+        if n > 40 then break end
+        local spec = l:match("^#%s*QUESTION:%s*(.+)$")
+        if spec then
+            local name, text, opts = spec:match("^([%w_]+)|([^|]+)|?(.*)$")
+            if name then
+                local q = { name = name, text = text, min = 0 }
+                for o in (opts or ""):gmatch("[^,]+") do
+                    o = o:match("^%s*(.-)%s*$")
+                    if o == "secret" then q.secret = true
+                    elseif o == "confirmer" then q.confirm = true
+                    elseif o == "facultatif" then q.optional = true
+                    elseif o:match("^min=%d+$") then q.min = tonumber(o:match("%d+"))
+                    elseif o:match("^si_absent=") then q.if_absent = o:match("^si_absent=(.+)$") end
+                end
+                qs[#qs + 1] = q
+            end
+        end
+    end
+    f:close()
+    return qs
+end
+
+-- Saisie dans une fenetre ; rend la chaine, ou nil sur [RETOUR]
+local function ask_line(title, question, secret, msg)
+    minitel.draw_window(9, 7, 64, 11, title)
+    local lines = minitel.wrap(question, 56, 2)
+    io.write(string.format("\x1b[9;12H%s\x1b[10;12H%s", lines[1], lines[2]))
+    io.write(string.format("\x1b[16;12H%s", minitel.pad(msg or "[ENVOI] VALIDER  [CORRECTION] EFFACER  [RETOUR] PASSER", 58)))
+    local s = ""
+    local function field()
+        local shown = secret and string.rep("*", #s) or s
+        io.write(string.format("\x1b[13;12H> \x1b[7m %-52s \x1b[0m", string.sub(shown, -52)))
+        io.flush()
+    end
+    field()
+    while true do
+        local k = minitel.get_key()
+        if k then
+            if k == "ENVOI" or k == "\r" or k == "\n" then return s
+            elseif k == "RETOUR" or k == "ESC" then return nil
+            elseif k == "CORRECTION" or k == "\x08" or k == "\x7f" then s = string.sub(s, 1, -2); field()
+            elseif k == "ANNULATION" then s = ""; field()
+            elseif #k == 1 and string.byte(k) >= 32 and string.byte(k) < 127 and #s < 80 then s = s .. k; field()
+            end
+        end
+        minitel.sleep(0.01)
+    end
+end
+
+-- Pose les questions des scripts en attente et ecrit les reponses
+-- (NOM=valeur, une par ligne) dans MAJ_ANSWERS
+local function ask_script_questions(scripts)
+    local answers = {}
+    for _, path in ipairs(scripts) do
+        local script = path:match("([^/]+)%.sh$") or path
+        for _, q in ipairs(script_questions(path)) do
+            local skip = q.if_absent and io.open(q.if_absent, "r")
+            if skip then skip:close() else
+                local msg, value = nil, nil
+                while true do
+                    value = ask_line("MISE A JOUR : " .. string.upper(script), q.text, q.secret, msg)
+                    if value == nil then break end
+                    if #value < q.min and not (q.optional and value == "") then
+                        msg = string.format("TROP COURT : %d CARACTERES AU MOINS", q.min)
+                    elseif q.confirm and ask_line("MISE A JOUR : " .. string.upper(script),
+                            "Encore une fois, pour confirmer :", q.secret) ~= value then
+                        msg = "LES DEUX SAISIES DIFFERENT, RECOMMENCEZ"
+                    else
+                        break
+                    end
+                    minitel.play_sound("damage")
+                end
+                if value then answers[#answers + 1] = q.name .. "=" .. value end
+            end
+        end
+    end
+    os.execute("rm -f " .. MAJ_ANSWERS .. "; umask 077 && : > " .. MAJ_ANSWERS)
+    local f = io.open(MAJ_ANSWERS, "w")
+    if f then
+        f:write(table.concat(answers, "\n"), #answers > 0 and "\n" or "")
+        f:close()
+    end
+    return #answers
+end
+
+-- Rend nil s'il n'y avait rien a jouer, sinon le bilan des scripts. Les
+-- questions eventuelles s'affichent d'abord : l'appelant redessine ensuite
+-- son ecran.
 local function run_update_scripts(y)
-    if pending_scripts() == 0 then return nil end
+    local scripts = pending_scripts()
+    if #scripts == 0 then return nil end
     local r = { ok = 0, echec = 0, ignore = 0 }
     local f = io.open(MAJ_RUNNER, "r")
     if not f then r.absent = true; return r end
     f:close()
 
+    if ask_script_questions(scripts) > 0 then
+        draw_frame("S Y N C H R O N I S A T I O N")
+    end
     io.write(string.format("\x1b[%d;15H SCRIPTS DE MISE A JOUR EN COURS...\x1b[K", y))
     io.flush()
     local p = io.popen("sudo -n " .. MAJ_RUNNER .. " 2>/dev/null")
@@ -243,6 +350,7 @@ local function run_update_scripts(y)
         lines = lines + 1
     end
     local ok = p:close()
+    os.remove(MAJ_ANSWERS)
     if not ok and lines == 0 then r.absent = true end -- sudo a refuse
     return r
 end
@@ -265,12 +373,14 @@ local function show_scripts_result(y, r)
 end
 
 local function show_up_to_date()
+    -- scripts restes en echec, ou lanceur installe depuis la derniere fois
+    -- (avant l'ecran final : ils peuvent poser des questions)
+    local scripts = run_update_scripts(14)
     minitel.play_sound("pickup")
     draw_frame("S Y S T E M E   A   J O U R")
     io.write("\x1b[10;15H\x1b[1mAUCUNE NOUVELLE VERSION DISPONIBLE.\x1b[0m\r\n")
     show_commit_info(12)
-    -- scripts restes en echec, ou lanceur installe depuis la derniere fois
-    show_scripts_result(16, run_update_scripts(16))
+    show_scripts_result(16, scripts)
     io.write("\x1b[22;11H==========================================================\r\n")
     io.write("\x1b[23;24H\x1b[7m RETOUR AU MENU PRINCIPAL... \x1b[0m")
     io.flush()
@@ -448,7 +558,9 @@ if git_line("rev-parse HEAD") == head_before and not tree_changed then
     show_up_to_date()
 end
 
--- 6. AFFICHAGE DU SUCCES
+-- 6. LES SCRIPTS LIVRES PAR CETTE VERSION, PUIS L'ECRAN DE SUCCES
+-- (les scripts passent avant l'ecran final : ils peuvent poser des questions)
+local scripts_result = run_update_scripts(14)
 draw_frame("M I S E   A   J O U R   R E U S S I E")
 io.write("\x1b[10;15H\x1b[1mDERNIERE VERSION SYNCHRONISEE :\x1b[0m\r\n")
 show_commit_info(12)
@@ -458,8 +570,7 @@ end
 if cfg_count > 0 then
     io.write(string.format("\x1b[17;15H SAUVEGARDES ET RECORDS CONSERVES : %d\r\n", cfg_count))
 end
--- Les scripts livres par cette version, avant le redemarrage
-show_scripts_result(19, run_update_scripts(19))
+show_scripts_result(19, scripts_result)
 
 minitel.play_sound("win")
 io.write("\x1b[22;11H==========================================================\r\n")
