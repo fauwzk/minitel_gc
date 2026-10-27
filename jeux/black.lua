@@ -55,36 +55,30 @@ local settings_cursor = 1
 -- =====================================================================
 local function draw_title(full_redraw)
     if full_redraw then
-        io.write("\x1b[2J\x1b[H")
-        io.flush()
-        minitel.sleep(0.08)
-
-        io.write("\x1b[4;11H==========================================================\r\n")
-        io.write("\x1b[5;11H|                                                        |\r\n")
-        io.write("\x1b[6;11H|             \x1b[1m3 6 1 5   B L A C K J A C K\x1b[0m                |\r\n")
-        io.write("\x1b[7;11H|                                                        |\r\n")
-        io.write("\x1b[8;11H==========================================================\r\n")
-        io.write("\x1b[12;23H FAITES SAUTER LA BANQUE (EN ASCII) \r\n")
+        io.write("\x1b[0m\x1b[2J")
+        minitel.title_bar("3615 BLACKJACK - CASINO MAGIS CLUB")
+        minitel.draw_frame(19, 6, 44, 13, "FAITES SAUTER LA BANQUE")
+        io.write("\x1b[8;24H  .-----.  .-----.     BLACKJACK")
+        io.write("\x1b[9;24H  | A   |  | K   |     PAIE 3 POUR 2")
+        io.write("\x1b[10;24H  |  *  |  |  *  |")
+        io.write("\x1b[11;24H  '-----'  '-----'")
+        minitel.footer("[Z/S] NAVIGUER  |  [ENVOI] VALIDER")
     end
 
-    local b_jouer = (title_cursor == 1) and "\x1b[7m [ ENTRER SUR LE TAPIS ] \x1b[0m" or "   ENTRER SUR LE TAPIS   "
-    local b_param = (title_cursor == 2) and "\x1b[7m [ REGLES DU CASINO ] \x1b[0m" or "   REGLES DU CASINO   "
-    local b_quit = (title_cursor == 3) and "\x1b[7m [ QUITTER ] \x1b[0m" or "   QUITTER   "
-
-    io.write("\x1b[16;1H\x1b[K\x1b[16;28H" .. b_jouer .. "\r\n")
-    io.write("\x1b[18;1H\x1b[K\x1b[18;30H" .. b_param .. "\r\n")
-    io.write("\x1b[20;1H\x1b[K\x1b[20;34H" .. b_quit .. "\r\n")
-
-    io.write("\x1b[23;14H ZQSD / FLECHES : NAVIGUER  |  ESPACE / ENTREE : VALIDER \r\n")
+    minitel.menu_line(13, 20, 42, "ENTRER SUR LE TAPIS", title_cursor == 1)
+    minitel.menu_line(15, 20, 42, "REGLES DU CASINO", title_cursor == 2)
+    minitel.menu_line(17, 20, 42, "QUITTER", title_cursor == 3)
     io.flush()
 end
 
-local function draw_settings()
-    io.write("\x1b[2J\x1b[H")
-    io.flush()
-    minitel.sleep(0.08)
-
-    io.write("\x1b[4;25H\x1b[7m REGLES DU CASINO \x1b[0m\r\n\n")
+-- full : ecran complet ; sinon seules les lignes de reglage sont renvoyees
+local function draw_settings(full)
+    if full then
+        io.write("\x1b[0m\x1b[2J")
+        minitel.title_bar("3615 BLACKJACK - REGLES DU CASINO")
+        minitel.draw_frame(12, 6, 58, 13, "REGLAGES")
+        minitel.footer("[Z/S] NAVIGUER  |  [Q/D] MODIFIER  |  [ENVOI] VALIDER")
+    end
 
     local opts = {{
         name = "FONDS DE DEPART ($)",
@@ -121,9 +115,8 @@ local function draw_settings()
         else
             line = line .. " \x1b[0m"
         end
-        io.write(line .. "\r\n")
+        io.write(line .. "    ") -- efface la fin d'une valeur plus courte
     end
-    io.write("\x1b[22;12H FLECHES: MODIFIER & NAVIGUER  |  ESPACE/ENTREE: VALIDER ")
     io.flush()
 end
 
@@ -205,13 +198,13 @@ end
 
 local function update_action_bar()
     if state == "BETTING" then
-        io.write("\x1b[24;1H\x1b[K  [Z/S] CHANGER MISE   |   [ESPACE] DISTRIBUER   |   [P] MENU")
+        minitel.footer("[Z/S] CHANGER MISE  |  [ESPACE] DISTRIBUER  |  [P] MENU")
     elseif state == "PLAYER_TURN" then
-        io.write("\x1b[24;1H\x1b[K  [T] TIRER (HIT)   |   [R] RESTER (STAND)   |   [D] DOUBLER")
+        minitel.footer("[T] TIRER (HIT)  |  [R] RESTER (STAND)  |  [D] DOUBLER")
     elseif state == "GAMEOVER" then
-        io.write("\x1b[24;1H\x1b[K  [ESPACE] NOUVELLE MAIN   |   [P] MENU")
+        minitel.footer("[ESPACE] NOUVELLE MAIN  |  [P] MENU")
     else
-        io.write("\x1b[24;1H\x1b[K")
+        minitel.footer("")
     end
     io.flush()
 end
@@ -409,7 +402,7 @@ while true do
                 elseif title_cursor == 2 then
                     state = "SETTINGS"
                     settings_cursor = 1
-                    draw_settings()
+                    draw_settings(true)
                 elseif title_cursor == 3 then
                     break -- Quitte le script vers le portail Télétel
                 end

@@ -25,7 +25,7 @@ local dealer_hand = {}
 local held_cards = {false, false, false, false, false}
 local cursor = 1
 local deck = {}
-local message = "FLECHES: MISER | [M] MISE LIBRE | [ENVOI] JOUER"
+local message = "[Z/S] MISER - [M] LIBRE - [ENVOI] JOUER"
 
 -- =====================================================================
 -- MOTEUR DU JEU (PAQUET ET IA)
@@ -132,7 +132,7 @@ end
 
 local function update_status_box()
     io.write(string.format("\x1b[11;6H\x1b[1mJETONS : %05d\x1b[0m", chips))
-    io.write(string.format("\x1b[11;23H\x1b[7m%s\x1b[0m", minitel.center(message, 40)))
+    io.write(string.format("\x1b[11;23H\x1b[7m%s\x1b[0m", minitel.center(string.sub(message, 1, 40), 40)))
     io.write(string.format("\x1b[11;66H\x1b[1mMISE : %03d\x1b[0m", current_bet))
 
     local footer = ""
@@ -328,7 +328,7 @@ while true do
                 minitel.msg_box("BANQUEROUTE !", "Vous n'avez plus un sou ! Le Magis Club vous offre une avance de 50 jetons.", "win")
                 chips = 50
             end
-            message = "FLECHES: MISER | [M] MISE LIBRE | [ENVOI] JOUER"
+            message = "[Z/S] MISER - [M] LIBRE - [ENVOI] JOUER"
             player_hand = {}
             dealer_hand = {}
             if current_bet > chips then current_bet = chips end

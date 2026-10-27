@@ -63,34 +63,29 @@ local msg_board = ""
 
 local function draw_title(full_redraw)
     if full_redraw then
-        io.write("\x1b[2J\x1b[H")
-        io.flush()
-        minitel.sleep(0.08)
-        io.write("\x1b[4;13H======================================================\r\n")
-        io.write("\x1b[5;13H|                                                    |\r\n")
-        io.write("\x1b[6;13H|           \x1b[1mM I N I T E L   S W E E P E R\x1b[0m            |\r\n")
-        io.write("\x1b[7;13H|                                                    |\r\n")
-        io.write("\x1b[8;13H======================================================\r\n")
-        io.write("\x1b[11;24H LOGIQUE ET DEDUCTION EN 1200 BAUDS \r\n")
+        io.write("\x1b[0m\x1b[2J")
+        minitel.title_bar("3615 DEMINEUR - MINITEL SWEEPER")
+        minitel.draw_frame(19, 6, 44, 13, "LOGIQUE ET DEDUCTION")
+        io.write("\x1b[8;27H .  1  P  .  .     DEVINEZ OU")
+        io.write("\x1b[9;27H 1  2  3  1  .     SONT LES")
+        io.write("\x1b[10;27H .  P  *  1  .     MINES CACHEES")
+        minitel.footer("[Z/S] NAVIGUER  |  [ENVOI] VALIDER")
     end
 
-    local b_jouer = (title_cursor == 1) and "\x1b[7m [ DEPLOYER LA GRILLE ] \x1b[0m" or "   DEPLOYER LA GRILLE   "
-    local b_param = (title_cursor == 2) and "\x1b[7m [ PARAMETRES DU JEU ] \x1b[0m" or "   PARAMETRES DU JEU   "
-    local b_quit = (title_cursor == 3) and "\x1b[7m [ QUITTER ] \x1b[0m" or "   QUITTER   "
-
-    io.write("\x1b[16;1H\x1b[K\x1b[16;28H" .. b_jouer .. "\r\n")
-    io.write("\x1b[18;1H\x1b[K\x1b[18;30H" .. b_param .. "\r\n")
-    io.write("\x1b[20;1H\x1b[K\x1b[20;34H" .. b_quit .. "\r\n")
-    io.write("\x1b[23;14H ZQSD / FLECHES : NAVIGUER  |  ENVOI : VALIDER \r\n")
+    minitel.menu_line(13, 20, 42, "DEPLOYER LA GRILLE", title_cursor == 1)
+    minitel.menu_line(15, 20, 42, "PARAMETRES DU JEU", title_cursor == 2)
+    minitel.menu_line(17, 20, 42, "QUITTER", title_cursor == 3)
     io.flush()
 end
 
-local function draw_settings()
-    io.write("\x1b[2J\x1b[H")
-    io.flush()
-    minitel.sleep(0.08)
-
-    io.write("\x1b[3;25H\x1b[7m PARAMETRES DU DEMINEUR \x1b[0m\r\n\n")
+-- full : ecran complet ; sinon seules les lignes de reglage sont renvoyees
+local function draw_settings(full)
+    if full then
+        io.write("\x1b[0m\x1b[2J")
+        minitel.title_bar("3615 DEMINEUR - PARAMETRES DU JEU")
+        minitel.draw_frame(9, 4, 62, 17, "REGLAGES")
+        minitel.footer("[Z/S] NAVIGUER  |  [Q/D] MODIFIER  |  [ENVOI] VALIDER")
+    end
     local diff_str = {"FACILE", "MOYEN", "EXTREME", "PERSO"}
     local snd_str = {"MUET", "ACTIF"}
     local max_mines = math.floor((config.WIDTH * config.HEIGHT) * 0.5)
@@ -135,9 +130,8 @@ local function draw_settings()
         else
             line = line .. " \x1b[0m"
         end
-        io.write(line .. "\r\n")
+        io.write(line .. "    ") -- efface la fin d'une valeur plus courte
     end
-    io.write("\x1b[22;12H FLECHES: MODIFIER & NAVIGUER  |  ENVOI: VALIDER ")
     io.flush()
 end
 
@@ -217,7 +211,7 @@ local function update_msg()
     io.flush()
 end
 
-local function draw_cell(x, y)
+local function cell_text(x, y)
     local cell = board[y][x]
     local is_cursor = (x == cursor_x and y == cursor_y)
     local str = ""
@@ -243,20 +237,28 @@ local function draw_cell(x, y)
     if invert then
         str = "\x1b[7m" .. str .. "\x1b[0m"
     end
-    local offset_x = math.floor((80 - (config.WIDTH * 3)) / 2)
-    io.write(string.format("\x1b[%d;%dH%s", 4 + y, offset_x + (x - 1) * 3, str))
+    return str
+end
+
+local function board_x()
+    return math.floor((80 - (config.WIDTH * 3)) / 2)
+end
+
+local function draw_cell(x, y)
+    io.write(string.format("\x1b[%d;%dH%s", 4 + y, board_x() + (x - 1) * 3, cell_text(x, y)))
 end
 
 local function draw_full_board()
-    io.write("\x1b[2J\x1b[H")
-    io.flush()
-    minitel.sleep(0.08)
-    io.write("\x1b[23;1H\x1b[K ZQSD/FL: BOUGER | ENVOI: CREUSER | F: DRAPEAU | RETOUR: MENU ")
+    io.write("\x1b[0m\x1b[2J")
+    minitel.title_bar("3615 DEMINEUR - " .. config.WIDTH .. " X " .. config.HEIGHT .. ", " .. config.MINES .. " MINES")
+    minitel.footer("[ZQSD] BOUGER  |  [ENVOI] CREUSER  |  [F] DRAPEAU  |  [RETOUR] MENU")
     update_hud()
+    -- Une ligne de la grille d'un seul tenant : un positionnement par ligne
+    -- au lieu d'un par case
+    local row = {}
     for y = 1, config.HEIGHT do
-        for x = 1, config.WIDTH do
-            draw_cell(x, y)
-        end
+        for x = 1, config.WIDTH do row[x] = cell_text(x, y) end
+        io.write(string.format("\x1b[%d;%dH%s", 4 + y, board_x(), table.concat(row, "", 1, config.WIDTH)))
     end
     io.flush()
 end
@@ -362,7 +364,7 @@ while true do
                 elseif title_cursor == 2 then
                     state = "SETTINGS"
                     settings_cursor = 1
-                    draw_settings()
+                    draw_settings(true)
                 elseif title_cursor == 3 then
                     break
                 end

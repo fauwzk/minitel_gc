@@ -84,22 +84,32 @@ local function init_buffers()
     end
 end
 
--- Envoie UNIQUEMENT les segments de caracteres qui ont change entre 2 images !
+-- Envoie UNIQUEMENT les segments de caracteres qui ont change entre 2 images.
+-- Deux segments separes par quelques caracteres inchanges n'en font qu'un :
+-- renvoyer ces caracteres coute moins cher qu'un nouveau positionnement du
+-- curseur (ESC [ l ; c H, 6 a 8 octets).
+local MERGE_GAP = 6
+
 local function flush_3d_buffer()
     local out = {}
     for y = 1, VIEW_H do
+        local nb, pb = next_buf[y], prev_buf[y]
         local x = 1
         while x <= VIEW_W do
-            if next_buf[y][x] ~= prev_buf[y][x] then
-                local start_x = x
-                local seg = {}
-                while x <= VIEW_W and next_buf[y][x] ~= prev_buf[y][x] do
-                    local c = next_buf[y][x]
-                    prev_buf[y][x] = c
-                    table.insert(seg, c)
-                    x = x + 1
+            if nb[x] ~= pb[x] then
+                local start_x, last = x, x
+                local scan = x + 1
+                while scan <= VIEW_W and scan - last <= MERGE_GAP do
+                    if nb[scan] ~= pb[scan] then last = scan end
+                    scan = scan + 1
                 end
-                table.insert(out, string.format("\x1b[%d;%dH%s", VIEW_Y + y - 1, VIEW_X + start_x - 1, table.concat(seg)))
+                local seg = {}
+                for i = start_x, last do
+                    seg[#seg + 1] = nb[i]
+                    pb[i] = nb[i]
+                end
+                out[#out + 1] = string.format("\x1b[%d;%dH%s", VIEW_Y + y - 1, VIEW_X + start_x - 1, table.concat(seg))
+                x = last + 1
             else
                 x = x + 1
             end
@@ -294,26 +304,42 @@ local function play_level(lvl_idx)
     local steps_count = 0
     local log_msg = "TROUVEZ LES TERMINAUX (@/*) PUIS REJOIGNEZ L'ASCENSEUR (S) !"
 
-    local function draw_level_skeleton()
-        io.write("\x1b[r\x1b[2J\x1b[H")
-        minitel.sleep(0.04)
-        init_buffers()
+    local hud_shown = {}
 
+    -- Ecrit un element du HUD seulement s'il a change depuis l'image precedente
+    local function hud_put(key, seq)
+        if hud_shown[key] ~= seq then
+            hud_shown[key] = seq
+            io.write(seq)
+        end
+    end
+
+    local function draw_level_skeleton()
+        io.write("\x1b[r\x1b[0m\x1b[2J\x1b[H")
+        init_buffers()
+        hud_shown = {}
+
+        -- L'ecran vient d'etre efface : cadres sans remplissage, et dans la vue
+        -- 3D les espaces deja a l'ecran ne sont pas renvoyes
+        for y = 1, VIEW_H do
+            for x = 1, VIEW_W do prev_buf[y][x] = " " end
+        end
         io.write("\x1b[1;1H\x1b[7m" .. minitel.center("* * *  3615 WOLF-3D - MOTEUR RAYCASTING TEMPS REEL  * * *", 80) .. "\x1b[0m")
-        minitel.draw_window(2, 3, 52, 18, lvl.name)
-        minitel.draw_window(56, 3, 24, 14, "RADAR & BOUSSOLE")
-        minitel.draw_window(56, 17, 24, 4, "OBJECTIF MISSION")
-        minitel.draw_window(2, 21, 78, 3, "")
+        minitel.draw_frame(2, 3, 52, 18, lvl.name)
+        minitel.draw_frame(56, 3, 24, 14, "RADAR & BOUSSOLE")
+        minitel.draw_frame(56, 17, 24, 4, "OBJECTIF MISSION")
+        minitel.draw_frame(2, 21, 78, 3, "")
 
         draw_full_automap(map, px, py)
         io.write("\x1b[24;1H\x1b[7m [Z/S] AVANCER/RECULER | [Q/D] TOURNER | [A/E] PAS DE COTE | [RETOUR] QUITTER   \x1b[0m")
+        io.write("\x1b[4;58HCAP :\x1b[18;58HTERMINAUX :\x1b[19;58HPAS       :\x1b[22;4H>")
     end
 
     local function update_hud()
-        io.write(string.format("\x1b[16;58HCAP : \x1b[1m%s\x1b[0m", get_compass_dir(pa)))
-        io.write(string.format("\x1b[18;58HTERMINAUX : \x1b[7m %d / %d \x1b[0m", hacked_count, total_terminals))
-        io.write(string.format("\x1b[19;58HPAS       : %04d", steps_count))
-        io.write("\x1b[22;4H> " .. minitel.pad(log_msg, 73))
+        hud_put("cap", string.format("\x1b[4;64H\x1b[1m%s\x1b[0m", get_compass_dir(pa)))
+        hud_put("term", string.format("\x1b[18;70H\x1b[7m %d / %d \x1b[0m", hacked_count, total_terminals))
+        hud_put("pas", string.format("\x1b[19;70H%04d", steps_count))
+        hud_put("log", "\x1b[22;6H" .. minitel.pad(log_msg, 73))
     end
 
     draw_level_skeleton()
@@ -323,8 +349,8 @@ local function play_level(lvl_idx)
 
     while true do
         local k = minitel.get_key()
-        if k then
-            local moved = false
+        local moved = false
+        while k do
             local move_speed = 0.42
             local rot_speed  = 0.26 -- ~15 degres par pression
 
@@ -394,12 +420,16 @@ local function play_level(lvl_idx)
                 end
             end
 
-            if moved then
-                render_raycast_view(map, px, py, pa)
-                update_automap_player(map, px, py)
-                update_hud()
-                io.flush()
-            end
+            -- Touches suivantes deja recues (touche maintenue, frappe rapide) :
+            -- elles ne donnent qu'une image, le Minitel ne prend pas de retard
+            k = minitel.get_key()
+        end
+        if moved then
+            render_raycast_view(map, px, py, pa)
+            update_automap_player(map, px, py)
+            update_hud()
+            io.flush()
+            minitel.wait_output()
         end
         minitel.sleep(0.01)
     end
@@ -414,15 +444,15 @@ local function draw_title()
     io.write("\x1b[1;1H\x1b[7m" .. minitel.center("* * *  3615 WOLF-3D - EXPLORATION 3D SUBJECTIVE (9600 BAUDS)  * * *", 80) .. "\x1b[0m")
 
     minitel.draw_window(12, 4, 58, 16, "BRIEFING DE MISSION : BUNKER TRANSPAC")
-    io.write("\x1b[6;16H      \\                 /      MOTEUR RAYCASTING DDA")
-    io.write("\x1b[7;16H       \\               /       DOUBLE-BUFFER DIFFERENTIEL")
-    io.write("\x1b[8;16H        +-------------+        -------------------------")
-    io.write("\x1b[9;16H        |  #   @   #  |        [# / H / +] Murs 3D")
-    io.write("\x1b[10;16H        |  #       #  |        [@ / *]     Terminaux Secrets")
-    io.write("\x1b[11;16H        +-------------+        [S / =]     Ascenseur Sortie")
-    io.write("\x1b[12;16H       /               \\")
-    io.write("\x1b[14;15HPiratez tous les terminaux (*) de chaque sous-sol pour")
-    io.write("\x1b[15;15Hdeverrouiller l'ascenseur (S) vers le niveau inferieur !")
+    io.write("\x1b[6;15H  \\                 /    MOTEUR RAYCASTING")
+    io.write("\x1b[7;15H   \\               /     ------------------")
+    io.write("\x1b[8;15H    +-------------+      [# H +]  MURS")
+    io.write("\x1b[9;15H    |  #   @   #  |      [@ *]    TERMINAUX")
+    io.write("\x1b[10;15H    |  #       #  |      [S =]    ASCENSEUR")
+    io.write("\x1b[11;15H    +-------------+")
+    io.write("\x1b[12;15H   /               \\")
+    io.write("\x1b[14;15HPiratez tous les terminaux (*) d'un sous-sol pour")
+    io.write("\x1b[15;15Hdeverrouiller l'ascenseur (S) vers le niveau suivant.")
     io.write("\x1b[17;23H\x1b[7m [ENVOI] ENTRER DANS LE LABYRINTHE 3D \x1b[0m")
 
     io.write("\x1b[24;1H\x1b[7m  [ENVOI] LANCER LA 3D TEMPS REEL   |   [RETOUR] QUITTER VERS LE PORTAIL        \x1b[0m")

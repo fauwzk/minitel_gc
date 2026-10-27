@@ -107,13 +107,50 @@ local function feed_vram(str)
     end
 end
 
+local function uptime_now()
+    local f = io.open("/proc/uptime", "r")
+    if not f then return os.time() end
+    local t = tonumber((f:read("*l") or ""):match("^([%d%.]+)"))
+    f:close()
+    return t or os.time()
+end
+
+-- Octets envoyes par io.write depuis le dernier M.wait_output(), et instant
+-- du premier d'entre eux
+local bytes_pending, pending_since = 0, 0
+
 -- Surcharge transparente de io.write pour alimenter le Framebuffer
 io.write = function(...)
     local args = {...}
     for _, v in ipairs(args) do
-        feed_vram(tostring(v))
+        local s = tostring(v)
+        if bytes_pending == 0 then pending_since = uptime_now() end
+        bytes_pending = bytes_pending + #s
+        feed_vram(s)
     end
     return orig_write(...)
+end
+
+-- Le port serie garde en memoire ce qu'on lui ecrit et rend la main tout de
+-- suite : a 9600 bauds (960 caracteres/s), une image de jeu met pourtant
+-- plusieurs dixiemes de seconde a s'afficher. Un jeu qui appelle wait_output()
+-- apres chaque image attend qu'elle soit affichee ; les touches frappees
+-- pendant ce temps s'accumulent et peuvent etre traitees d'un coup, au lieu
+-- de s'empiler en retard. En mode PC, il n'attend que si MINITEL_BAUD est fixe
+-- (pour simuler le Minitel).
+local SIM_BAUD = tonumber(os.getenv("MINITEL_BAUD") or "")
+local line_free_at = 0 -- instant ou le Minitel aura fini d'afficher
+
+function M.wait_output()
+    local baud = SIM_BAUD or (not is_pc and 9600) or nil
+    local n = bytes_pending
+    bytes_pending = 0
+    if not baud or n == 0 then return end
+    -- ce qui a ete ecrit depuis le dernier appel est parti a la suite de ce
+    -- qui etait encore en cours d'envoi, ou des son ecriture si la ligne etait
+    -- libre : un ecran dessine il y a longtemps ne fait plus attendre
+    line_free_at = math.max(pending_since, line_free_at) + n * 10 / baud
+    M.sleep_raw(line_free_at - uptime_now())
 end
 
 -- Retourne le contenu actuel de l'ecran 80x24 sous forme de texte
@@ -576,6 +613,45 @@ function M.draw_window(x, y, w, h, title)
         io.write(string.format("\x1b[%d;%dH\x1b[1m|\x1b[0m%s\x1b[1m|\x1b[0m", y + i, x, empty_row))
     end
     io.write(string.format("\x1b[%d;%dH\x1b[1m+%s+\x1b[0m", y + h - 1, x, string.rep("-", inner_w)))
+    io.flush()
+end
+
+-- Habillage commun des jeux et des outils : bandeau de titre en ligne 1 et
+-- rappel des touches en ligne 24, en video inverse sur toute la largeur
+function M.title_bar(text)
+    io.write("\x1b[1;1H\x1b[7m" .. M.center("* * *  " .. text .. "  * * *", 80) .. "\x1b[0m")
+end
+
+function M.footer(text)
+    io.write("\x1b[24;1H\x1b[7m" .. M.pad(" " .. text, 80) .. "\x1b[0m")
+end
+
+-- Ligne de menu centree dans une largeur donnee ; l'option choisie est en
+-- video inverse entre crochets. Toujours la meme longueur : rien a effacer.
+function M.menu_line(y, x, width, label, selected)
+    local item = selected and ("[ " .. label .. " ]") or ("  " .. label .. "  ")
+    local left = math.floor((width - #item) / 2)
+    local right = width - #item - left
+    io.write(string.format("\x1b[%d;%dH%s%s%s%s%s", y, x, string.rep(" ", left),
+        selected and "\x1b[7m" or "", item, selected and "\x1b[0m" or "", string.rep(" ", right)))
+end
+
+-- Meme cadre que draw_window, sans remplir l'interieur d'espaces : pour un
+-- ecran qui vient d'etre efface, deux fois moins d'octets a 9600 bauds
+function M.draw_frame(x, y, w, h, title)
+    local inner_w = w - 2
+    local out = {}
+    if title and title ~= "" then
+        local t_str = " " .. string.sub(title, 1, inner_w - 2) .. " "
+        out[#out + 1] = string.format("\x1b[%d;%dH\x1b[1m+\x1b[0m\x1b[7m%s\x1b[0m\x1b[1m+", y, x, M.center(t_str, inner_w))
+    else
+        out[#out + 1] = string.format("\x1b[%d;%dH\x1b[1m+%s+", y, x, string.rep("-", inner_w))
+    end
+    for i = 1, h - 2 do
+        out[#out + 1] = string.format("\x1b[%d;%dH|\x1b[%d;%dH|", y + i, x, y + i, x + w - 1)
+    end
+    out[#out + 1] = string.format("\x1b[%d;%dH+%s+\x1b[0m", y + h - 1, x, string.rep("-", inner_w))
+    io.write(table.concat(out))
     io.flush()
 end
 

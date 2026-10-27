@@ -77,54 +77,59 @@ end
 -- AFFICHAGE : MENU PRINCIPAL
 -- =====================================================================
 local function draw_title()
-    io.write("\x1b[2J\x1b[H")
-    io.write("\x1b[3;11H\x1b[7m==========================================================\x1b[0m\r\n")
-    io.write("\x1b[4;11H\x1b[7m|                  3 6 1 5   D E F E N S E               |\x1b[0m\r\n")
-    io.write("\x1b[5;11H\x1b[7m==========================================================\x1b[0m\r\n")
-    
-    io.write("\x1b[9;28H\x1b[1mMENU PRINCIPAL\x1b[0m\r\n")
-    
+    io.write("\x1b[0m\x1b[2J")
+    minitel.title_bar("3615 DEFENSE - TENEZ LA BASE VAGUE APRES VAGUE")
+    minitel.draw_frame(19, 6, 44, 13, "MENU PRINCIPAL")
+    io.write("\x1b[8;26H E  >  >  T  .  .  .  [BASE]")
+    io.write("\x1b[9;26H BATISSEZ DES TOURS (T) SUR LE")
+    io.write("\x1b[10;26H CHEMIN DES ENNEMIS (E)")
+
     local options = {
         "NOUVELLE PARTIE",
         "DIFFICULTE : " .. diff_names[config.difficulty],
         "QUITTER LE JEU"
     }
-    
+
     for i, opt in ipairs(options) do
-        if i == menu_cursor then
-            io.write("\x1b[" .. (11+i*2) .. ";25H\x1b[7m > " .. opt .. " \x1b[0m")
-        else
-            io.write("\x1b[" .. (11+i*2) .. ";25H   " .. opt .. "   ")
-        end
+        minitel.menu_line(11 + i * 2, 20, 42, opt, i == menu_cursor)
     end
-    
-    io.write("\x1b[22;11H==========================================================\r\n")
-    io.write("\x1b[23;13H ZQSD / FLECHES : NAVIGUER  |  ENVOI : VALIDER / CHANGER\r\n")
+
+    minitel.footer("[Z/S] NAVIGUER  |  [ENVOI] VALIDER / CHANGER")
     io.flush()
 end
 
 -- =====================================================================
 -- AFFICHAGE : JEU EN COURS
 -- =====================================================================
-local function draw_game_ui()
-    io.write("\x1b[2J\x1b[H")
-    io.write("\x1b[1;11H\x1b[7m==========================================================\x1b[0m\r\n")
-    io.write("\x1b[2;11H\x1b[7m|                  3 6 1 5   D E F E N S E               |\x1b[0m\r\n")
-    io.write("\x1b[3;11H\x1b[7m==========================================================\x1b[0m\r\n")
-    
+-- Ligne d'etat (vague, or, base) et message : sans effacer l'ecran
+local function update_status()
     local stats = string.format(" VAGUE: %02d   |   OR: %03d   |   BASE HP: %02d ", wave, gold, hp)
-    io.write("\x1b[5;20H\x1b[1m" .. stats .. "\x1b[0m\r\n")
-    
-    io.write("\x1b[21;4H========================================================================\r\n")
-    io.write("\x1b[22;4H [ESPACE] BÂTIR TOUR (15 OR) | [ENVOI] FIN DE TOUR | [RETOUR] QUITTER \r\n")
-    io.write("\x1b[23;4H MESSAGE : " .. msg .. " \x1b[K\r\n")
+    io.write("\x1b[5;20H\x1b[1m" .. stats .. "\x1b[0m")
+    io.write("\x1b[23;4H MESSAGE : " .. msg .. " \x1b[K")
+end
+
+local function draw_game_ui()
+    io.write("\x1b[0m\x1b[2J")
+    minitel.title_bar("3615 DEFENSE - TENEZ LA BASE VAGUE APRES VAGUE")
+    io.write("\x1b[21;4H" .. string.rep("-", 74))
+    minitel.footer("[ZQSD] CURSEUR | [ESPACE] TOUR (15 OR) | [ENVOI] FIN DU TOUR | [RETOUR] QUITTER")
+    update_status()
     io.flush()
 end
 
-local function draw_grid()
-    for y = 1, map_h do
-        io.write("\x1b[" .. (y+8) .. ";16H")
-        for x = 1, map_w do
+-- only : liste de cases {x, y} a redessiner (deplacement du curseur) ; sans
+-- elle, toute la grille
+local function draw_grid(only)
+    local rows = {}
+    if only then
+        for _, c in ipairs(only) do rows[#rows + 1] = c end
+    else
+        for y = 1, map_h do rows[#rows + 1] = { 1, y, map_w } end
+    end
+    for _, r in ipairs(rows) do
+        local y, x_from, x_to = r[2], r[1], r[3] or r[1]
+        io.write("\x1b[" .. (y+8) .. ";" .. (16 + (x_from - 1) * 3) .. "H")
+        for x = x_from, x_to do
             local cell_key = x .. "," .. y
             local cell_str = " . "
             local is_inv = (cx == x and cy == y)
@@ -285,6 +290,7 @@ while true do
                 state = "TITLE"
                 draw_title()
             else
+                local old_x, old_y = cx, cy
                 if key == "RIGHT" or key == "d" or key == "D" then cx = cx + 1; if cx > map_w then cx = 1 end end
                 if key == "LEFT"  or key == "q" or key == "Q" then cx = cx - 1; if cx < 1 then cx = map_w end end
                 if key == "DOWN"  or key == "s" or key == "S" then cy = cy + 1; if cy > map_h then cy = 1 end end
@@ -304,17 +310,21 @@ while true do
                         msg = "TOUR CONSTRUITE !"
                         minitel.play_sound("pickup")
                     else
-                        msg = "PAS ASSEZ D'OR (COÛT: 15)."
+                        msg = "PAS ASSEZ D'OR (COUT: 15)."
                         minitel.play_sound("blip")
                     end
-                    draw_game_ui()
+                    update_status()
+                    draw_grid({ { cx, cy } })
                 end
-                
+
                 if key == "ENVOI" or key == "\r" or key == "\n" then
                     execute_turn()
+                    draw_grid()
+                elseif old_x ~= cx or old_y ~= cy then
+                    -- le curseur a bouge : seules ses deux cases changent
+                    draw_grid({ { old_x, old_y }, { cx, cy } })
                 end
-                
-                draw_grid()
+                io.flush()
             end
             
         elseif state == "GAMEOVER" then

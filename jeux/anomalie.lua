@@ -158,7 +158,7 @@ local STORY = {
     
     ["serveurs"] = {
         title = "SALLE DU CALCULATEUR CENTRAL",
-        text = "Les baies VAX et Télétel ronronnent. C'est ici que l'anomalie reseau a pris naissance. La console maitre attend une commande d'execution.",
+        text = "Les baies VAX et Teletel ronronnent. C'est ici que l'anomalie reseau a pris naissance. La console maitre attend une commande d'execution.",
         choices = {
             { label = "Executer la sequence de purge totale", dest = "victoire" },
             { label = "Consolider l'integrite sur le terminal (+10 INT)", dest = "serveurs", on_choose = function() 
@@ -171,7 +171,7 @@ local STORY = {
     
     ["victoire"] = {
         title = "TRANSMISSION RETABLIE",
-        text = "Les ecrans virent au vert. L'anomalie est purgee et le reseau 3615 Magis Club est de nouveau operationnel sur tout le territoire. Félicitations !",
+        text = "Les ecrans virent au vert. L'anomalie est purgee et le reseau 3615 Magis Club est de nouveau operationnel sur tout le territoire. Felicitations !",
         choices = {
             { label = "Terminer la mission (Menu Principal)", dest = "menu", on_choose = function() is_playing = false end }
         }

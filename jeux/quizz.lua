@@ -324,7 +324,7 @@ local function draw_main_menu()
     io.write("\x1b[7;20H\x1b[1mSERVEUR :\x1b[0m " .. string.sub(server_url, 1, 32))
     io.write("\x1b[8;20H\x1b[1mCANDIDAT:\x1b[0m " .. pseudo)
     io.write("\x1b[10;20H\x1b[7m [1] \x1b[0m PLATEAU LIVE MULTIJOUEUR (WEB/DISCORD)")
-    io.write("\x1b[12;20H\x1b[7m [2] \x1b[0m QUIZZ SOLO INFINI (QUESTIONS A LA VOLEE)")
+    io.write("\x1b[12;20H\x1b[7m [2] \x1b[0m QUIZZ SOLO (QUESTIONS A LA VOLEE)")
     io.write("\x1b[14;20H\x1b[7m [3] \x1b[0m CONFIGURER SERVEUR / PSEUDO")
     io.write("\x1b[17;20H\x1b[7m [RETOUR] \x1b[0m QUITTER VERS LE PORTAIL")
 

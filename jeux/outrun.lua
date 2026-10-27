@@ -29,12 +29,22 @@ local prev_slices = {}
 local prev_car_scr_x = -1
 local prev_rival_scr = { row = -1, x = -1 }
 
+local hud_shown = {}
+
+local function hud_put(slot, seq)
+    if hud_shown[slot] ~= seq then
+        hud_shown[slot] = seq
+        io.write(seq)
+    end
+end
+
 local function reset_render_cache()
     for i = 1, ROAD_ROWS do
         prev_slices[i] = { l = -1, r = -1, m = -1, rumble = false }
     end
     prev_car_scr_x = -1
     prev_rival_scr = { row = -1, x = -1 }
+    hud_shown = {}
 end
 
 local function draw_cockpit_skeleton()
@@ -275,16 +285,20 @@ local function run_arcade_race()
         -- 6. Rendu differentiel de la route 3D & du tableau de bord
         render_road_frame(seg.curve, player_x, dist_total, rival_z, rival_offset)
 
+        -- Tableau de bord : chaque champ n'est renvoye que s'il a change
         local g_mode = auto_gear and "A" or "M"
-        io.write(string.format("\x1b[3;12H\x1b[7m %02ds \x1b[0m", time_left))
-        io.write(string.format("\x1b[3;29H\x1b[1m%3d KM/H\x1b[0m", speed))
-        io.write(string.format("\x1b[3;53H[%d%s]", gear, g_mode))
-        io.write(string.format("\x1b[3;68H%07d", score))
-        io.write(string.format("\x1b[4;14H%-40s", seg.name))
-        io.write(string.format("\x1b[4;72H%3d M", math.max(0, math.floor(cp_dist_left))))
+        hud_put(1, string.format("\x1b[3;12H\x1b[7m %02ds \x1b[0m", time_left))
+        hud_put(2, string.format("\x1b[3;29H\x1b[1m%3d KM/H\x1b[0m", speed))
+        hud_put(3, string.format("\x1b[3;53H[%d%s]", gear, g_mode))
+        hud_put(4, string.format("\x1b[3;68H%07d", score))
+        hud_put(5, string.format("\x1b[4;14H%-40s", seg.name))
+        hud_put(6, string.format("\x1b[4;72H%3d M", math.max(0, math.floor(cp_dist_left))))
         io.flush()
 
-        minitel.sleep(0.08) -- ~12 FPS constants
+        -- Image suivante quand celle-ci est affichee (a 9600 bauds, une image
+        -- chargee prend plus de 0,08 s) : la course ne prend pas de retard
+        minitel.wait_output()
+        minitel.sleep(0.04)
     end
 
     minitel.msg_box("TIME OVER !", "Fin de la course ! Votre score final sur 3615 OUTRUN : " .. score .. " points !", "lose")
@@ -302,15 +316,15 @@ local function draw_title()
     io.write("\x1b[1;1H\x1b[7m" .. minitel.center("* * *  3615 OUTRUN - COURSE D'ARCADE PSEUDO-3D (9600 BAUDS)  * * *", 80) .. "\x1b[0m")
 
     minitel.draw_window(12, 4, 58, 16, "MAGIS TURBO CHALLENGE")
-    io.write("\x1b[6;18H          ._____________.          ")
-    io.write("\x1b[7;18H         /   _________   \\         HIGH SCORE : " .. high_score)
-    io.write("\x1b[8;18H       _[___/         \\___]_       --------------------")
-    io.write("\x1b[9;18H      [ (O)  ==3615==   (O) ]      [Z] Donner l'impulsion")
-    io.write("\x1b[10;18H      '====================='      [Q / D] Tourner Volant")
+    io.write("\x1b[6;16H          ._____________.")
+    io.write("\x1b[7;16H         /   _________   \\       HIGH SCORE")
+    io.write("\x1b[8;16H       _[___/         \\___]_     \x1b[1m" .. string.format("%-10d", high_score) .. "\x1b[0m")
+    io.write("\x1b[9;16H      [ (O)  ==3615==   (O) ]    [Z]   GAZ")
+    io.write("\x1b[10;16H      '====================='    [Q/D] VOLANT")
     io.write("\x1b[12;16H- Appuyez une fois sur [Z] pour lancer le moteur :")
-    io.write("\x1b[13;16H  l'accelerateur reste maintenu automatiquement !")
-    io.write("\x1b[14;16H-Compensez la force centrifuge avec [Q] et [D] dans")
-    io.write("\x1b[15;16H  les virages et evitez le trafic pour battre le record !")
+    io.write("\x1b[13;16H  l'accelerateur reste ensuite maintenu tout seul.")
+    io.write("\x1b[14;16H- Compensez la force centrifuge avec [Q] et [D]")
+    io.write("\x1b[15;16H  et evitez le trafic pour battre le record !")
     io.write("\x1b[17;23H\x1b[7m [ENVOI] DEMARRER LE MOTEUR V12 \x1b[0m")
 
     io.write("\x1b[24;1H\x1b[7m  [ENVOI] PRENDRE LE DEPART   |   [RETOUR] QUITTER VERS LE PORTAIL MAGIS        \x1b[0m")

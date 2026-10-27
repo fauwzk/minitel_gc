@@ -70,7 +70,7 @@ local CARS = {
     },
     {
         id = "PORSCHE_964",
-        name = "COUPÉ FLAT-6 3.6L RS (260 CH - 1220 KG)",
+        name = "COUPE FLAT-6 3.6L RS (260 CH - 1220 KG)",
         short = "FLAT-6 3.6 RS",
         base_btg = 472, -- ~07m52s
         power = 9, weight = 4, grip = 9,

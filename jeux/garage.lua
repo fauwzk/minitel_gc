@@ -316,8 +316,8 @@ local function draw_main_menu()
     io.write(string.format("\x1b[7;20H\x1b[1mCAISSE ATELIER :\x1b[0m %d FRANCS", cash))
     io.write(string.format("\x1b[8;20H\x1b[1mREPUTATION     :\x1b[0m %d %%", rep))
 
-    io.write("\x1b[11;20H\x1b[7m [1] \x1b[0m DIAGNOSTIC PANNE CLIENT (XR25 / SOURIAU)")
-    io.write("\x1b[13;20H\x1b[7m [2] \x1b[0m BANC A ROULEAUX & GRAVURE EPROM 27C256")
+    io.write("\x1b[11;20H\x1b[7m [1] \x1b[0m DIAGNOSTIC PANNE (XR25 / SOURIAU)")
+    io.write("\x1b[13;20H\x1b[7m [2] \x1b[0m BANC A ROULEAUX & EPROM 27C256")
     io.write("\x1b[16;20H\x1b[7m [RETOUR] \x1b[0m FERMER LE RIDEAU DE L'ATELIER")
 
     io.write("\x1b[24;1H\x1b[7m  TAPEZ [1] POUR LE DIAGNOSTIC MECANIQUE OU [2] POUR LE BANC DE PUISSANCE       \x1b[0m")

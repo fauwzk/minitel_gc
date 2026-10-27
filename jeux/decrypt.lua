@@ -169,24 +169,25 @@ end
 -- =====================================================================
 local function draw_title(full)
     if full then
-        io.write("\x1b[2J\x1b[H")
-        io.write("\x1b[4;11H==========================================================\r\n")
-        io.write("\x1b[5;11H|                                                        |\r\n")
-        io.write("\x1b[6;11H|            \x1b[1m3 6 1 5   D E C R Y P T A G E\x1b[0m               |\r\n")
-        io.write("\x1b[7;11H|                                                        |\r\n")
-        io.write("\x1b[8;11H==========================================================\r\n")
-        io.write("\x1b[12;23H PIRATAGE DE SERVEUR (PROTOCOLE MOTUS) \r\n")
+        io.write("\x1b[0m\x1b[2J")
+        minitel.title_bar("3615 DECRYPTAGE - PIRATAGE DE SERVEUR")
+        minitel.draw_frame(19, 6, 44, 13, "PROTOCOLE MOTUS")
+        io.write("\x1b[8;24H RETROUVEZ LE MOT DE PASSE DU")
+        io.write("\x1b[9;24H SERVEUR, LETTRE PAR LETTRE :")
+        io.write("\x1b[11;24H\x1b[7m[ M ]\x1b[0m BIEN PLACEE  ( M ) MAL PLACEE")
+        minitel.footer("[ENVOI] LANCER L'INTRUSION  |  [RETOUR] QUITTER VERS LE PORTAIL")
     end
 
-    io.write("\x1b[16;1H\x1b[K\x1b[16;25H\x1b[7m [ ENVOI ] LANCER L'INTRUSION \x1b[0m\r\n")
-    io.write("\x1b[18;1H\x1b[K\x1b[18;30H   [ RETOUR ] QUITTER   \r\n")
+    minitel.menu_line(14, 20, 42, "ENVOI : LANCER L'INTRUSION", true)
+    minitel.menu_line(16, 20, 42, "RETOUR : QUITTER", false)
     io.flush()
 end
 
-local function update_grid()
+-- only_row : pendant la frappe, seule la ligne en cours change
+local function update_grid(only_row)
     local start_x = math.floor((80 - (word_length * 6)) / 2)
 
-    for i = 1, max_attempts do
+    for i = only_row or 1, only_row or max_attempts do
         local line_y = 6 + (i * 2)
         io.write("\x1b[" .. line_y .. ";" .. start_x .. "H\x1b[K")
 
@@ -248,11 +249,11 @@ end
 
 local function draw_game_screen()
     io.write("\x1b[2J\x1b[H")
-    io.write("\x1b[2;11H==========================================================\r\n")
-    io.write("\x1b[3;11H| \x1b[7m BRUTE-FORCE ACTIF \x1b[0m            FORMAT: " .. word_length .. " LETTRES |\r\n")
-    io.write("\x1b[4;11H==========================================================\r\n")
+    minitel.title_bar("3615 DECRYPTAGE - BRUTE-FORCE ACTIF - MOT DE " .. word_length .. " LETTRES")
+    io.write("\x1b[4;8H\x1b[7m[ M ]\x1b[0m BIEN PLACEE   ( M ) MAL PLACEE   ABSENTE : RETIREE DU CLAVIER")
+    minitel.footer("[A-Z] TAPER  |  [CORRECTION] EFFACER  |  [ENVOI] TESTER  |  [RETOUR] QUITTER")
 
-    io.write("\x1b[24;1H\x1b[K\x1b[7m MESSAGE: \x1b[0m " .. msg_board)
+    io.write("\x1b[23;1H\x1b[K\x1b[7m MESSAGE: \x1b[0m " .. msg_board)
 
     update_grid()
     update_keyboard()
@@ -286,23 +287,23 @@ while true do
             if string.len(current_input) < word_length then
                 current_input = current_input .. string.upper(key)
                 minitel.play_sound("hit")
-                update_grid()
+                update_grid(#guesses + 1)
             end
         elseif key == "\x08" or key == "\x7f" or key == "CORRECTION" or key == "ANNULATION" then
             if string.len(current_input) > 0 then
                 current_input = string.sub(current_input, 1, -2)
-                update_grid()
+                update_grid(#guesses + 1)
             end
         elseif key == "\n" or key == "\r" or key == "ENVOI" then
             if string.len(current_input) == word_length then
                 evaluate_guess(current_input)
                 current_input = ""
 
-                io.write("\x1b[24;1H\x1b[K\x1b[7m MESSAGE: \x1b[0m " .. msg_board)
+                io.write("\x1b[23;1H\x1b[K\x1b[7m MESSAGE: \x1b[0m " .. msg_board)
                 update_grid()
                 update_keyboard()
             else
-                io.write("\x1b[24;1H\x1b[K\x1b[7m ERREUR: \x1b[0m LE MOT DOIT CONTENIR " .. word_length .. " LETTRES.")
+                io.write("\x1b[23;1H\x1b[K\x1b[7m ERREUR:\x1b[0m LE MOT DOIT CONTENIR " .. word_length .. " LETTRES.")
                 io.flush()
             end
         end

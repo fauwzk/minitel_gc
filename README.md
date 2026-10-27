@@ -785,7 +785,9 @@ Exemple : déplacer la sélection d'une ligne vers le bas dans une liste.
                                                     ~    80 octets (0,08 s)
 ```
 
-Les programmes les plus élaborés poussent l'idée plus loin. **3615 WOLF-3D** calcule son image 3D dans un tampon et ne transmet que les caractères qui diffèrent de l'image précédente (*double tampon différentiel*). **3615 SANTE** garde en mémoire le contenu de chaque zone et n'envoie une valeur que si elle a changé.
+**Ne pas prendre de retard sur l'écran.** Le port série rend la main tout de suite : il garde en mémoire ce qu'on lui écrit, et le Minitel l'affiche ensuite à son rythme de 960 caractères par seconde. Un jeu qui calcule ses images plus vite que le Minitel ne les affiche prend donc du retard, de plus en plus. Mesuré en émulation, cinq secondes de course de 3615 OUTRUN envoyaient 28 secondes d'affichage. Les jeux en temps réel appellent donc `minitel.wait_output()` après chaque image, puis traitent d'un coup toutes les touches reçues entre-temps. Une touche maintenue fait alors un seul grand mouvement, au lieu d'une file d'images en retard.
+
+Les programmes les plus élaborés poussent l'idée plus loin. **3615 WOLF-3D** calcule son image 3D dans un tampon et ne transmet que les caractères qui diffèrent de l'image précédente (*double tampon différentiel*). Deux zones modifiées séparées par moins de six caractères identiques partent d'un seul tenant : renvoyer ces caractères coûte moins cher qu'un nouveau positionnement du curseur. **3615 SANTE** garde en mémoire le contenu de chaque zone et n'envoie une valeur que si elle a changé.
 
 ### 4.3 Le framebuffer virtuel
 
@@ -834,6 +836,11 @@ et se termine par `minitel.cleanup()`.
 | Fonction | Description |
 | :------- | :---------- |
 | `minitel.draw_window(x, y, l, h, titre)` | Cadre en `+`, `-` et `|` de `l` × `h` caractères en `(x, y)`, intérieur effacé, titre centré en vidéo inverse dans le bord supérieur. |
+| `minitel.draw_frame(x, y, l, h, titre)` | Le même cadre, sans remplir l'intérieur d'espaces : pour un écran qui vient d'être effacé, deux fois moins de caractères à envoyer. |
+| `minitel.title_bar(texte)` | Bandeau de titre de la ligne 1, en vidéo inverse : `* * *  texte  * * *`, centré. |
+| `minitel.footer(texte)` | Rappel des touches en ligne 24, en vidéo inverse sur toute la largeur. |
+| `minitel.menu_line(y, x, l, libellé, choisi)` | Une option de menu centrée sur `l` colonnes ; l'option choisie est entre crochets, en vidéo inverse. La ligne a toujours la même longueur : rien à effacer en passant d'une option à l'autre. |
+| `minitel.wait_output()` | Attend que le Minitel ait fini d'afficher ce qui a été écrit depuis l'appel précédent, à 9600 bauds (voir § 4.2). En mode PC, il n'attend que si la variable `MINITEL_BAUD` est fixée, pour simuler le Minitel. |
 | `minitel.progress_bar(x, y, l, valeur, max, pct)` | Jauge `[████......]` en vidéo inverse ; avec `pct = true`, ajoute le pourcentage. |
 | `minitel.msg_box(titre, message, son)` | Fenêtre d'information modale ; attend `[ENVOI]`, `[RETOUR]` ou Espace. |
 | `minitel.confirm_box(titre, question)` | Fenêtre OUI / NON. Flèches ou `Q`/`D` pour choisir, `O` / `N` en raccourci. Renvoie `true` ou `false`. |
@@ -1013,7 +1020,7 @@ Quinze cartouches, accessibles depuis **3615 JEUX**. La plupart ouvrent sur un �
 
 <p align="center"><img src="docs/captures/jeu-wolf.svg" width="640" alt="3615 WOLF-3D"><br><sub><b>Fig. 6.1</b> — 3615 WOLF-3D : vue subjective calculée par lancer de rayons, et radar du niveau.</sub></p>
 
-**3615 WOLF-3D** (`wolf.lua`) — *Action / 3D par lancer de rayons.* Un vrai moteur 3D en mode texte. Pour chaque colonne de l'écran, un rayon est lancé dans le plan du labyrinthe (algorithme DDA) ; la distance du mur rencontré donne la hauteur de la colonne, et le caractère employé (`H`, `+`, `-`…) suggère l'éloignement. Seuls les caractères qui ont changé depuis l'image précédente sont transmis. Piratez les terminaux (`*`) de chaque sous-sol pour débloquer l'ascenseur (`S`). `Z`/`S` avancer et reculer, `Q`/`D` tourner, `A`/`E` pas de côté.
+**3615 WOLF-3D** (`wolf.lua`) — *Action / 3D par lancer de rayons.* Un vrai moteur 3D en mode texte. Pour chaque colonne de l'écran, un rayon est lancé dans le plan du labyrinthe (algorithme DDA) ; la distance du mur rencontré donne la hauteur de la colonne, et le caractère employé (`H`, `+`, `-`…) suggère l'éloignement. Seuls les caractères qui ont changé depuis l'image précédente sont transmis, et les touches frappées pendant qu'une image s'affiche sont regroupées en un seul mouvement : une touche maintenue ne crée plus de retard. Une rotation coûte environ 600 caractères (0,6 s), un pas 250 à 600. Piratez les terminaux (`*`) de chaque sous-sol pour débloquer l'ascenseur (`S`). `Z`/`S` avancer et reculer, `Q`/`D` tourner, `A`/`E` pas de côté.
 
 <p align="center"><img src="docs/captures/jeu-outrun.svg" width="640" alt="3615 OUTRUN"><br><sub><b>Fig. 6.2</b> — 3615 OUTRUN : route en pseudo-3D, compteur, rapport engagé et checkpoint.</sub></p>
 
@@ -1121,8 +1128,9 @@ Le lanceur exécute la cartouche avec `lua5.3`, depuis la racine du dépôt. Les
 2. **80 colonnes, 24 lignes, ASCII pur.** Pas d'accents dans le texte affiché (`minitel.clean_accents()` pour les données venues d'Internet). Chaque ligne écrite doit tenir dans l'écran : un caractère en colonne 81 provoque un retour à la ligne qui décale tout.
 3. **Delta-drawing.** Dessinez le squelette une fois, puis ne réécrivez que ce qui change. Utilisez `minitel.pad()` pour qu'une nouvelle valeur efface entièrement l'ancienne.
 4. **Ne bloquez jamais.** Lisez le clavier avec `minitel.get_key()` dans une boucle, avec une petite pause (`minitel.sleep(0.01)` à `0.05`).
-5. **Respectez les conventions** : `[RETOUR]` pour sortir ou ouvrir un menu, `[REPETITION]` pour tout redessiner, barre de touches en ligne 24.
-6. **Mesurez le temps** avec `/proc/uptime` plutôt qu'avec `os.clock()`, qui compte le temps processeur et non le temps réel.
+5. **Respectez les conventions** : `[RETOUR]` pour sortir ou ouvrir un menu, `[REPETITION]` pour tout redessiner. Côté présentation, tous les jeux partagent le même habillage : bandeau de titre en ligne 1 (`minitel.title_bar`), cadres (`minitel.draw_frame`), options de menu entre crochets (`minitel.menu_line`) et rappel des touches en ligne 24 (`minitel.footer`).
+6. **En temps réel, ne prenez pas de retard** : après chaque image, `minitel.wait_output()`, puis lisez toutes les touches en attente avant de dessiner l'image suivante (§ 4.2).
+7. **Mesurez le temps** avec `/proc/uptime` plutôt qu'avec `os.clock()`, qui compte le temps processeur et non le temps réel.
 
 ### 8.3 Exemple complet : 3615 CHRONO
 
