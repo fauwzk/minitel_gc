@@ -1,11 +1,18 @@
--- =====================================================================
--- TEST DU CURSEUR : QUELLE COMMANDE LE CACHE SUR CE MINITEL ?
--- =====================================================================
+-- Fichier : utils/test_curseur.lua
+-- TEST DU CURSEUR : quelle commande le cache sur ce Minitel ?
+-- @TYPE: DIAGNOSTIC ECRAN
+-- @DESC: Essaie une a une les commandes qui cachent le curseur (ANSI, Videotex, VT52...) : dites pour chacune s'il a disparu.
+-- @ART1:      .----------------.
+-- @ART2:      | ESSAI 2 SUR 8  |
+-- @ART3:      | VISIBLE ICI >_ |
+-- @ART4:      | [O]UI   [N]ON  |
+-- @ART5:      '----------------'
+--
 -- En 80 colonnes, le Minitel ignore peut-etre la commande ANSI habituelle
 -- (ESC [ ? 25 l). Ce test essaie les commandes connues d'autres terminaux,
 -- une par une : pour chacune, dites si le curseur a disparu.
 --
---   lua5.3 outils/test_curseur.lua   (depuis le terminal du portail)
+--   3615 OUTILS > TEST_CURSEUR, ou : lua5.3 utils/test_curseur.lua
 --
 -- Le resume s'affiche a la fin et reste dans /tmp/test_curseur.txt.
 
