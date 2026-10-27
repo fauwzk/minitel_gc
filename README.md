@@ -50,8 +50,8 @@ Un second volume, le **[Manuel de programmation MICRO-BASIC](docs/MANUEL_BASIC.m
 | **2** | [Le matériel](#chapitre-2--le-matériel) | Liaison série, clavier, écran VT100, son et audio, fiche technique |
 | **3** | [L'architecture logicielle](#chapitre-3--larchitecture-logicielle) | Démarrage, arborescence, portail, lanceurs, mises à jour |
 | **4** | [Le moteur graphique et le SDK](#chapitre-4--le-moteur-graphique-et-le-sdk-minitellua) | Delta-drawing, framebuffer, référence de `minitel.lua` |
-| **5** | [Les logiciels du poste de travail](#chapitre-5--les-logiciels-du-poste-de-travail-utils) | Éditeur, tableur, télématique, santé, musique, réseau Wi-Fi |
-| **6** | [La salle d'arcade](#chapitre-6--la-salle-darcade-jeux) | Les 15 cartouches de jeux |
+| **5** | [Les logiciels du poste de travail](#chapitre-5--les-logiciels-du-poste-de-travail-utils) | Éditeur, tableur, télématique, santé, musique, réseau Wi-Fi, éphéméride, Wikipédia |
+| **6** | [La salle d'arcade](#chapitre-6--la-salle-darcade-jeux) | Les 15 cartouches de jeux et le tableau des records |
 | **7** | [Le langage MICRO-BASIC](#chapitre-7--le-langage-micro-basic) | Présentation et renvoi au second manuel |
 | **8** | [Guide du développeur](#chapitre-8--guide-du-développeur) | Écrire sa propre cartouche Lua |
 | **A** | [Mémento VT100](#annexe-a--mémento-des-séquences-vt100) | Les séquences d'échappement utilisées |
@@ -640,7 +640,7 @@ Le système se met à jour depuis son dépôt Git. Le programme est lancé autom
                  |
                  v
   git fetch : le serveur a-t-il de nouveaux commits ?
-  git status : modifications locales (hors BASIC et *.cfg) ?
+  git status : modifications locales (hors BASIC et sauvegardes) ?
                  |
      rien de nouveau, rien de local  ->  "SYSTEME A JOUR", retour
                  |                        direct au portail
@@ -653,7 +653,7 @@ Le système se met à jour depuis son dépôt Git. Le programme est lancé autom
         |   [4] ANNULER : retour au portail sans rien toucher
        NON                     |
         v                      |
-  Programmes BASIC et *.cfg locaux mis de cote  <-----+
+  BASIC et sauvegardes locales mis de cote  <---------+
         |
         v
   git pull, puis remise en place des fichiers locaux
@@ -669,7 +669,7 @@ Après le `git pull`, puis juste avant de redémarrer la session, le programme l
 
 Le système **ne redémarre que si quelque chose a réellement changé** : un nouveau commit a été téléchargé, ou les options 1 et 3 ont modifié les fichiers. Dans tous les autres cas (déjà à jour, envoi réussi, annulation, erreur réseau), vous revenez directement au portail, à l'endroit où vous l'aviez quitté.
 
-> **Vos programmes BASIC et vos sauvegardes de jeux sont toujours conservés.** Deux sortes de fichiers appartiennent au Minitel plutôt qu'au dépôt : le dossier `utils/prog_basic/` et **tous les fichiers `.cfg`**, où les jeux et les outils gardent leurs réglages, leurs parties et leurs scores (`jeux/minitel_*.cfg`, `utils/pictochat.cfg`…). Ils sont traités à part : ils ne déclenchent jamais l'écran « CONFLIT LOCAL », et ceux qui ont été créés ou modifiés sur le Pi sont mis de côté avant le `git pull`, puis remis en place à l'identique. Si le dépôt apporte un fichier du même nom, **votre version l'emporte** ; les fichiers que vous n'avez pas touchés reçoivent normalement la version du dépôt. L'écran de fin indique combien de programmes BASIC et de fichiers `.cfg` ont été conservés.
+> **Vos programmes BASIC et vos sauvegardes de jeux sont toujours conservés.** Plusieurs sortes de fichiers appartiennent au Minitel plutôt qu'au dépôt : le dossier `utils/prog_basic/`, **tous les fichiers `.cfg`**, où les jeux et les outils gardent leurs réglages et leurs records (`jeux/minitel_*.cfg`, `jeux/records.cfg`, `utils/pictochat.cfg`…), les fichiers `.rec` (records de 3615 NORDSCHLEIFE) et les parties enregistrées des dossiers `jeux/saves_*`. Ils sont traités à part : ils ne déclenchent jamais l'écran « CONFLIT LOCAL », et ceux qui ont été créés ou modifiés sur le Pi sont mis de côté avant le `git pull`, puis remis en place à l'identique. Si le dépôt apporte un fichier du même nom, **votre version l'emporte** ; les fichiers que vous n'avez pas touchés reçoivent normalement la version du dépôt. L'écran de fin indique combien de programmes BASIC, de sauvegardes et de records ont été conservés.
 >
 > Par sécurité, une copie complète est aussi faite dans `/home/minitel/minitel_gc_backup/` : les programmes BASIC dans `utils/prog_basic_backup/`, et chaque `.cfg` à son chemin dans le dépôt. Les fichiers listés dans `.gitignore` (comme le dossier `utils/sante/`) ne sont jamais envoyés ni effacés par la mise à jour.
 
@@ -702,6 +702,10 @@ Pour les désactiver, tapez `sudo ./install_scripts_maj.sh --retirer`. Tant qu'i
 | `/var/lib/minitel/maj_faites`, `maj.log` | Mise à jour | Scripts de mise à jour déjà joués, et leur sortie (§ 3.5). |
 | `jeux/minitel_*.cfg` | Les jeux | Réglages (difficulté, mise de départ, son…). Conservés par la mise à jour (§ 3.5). |
 | `utils/pictochat.cfg` | PICTO, BATAILLE, QUIZZ | Ligne 1 : adresse du serveur. Ligne 2 : pseudo. |
+| `jeux/records.cfg` | Les jeux | Le meilleur résultat de chaque jeu, avec sa date et le nombre de parties (§ 6.7). |
+| `jeux/nordschleife.rec` | NORDSCHLEIFE | Le meilleur tour de chaque voiture. |
+| `utils/ephemeride.cfg` | ÉPHÉMÉRIDE | Le lieu choisi pour le lever et le coucher du soleil. |
+| `utils/ephemeride_saints.txt`, `ephemeride_histoire.txt` | ÉPHÉMÉRIDE | Les fêtes du calendrier, et les événements « ce jour-là dans l'histoire ». |
 | `utils/prog_basic/*.bas` | MICRO-BASIC | Programmes BASIC, en texte brut. |
 | `utils/music/*.MOD` | PROTRACKER | Morceaux (tables Lua). |
 | `utils/sante/` | 3615 SANTE | Export Apple Health et cache. **Données personnelles, ignorées par Git.** |
@@ -828,7 +832,9 @@ et se termine par `minitel.cleanup()`.
 | :------- | :---------- |
 | `minitel.pad(texte, n)` | Tronque ou complète par des espaces pour obtenir **exactement** `n` caractères. Indispensable pour effacer proprement l'ancienne valeur d'un champ. |
 | `minitel.center(texte, n)` | Centre le texte dans une largeur de `n` caractères. |
-| `minitel.clean_accents(texte)` | Remplace les lettres accentuées par leurs équivalents sans accent (`é` → `E`, `ç` → `C`, `œ` → `OE`). |
+| `minitel.clean_accents(texte)` | Convertit un texte UTF-8 en ASCII pour le Minitel, en gardant la casse : `é` → `e`, `É` → `E`, `ç` → `c`, `œ` → `oe`, guillemets et tirets typographiques → `"` et `-`. Un caractère sans équivalent devient `?`. |
+| `minitel.submit_record(jeu, valeur, sens, unité, détail)` | Propose un résultat au tableau des records (`jeux/records.cfg`). `sens` vaut `"high"` (plus grand = mieux), `"low"` (plus petit = mieux, pour un temps) ou `"sum"` (compteur de victoires). Rend `true` si c'est un nouveau record. |
+| `minitel.get_record(jeu)` | Le record actuel d'un jeu, ou `nil`. |
 | `minitel.wrap(texte, largeur, lignes_max)` | Découpe un paragraphe mot à mot. Renvoie un tableau de lignes déjà complétées à `largeur` ; avec `lignes_max`, le tableau a toujours exactement ce nombre de lignes. |
 
 #### Composants d'interface
@@ -1010,11 +1016,34 @@ Une connexion attend au plus 30 secondes. Les erreurs courantes s'affichent en c
 
 **Les droits.** NetworkManager ne laisse gérer le réseau qu'aux sessions ouvertes devant l'écran et le clavier du Raspberry Pi. La session du Minitel, ouverte sur le port série, n'en fait pas partie. Le script de mise à jour `maj/0002_droits_reseau.sh` ajoute donc une règle polkit, qui donne ce droit au compte `minitel` (`/etc/polkit-1/rules.d/50-minitel-reseau.rules`, plus un fichier `.pkla` pour les anciennes versions de polkit). Il est joué à la mise à jour, si les scripts de mise à jour sont activés (§ 3.5).
 
+### 5.9 3615 EPHEMERIDE — le jour, le soleil et la lune (`ephemeride.lua`)
+
+Tout ce qu'affiche l'éphéméride se calcule sur le Raspberry Pi, **sans connexion**.
+
+<p align="center"><img src="docs/captures/app-ephemeride.svg" width="640" alt="3615 EPHEMERIDE"><br><sub><b>Fig. 5.15</b> — 3615 EPHEMERIDE (exemple pour Paris).</sub></p>
+
+| Cadre | Contenu |
+| :---- | :------ |
+| **Le jour** | La date, le numéro de semaine (norme ISO), le jour de l'année, la fête du calendrier des postes, le jour férié s'il y en a un, et le prochain férié avec le nombre de jours qui restent. Pâques, l'Ascension et la Pentecôte sont calculées pour chaque année. |
+| **Le soleil** | Lever, coucher, durée du jour et son écart avec la veille, midi solaire. Calculé par l'équation du lever du soleil, à la minute près, pour le lieu choisi : Paris par défaut, une autre ville avec `V` (nom, latitude, longitude). L'heure d'été est prise en compte. |
+| **La lune** | Son dessin, sa phase, la part éclairée, son âge, et les dates de la prochaine pleine lune et de la prochaine nouvelle lune. |
+| **Il y a 40 ans** | Le même jour il y a 40 ans, sa phase de lune ou son férié, et les événements de cette date dans `utils/ephemeride_histoire.txt`. Celui de l'année d'il y a 40 ans est en vidéo inverse. |
+
+`Q` et `D` changent de jour, `Z` et `S` de mois, `T` revient à aujourd'hui. Le fichier `utils/ephemeride_histoire.txt` ne contient qu'une vingtaine de dates de l'histoire des sciences, de l'informatique et de la télématique : ajoutez-y les vôtres (anniversaires, souvenirs), une par ligne, sous la forme `MM-JJ|ANNEE|TEXTE`.
+
+### 5.10 3615 WIKIPEDIA — l'encyclopédie en 80 colonnes (`wiki.lua`)
+
+Tapez un mot, choisissez l'article parmi les neuf premiers résultats, puis lisez-le page par page. La première page est le résumé de l'article ; `[SUITE]` passe à la page suivante, `[RETOUR]` revient à la précédente, et, depuis la première page, à la liste des résultats. `[SOMMAIRE]` relance une recherche.
+
+<p align="center"><img src="docs/captures/app-wiki.svg" width="640" alt="3615 WIKIPEDIA"><br><sub><b>Fig. 5.16</b> — La première page de l'article « Minitel ».</sub></p>
+
+Le texte vient de l'API de **fr.wikipedia.org**, en texte brut : ni images, ni tableaux, ni références. Les titres de sections sont en gras et les sections vides sont retirées. Une page envoie environ 1 700 caractères, soit moins de deux secondes. Les textes de Wikipédia sont sous licence CC BY-SA. Il faut une connexion à Internet.
+
 <div style="page-break-after: always;"></div>
 
 ## CHAPITRE 6 : LA SALLE D'ARCADE (`/jeux`)
 
-Quinze cartouches, accessibles depuis **3615 JEUX**. La plupart ouvrent sur un écran-titre ou un briefing ; les touches sont toujours rappelées en bas de l'écran.
+Quinze cartouches et le tableau des records, accessibles depuis **3615 JEUX**. La plupart ouvrent sur un écran-titre ou un briefing ; les touches sont toujours rappelées en bas de l'écran.
 
 ### 6.1 Action et course
 
@@ -1089,6 +1118,30 @@ Quinze cartouches, accessibles depuis **3615 JEUX**. La plupart ouvrent sur un �
 **3615 QUIZZ LIVE** (`quizz.lua`) — Jeu télévisé : plateau multijoueur en direct (Minitel, web, Discord) ou quizz solo infini avec des questions générées à la volée. Buzzez avec les touches `1` à `4`.
 
 Ces deux jeux utilisent le serveur décrit au § 3.8 et le fichier `utils/pictochat.cfg`.
+
+### 6.7 3615 RECORDS — le tableau d'honneur (`records.lua`)
+
+Chaque jeu signale son résultat en fin de partie. Le système garde le meilleur, avec sa date et le nombre de parties jouées, dans `jeux/records.cfg`, que les mises à jour conservent (§ 3.5). **3615 RECORDS**, dans 3615 JEUX, les rassemble sur un seul écran.
+
+<p align="center"><img src="docs/captures/jeu-records.svg" width="640" alt="3615 RECORDS"><br><sub><b>Fig. 6.13</b> — Le tableau des records (valeurs d'exemple).</sub></p>
+
+| Jeu | Record gardé |
+| :-- | :----------- |
+| OUTRUN | Le meilleur score, qui devient aussi le HIGH SCORE de l'écran titre. |
+| WOLF-3D | Le moins de pas pour traverser les trois sous-sols. |
+| NORDSCHLEIFE | Le meilleur tour, toutes voitures confondues (lu dans `jeux/nordschleife.rec`). |
+| DEFENSE | La vague la plus haute atteinte. |
+| ENIGMA | Le nœud le plus profond atteint. |
+| DECRYPTAGE | Le moins d'essais pour trouver le mot. |
+| DEMINEUR | Le meilleur temps, pour chaque taille de grille. |
+| QUIZZ SOLO | La plus grosse cagnotte. |
+| BLACKJACK, POKER | La caisse ou la pile de jetons la plus haute. |
+| BOURSE | La fortune la plus haute en fin de carrière. |
+| CENTRAL PTT | La meilleure recette d'un quart de nuit réussi. |
+| GARAGE | La caisse de l'atelier la plus haute. |
+| BATAILLE NAVALE | Le nombre de victoires, contre l'IA et en ligne. |
+
+Un nouveau record est annoncé à la fin de la partie (OUTRUN, WOLF-3D, DEMINEUR, DECRYPTAGE). `Z` et `S` font défiler le tableau, `X` efface les records, sauf ceux de NORDSCHLEIFE, qui ont leur propre fichier.
 
 <div style="page-break-after: always;"></div>
 

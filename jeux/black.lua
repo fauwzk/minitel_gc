@@ -314,6 +314,7 @@ local function resolve_game()
         msg_board = "EGALITE (PUSH). VOTRE MISE EST RECUPEREE."
     end
 
+    minitel.submit_record("BLACKJACK", bankroll, "high", "$", "CAISSE LA PLUS HAUTE")
     if bankroll <= 0 then
         bankroll = config.START_BANKROLL
         msg_board = msg_board .. " LE CASINO VOUS OFFRE " .. config.START_BANKROLL .. " $."

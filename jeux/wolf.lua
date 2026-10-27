@@ -403,7 +403,7 @@ local function play_level(lvl_idx)
                 elseif target_block == 2 then
                     if hacked_count >= total_terminals then
                         minitel.play_sound("win")
-                        return "NEXT"
+                        return "NEXT", steps_count
                     else
                         minitel.play_sound("lose")
                         log_msg = string.format("ASCENSEUR VERROUILLE ! Il reste %d terminal(aux) (*) a pirater !", total_terminals - hacked_count)
@@ -467,14 +467,18 @@ while true do
         break
     elseif k == "ENVOI" or k == " " then
         local cur_lvl = 1
+        local total_steps = 0
         while cur_lvl <= #LEVELS do
-            local res = play_level(cur_lvl)
+            local res, steps = play_level(cur_lvl)
+            total_steps = total_steps + (steps or 0)
             if res == "QUIT" then break
             elseif res == "NEXT" then
                 if cur_lvl < #LEVELS then
                     minitel.msg_box("NIVEAU TERMINE !", "Descente vers le " .. LEVELS[cur_lvl + 1].name .. " !", "win")
                 else
-                    minitel.msg_box("VICTOIRE TOTALE !", "Bravo ! Vous avez infiltre les 3 sous-sols 3D du Bunker !", "win")
+                    local best = minitel.submit_record("WOLF-3D", total_steps, "low", "PAS", "3 SOUS-SOLS")
+                    minitel.msg_box(best and "NOUVEAU RECORD !" or "VICTOIRE TOTALE !",
+                        "Les 3 sous-sols du Bunker infiltres en " .. total_steps .. " pas !", "win")
                 end
                 cur_lvl = cur_lvl + 1
             end

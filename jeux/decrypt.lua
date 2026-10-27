@@ -156,6 +156,9 @@ local function evaluate_guess(guess)
     if guess == target_word then
         state = "VICTORY"
         msg_board = "ACCES AUTORISE. MOT DE PASSE VALIDE."
+        if minitel.submit_record("DECRYPTAGE", #guesses, "low", "ESSAIS", word_length .. " LETTRES") then
+            msg_board = "ACCES AUTORISE EN " .. #guesses .. " ESSAI(S) : NOUVEAU RECORD !"
+        end
         minitel.play_sound("win")
     elseif #guesses >= max_attempts then
         state = "GAMEOVER"

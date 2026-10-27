@@ -301,14 +301,18 @@ local function run_arcade_race()
         minitel.sleep(0.04)
     end
 
-    minitel.msg_box("TIME OVER !", "Fin de la course ! Votre score final sur 3615 OUTRUN : " .. score .. " points !", "lose")
+    if minitel.submit_record("OUTRUN", score, "high", "PTS") then
+        minitel.msg_box("NOUVEAU RECORD !", "Fin de la course ! Record battu sur 3615 OUTRUN : " .. score .. " points !", "win")
+    else
+        minitel.msg_box("TIME OVER !", "Fin de la course ! Votre score final sur 3615 OUTRUN : " .. score .. " points !", "lose")
+    end
     return score
 end
 
 -- =====================================================================
 -- 4. ECRAN TITRE (DESSINE UNE SEULE FOIS HORS BOUCLE !)
 -- =====================================================================
-local high_score = 12500
+local high_score = math.max(12500, minitel.get_record("OUTRUN") or 0)
 
 local function draw_title()
     io.write("\x1b[r\x1b[2J\x1b[H")

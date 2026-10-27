@@ -286,6 +286,7 @@ local function play_solo_infinite()
 
             local k = minitel.get_key()
             if k == "RETOUR" or k == "ESC" then
+                minitel.submit_record("QUIZZ SOLO", score, "high", "PTS")
                 minitel.msg_box("FIN DE PARTIE", "Vous repartez avec une cagnotte de " .. score .. " points !", "pickup")
                 return
             elseif k == "1" or k == "2" or k == "3" or k == "4" then

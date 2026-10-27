@@ -749,6 +749,8 @@ while true do
 
                         if p_hp <= 0 then
                             state = "GAMEOVER"
+                            minitel.submit_record("ENIGMA", floor_depth, "high", "NOEUDS",
+                                p_kills .. " PURGES, LVL " .. p_lvl)
                             io.write("\x1b[2J\x1b[H")
                             minitel.draw_window(18, 6, 46, 12, "ERREUR SYSTEME : CORRUPTION TOTALE")
                             io.write(string.format("\x1b[9;22H PROFONDEUR ATTEINTE : \x1b[1mNOEUD -%d\x1b[0m", floor_depth))

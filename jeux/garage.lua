@@ -163,6 +163,7 @@ local function run_diagnostic_workshop()
                 if choice == case.correct then
                     cash = cash + case.reward
                     rep  = math.min(100, rep + 5)
+                    minitel.submit_record("GARAGE", cash, "high", "F", "CAISSE DE L'ATELIER")
                     minitel.msg_box("FACTURE REGLEE (+" .. case.reward .. " FRANCS)", case.explanation, "win")
                 else
                     cash = cash - 250

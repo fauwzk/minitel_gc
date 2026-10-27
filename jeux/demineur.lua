@@ -154,7 +154,10 @@ local function modify_setting(dir)
     end
 end
 
+local game_start = nil -- debut de la partie, pour le record de temps
+
 local function init_game()
+    game_start = os.time()
     board = {}
     flags_placed = 0
     cells_revealed = 0
@@ -266,7 +269,13 @@ end
 local function check_win()
     if cells_revealed == total_safe_cells and state ~= "GAMEOVER" then
         state = "VICTORY"
-        msg_board = "SECTEUR SECURISE ! VOUS AVEZ GAGNE !"
+        local secs = os.time() - (game_start or os.time())
+        local name = string.format("DEMINEUR %dX%d", config.WIDTH, config.HEIGHT)
+        if minitel.submit_record(name, secs, "low", "S", config.MINES .. " MINES") then
+            msg_board = "SECTEUR SECURISE EN " .. secs .. " S : NOUVEAU RECORD !"
+        else
+            msg_board = "SECTEUR SECURISE EN " .. secs .. " S ! VOUS AVEZ GAGNE !"
+        end
         play_game_sound("win")
     end
 end

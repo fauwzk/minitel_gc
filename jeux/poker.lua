@@ -228,6 +228,7 @@ local function do_showdown()
         local gain = current_bet * mult
         message = p_name .. " ! +" .. gain .. " JETONS !"
         chips = chips + gain
+        minitel.submit_record("POKER", chips, "high", "JETONS", "PILE LA PLUS HAUTE")
         minitel.play_sound("win")
     else
         message = "CROUPIER : " .. d_name .. ". PERDU."

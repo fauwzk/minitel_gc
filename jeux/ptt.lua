@@ -196,6 +196,7 @@ local function run_shift()
 
     local total_f = math.floor(taxed_units * 0.73)
     if qos_health > 0 then
+        minitel.submit_record("CENTRAL PTT", total_f, "high", "F", "QOS " .. qos_health .. "%")
         minitel.msg_box(
             "FIN DE QUART FRANCE TELECOM",
             string.format("Service irreprochable ! Recette telephonique : %d Francs (QoS : %d%%).", total_f, qos_health),

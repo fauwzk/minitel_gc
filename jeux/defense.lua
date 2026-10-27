@@ -236,6 +236,7 @@ local function execute_turn()
     -- 6. Game Over ?
     if hp <= 0 then
         state = "GAMEOVER"
+        minitel.submit_record("DEFENSE", wave, "high", "VAGUES", diff_names[config.difficulty])
         msg = "BASE DETRUITE ! FIN DE PARTIE. [RETOUR] VERS LE MENU."
         minitel.play_sound("lose")
     end

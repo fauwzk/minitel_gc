@@ -248,6 +248,7 @@ local function play_vs_ai(my_grid)
                     draw_single_cell(true, radar_grid, cx, cy, true)
 
                     if my_hits >= TOTAL_SHIP_CELLS then
+                        minitel.submit_record("BATAILLE (VS IA)", 1, "sum", "VICTOIRES")
                         minitel.msg_box("VICTOIRE NAVALE !", "Bravo Amiral ! Vous avez coule toute la flotte ennemie !", "win")
                         return
                     end
@@ -374,6 +375,7 @@ local function play_online(my_grid)
 
                 if status == "FINISHED" then
                     if win == tostring(my_slot) then
+                        minitel.submit_record("BATAILLE (EN LIGNE)", 1, "sum", "VICTOIRES")
                         minitel.msg_box("VICTOIRE EN LIGNE !", "Vous avez aneanti la flotte de " .. enemy_name .. " !", "win")
                     else
                         minitel.msg_box("DEFAITE EN LIGNE", enemy_name .. " a coule votre flotte !", "lose")

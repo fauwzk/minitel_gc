@@ -561,16 +561,29 @@ function M.center(str, len)
     return string.rep(" ", left) .. str .. string.rep(" ", right)
 end
 
+-- UTF-8 -> ASCII pour le Minitel. Les caracteres sont reconnus en entier
+-- (plusieurs octets), les lettres gardent leur casse : "Ecole" pour "École",
+-- "cafe" pour "café". Ce qui n'a pas d'equivalent devient "?".
+local ASCII_OF = {}
+do
+    local groups = {
+        a = "àáâãäå", A = "ÀÁÂÃÄÅ", e = "èéêë", E = "ÈÉÊË", i = "ìíîï", I = "ÌÍÎÏ",
+        o = "òóôõöø", O = "ÒÓÔÕÖØ", u = "ùúûü", U = "ÙÚÛÜ", c = "ç", C = "Ç",
+        n = "ñ", N = "Ñ", y = "ýÿ", Y = "Ý",
+        ["'"] = "’‘′´", ['"'] = "«»“”″", ["-"] = "–—‐‑−", [" "] = "\194\160\226\128\175\226\128\137",
+    }
+    for ascii, chars in pairs(groups) do
+        for ch in chars:gmatch("[%z\1-\127\194-\244][\128-\191]*") do ASCII_OF[ch] = ascii end
+    end
+    for k, v in pairs({ ["œ"] = "oe", ["Œ"] = "OE", ["æ"] = "ae", ["Æ"] = "AE", ["ß"] = "ss",
+                        ["…"] = "...", ["€"] = "EUR", ["°"] = "o", ["×"] = "x", ["·"] = "." }) do
+        ASCII_OF[k] = v
+    end
+end
+
 function M.clean_accents(str)
     if not str then return "" end
-    str = str:gsub("[éèêëÉÈÊË]", "E")
-    str = str:gsub("[àâäÀÂÄ]", "A")
-    str = str:gsub("[îïÎÏ]", "I")
-    str = str:gsub("[ôöÔÖ]", "O")
-    str = str:gsub("[ùûüÙÛÜ]", "U")
-    str = str:gsub("[çÇ]", "C")
-    str = str:gsub("œ", "OE"):gsub("’", "'")
-    return str
+    return (string.gsub(str, "[\194-\244][\128-\191]+", function(ch) return ASCII_OF[ch] or "?" end))
 end
 
 function M.wrap(text, max_width, max_lines)
@@ -952,6 +965,78 @@ function M.file_browser(mode, start_dir)
         end
         M.sleep(0.01)
     end
+end
+
+-- =====================================================================
+-- 7. TABLEAU DES RECORDS DES JEUX (jeux/records.cfg)
+-- =====================================================================
+-- Chaque jeu signale son resultat en fin de partie ; seul le meilleur est
+-- garde, avec la date. Le fichier est un .cfg : la mise a jour le conserve.
+-- Une ligne par jeu : nom|valeur|sens|unite|date|detail|parties
+--   sens "high" : plus c'est grand, mieux c'est (score, gains, vague...)
+--   sens "low"  : plus c'est petit, mieux c'est (temps, essais, pas...)
+--   sens "sum"  : compteur, la valeur s'ajoute (victoires...)
+M.RECORDS_FILE = "jeux/records.cfg"
+
+function M.load_records()
+    local recs = {}
+    local f = io.open(M.RECORDS_FILE, "r")
+    if not f then return recs end
+    for line in f:lines() do
+        local g, v, sense, unit, date, detail, plays =
+            string.match(line, "^([^|]+)|([^|]*)|([^|]*)|([^|]*)|([^|]*)|([^|]*)|?(%d*)$")
+        if g and tonumber(v) then
+            recs[g] = { value = tonumber(v), sense = sense, unit = unit, date = date,
+                        detail = detail, plays = tonumber(plays) or 1 }
+        end
+    end
+    f:close()
+    return recs
+end
+
+local function save_records(recs)
+    local names = {}
+    for g in pairs(recs) do names[#names + 1] = g end
+    table.sort(names)
+    local f = io.open(M.RECORDS_FILE, "w")
+    if not f then return end
+    for _, g in ipairs(names) do
+        local r = recs[g]
+        f:write(string.format("%s|%s|%s|%s|%s|%s|%d\n", g, tostring(r.value), r.sense or "high",
+            r.unit or "", r.date or "", r.detail or "", r.plays or 1))
+    end
+    f:close()
+end
+
+-- Rend true si c'est un nouveau record (ou, en mode "sum", toujours)
+function M.submit_record(game, value, sense, unit, detail)
+    if type(value) ~= "number" then return false end
+    sense = sense or "high"
+    local function clean(s) return (string.gsub(M.clean_accents(tostring(s or "")), "[|\r\n]", " ")) end
+    game, detail = clean(game), clean(detail)
+    local recs = M.load_records()
+    local r = recs[game]
+    local better = not r
+        or (sense == "sum")
+        or (sense == "high" and value > r.value)
+        or (sense == "low" and value < r.value)
+    local plays = (r and r.plays or 0) + 1
+    if better then
+        local v = value
+        if sense == "sum" and r then v = r.value + value end
+        recs[game] = { value = v, sense = sense, unit = clean(unit), date = os.date("%d/%m/%Y"),
+                       detail = detail, plays = plays }
+    else
+        r.plays = plays
+    end
+    save_records(recs)
+    return better and sense ~= "sum"
+end
+
+-- Meilleur resultat connu d'un jeu (nil s'il n'y en a pas)
+function M.get_record(game)
+    local r = M.load_records()[game]
+    return r and r.value or nil
 end
 
 return M

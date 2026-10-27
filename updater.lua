@@ -97,13 +97,19 @@ end
 -- PROTECTION DES FICHIERS LOCAUX (PROGRAMMES BASIC ET SAUVEGARDES .CFG)
 -- =====================================================================
 -- Les programmes enregistres depuis le MICRO-BASIC (utils/prog_basic) et les
--- fichiers .cfg des jeux et outils (scores, parties, reglages) appartiennent a
--- ce Minitel : une mise a jour ne doit jamais les ecraser ni les effacer. Ils
+-- sauvegardes des jeux et outils (.cfg de reglages et de records, .rec de
+-- Nordschleife, parties enregistrees dans jeux/saves_*) appartiennent a ce
+-- Minitel : une mise a jour ne doit jamais les ecraser ni les effacer. Ils
 -- sont mis de cote avant toute operation git, puis remis en place a l'identique.
 local BASIC_DIR = "utils/prog_basic"
 local LOCAL_STASH = "/tmp/minitel_fichiers_locaux"
-local LOCAL_SPECS = "'" .. BASIC_DIR .. "' ':(glob)**/*.cfg'"
-local NOT_LOCAL = "-- . ':(exclude)" .. BASIC_DIR .. "' ':(exclude,glob)**/*.cfg'"
+local SAVE_GLOBS = { "**/*.cfg", "**/*.rec", "jeux/saves_*/**" }
+local LOCAL_SPECS = "'" .. BASIC_DIR .. "'"
+local NOT_LOCAL = "-- . ':(exclude)" .. BASIC_DIR .. "'"
+for _, g in ipairs(SAVE_GLOBS) do
+    LOCAL_SPECS = LOCAL_SPECS .. " ':(glob)" .. g .. "'"
+    NOT_LOCAL = NOT_LOCAL .. " ':(exclude,glob)" .. g .. "'"
+end
 local local_saved = {}
 local basic_count, cfg_count = 0, 0
 
@@ -144,10 +150,10 @@ local function protect_local_files()
             os.execute("mkdir -p " .. sh_quote(dirname(dst)))
             if not string.find(code, "D") and copy_file(path, dst) then
                 table.insert(local_saved, path)
-                if string.match(path, "%.cfg$") then
-                    cfg_count = cfg_count + 1
-                else
+                if string.sub(path, 1, #BASIC_DIR + 1) == BASIC_DIR .. "/" then
                     basic_count = basic_count + 1
+                else
+                    cfg_count = cfg_count + 1
                 end
             end
         end
@@ -157,7 +163,7 @@ local function protect_local_files()
         run_git("reset -q -- " .. LOCAL_SPECS)
         -- un par un : checkout refuse tout si l'un des motifs ne suit aucun fichier
         run_git("checkout -- '" .. BASIC_DIR .. "'")
-        run_git("checkout -- ':(glob)**/*.cfg'")
+        for _, g in ipairs(SAVE_GLOBS) do run_git("checkout -- ':(glob)" .. g .. "'") end
         run_git("clean -fdq -- " .. LOCAL_SPECS)
     end
 end
@@ -450,7 +456,7 @@ if basic_count > 0 then
     io.write(string.format("\x1b[16;15H PROGRAMMES BASIC LOCAUX CONSERVES : %d\r\n", basic_count))
 end
 if cfg_count > 0 then
-    io.write(string.format("\x1b[17;15H SAUVEGARDES DES JEUX (.CFG) CONSERVEES : %d\r\n", cfg_count))
+    io.write(string.format("\x1b[17;15H SAUVEGARDES ET RECORDS CONSERVES : %d\r\n", cfg_count))
 end
 -- Les scripts livres par cette version, avant le redemarrage
 show_scripts_result(19, run_update_scripts(19))
