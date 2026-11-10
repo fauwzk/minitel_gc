@@ -170,8 +170,10 @@ function M.with_cursor(fn)
     end
 end
 
+local in_videotex = false -- M.force_videotex() : pas de sequences ANSI a l'ecran
+
 local function park_cursor()
-    if not park_enabled or cursor_wanted or parked or not drawn then return end
+    if not park_enabled or in_videotex or cursor_wanted or parked or not drawn then return end
     orig_write(string.format("\x1b[%d;%dH", PARK_ROW, PARK_COL))
     io.flush()
     parked, drawn = true, false
@@ -402,6 +404,7 @@ local TO_80 = {
 -- puis efface l'ecran. Chaque commande part en 7 bits + parite paire, puis en
 -- 8 bits sans parite (Minitel regle a 9600 bauds).
 function M.force_80()
+    in_videotex = false
     for _, seq in ipairs(TO_80) do
         orig_write(videotex(seq))
         if videotex(seq) ~= seq then orig_write(seq) end
@@ -417,6 +420,37 @@ function M.force_80()
     M.echo_off_80()
     orig_write("\x1b[0m\x1b[2J\x1b[H")
     io.flush()
+end
+
+-- Repasse le Minitel en Videotex (40 colonnes, couleurs, mosaiques) : sert
+-- aux serveurs Minitel en ligne (3615 VIDEOTEX) et aux programmes qui dessinent
+-- en Videotex. CSI ? { quitte la Teleinformatique (norme du Minitel 1B) ; une
+-- fois en Videotex, l'echo local est coupe et le clavier etendu arrete, pour
+-- que les touches envoient les codes Videotex habituels. On revient ensuite en
+-- 80 colonnes avec M.force_80().
+local TO_VIDEOTEX = {
+    "\x1b\x3b\x60\x58\x52", -- PRO3 AIGUILLAGE OFF ECRAN <- MODEM : pas d'echo
+    "\x1b\x3b\x6a\x59\x41", -- PRO3 STOP CLAVIER ETEN : clavier Videotex
+}
+
+function M.force_videotex()
+    in_videotex, parked = true, false
+    orig_write("\x1b[?{")
+    io.flush()
+    M.sleep_raw(0.3)
+    for _, seq in ipairs(TO_VIDEOTEX) do
+        orig_write(videotex(seq))
+        if videotex(seq) ~= seq then orig_write(seq) end
+        io.flush()
+        M.sleep_raw(0.1)
+    end
+    local t0, last = mono_time(), mono_time()
+    while mono_time() - last < 0.3 and mono_time() - t0 < 1.5 do
+        if io.read(1) then last = mono_time() else M.sleep_raw(0.05) end
+    end
+    orig_write("\x0c") -- FF : efface l'ecran Videotex
+    io.flush()
+    clear_vram()
 end
 
 -- En Teleinformatique, l'echo local ne depend plus des aiguillages Videotex

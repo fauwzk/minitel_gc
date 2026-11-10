@@ -50,8 +50,8 @@ Un second volume, le **[Manuel de programmation MICRO-BASIC](docs/MANUEL_BASIC.m
 | **2** | [Le matériel](#chapitre-2--le-matériel) | Liaison série, clavier, écran VT100, son et audio, fiche technique |
 | **3** | [L'architecture logicielle](#chapitre-3--larchitecture-logicielle) | Démarrage, arborescence, portail, lanceurs, mises à jour, interface web |
 | **4** | [Le moteur graphique et le SDK](#chapitre-4--le-moteur-graphique-et-le-sdk-minitellua) | Delta-drawing, framebuffer, référence de `minitel.lua` |
-| **5** | [Les logiciels du poste de travail](#chapitre-5--les-logiciels-du-poste-de-travail-utils) | Éditeur, tableur, télématique, santé, musique, réseau Wi-Fi, éphéméride, Wikipédia, photos |
-| **6** | [La salle d'arcade](#chapitre-6--la-salle-darcade-jeux) | Les 15 cartouches de jeux et le tableau des records |
+| **5** | [Les logiciels du poste de travail](#chapitre-5--les-logiciels-du-poste-de-travail-utils) | Éditeur, tableur, télématique, santé, musique, réseau Wi-Fi, éphéméride, Wikipédia, photos, supervision, Vidéotex |
+| **6** | [La salle d'arcade](#chapitre-6--la-salle-darcade-jeux) | Les 16 cartouches de jeux et le tableau des records |
 | **7** | [Le langage MICRO-BASIC](#chapitre-7--le-langage-micro-basic) | Présentation et renvoi au second manuel |
 | **8** | [Guide du développeur](#chapitre-8--guide-du-développeur) | Écrire sa propre cartouche Lua |
 | **A** | [Mémento VT100](#annexe-a--mémento-des-séquences-vt100) | Les séquences d'échappement utilisées |
@@ -883,6 +883,7 @@ et se termine par `minitel.cleanup()`.
 | `minitel.init()` | Configure la liaison (`raw`, `-echo`, lecture non bloquante) et masque le curseur. |
 | `minitel.cleanup()` | Remet les marges de défilement à zéro, réaffiche le curseur, efface l'écran, rétablit le terminal (`stty sane`). |
 | `minitel.force_80()` | Met le Minitel en 80 colonnes, sans écho et avec le clavier étendu, puis efface l'écran (§ 1.4). Sans effet sur un Minitel déjà en 80 colonnes. |
+| `minitel.force_videotex()` | Repasse le Minitel en Vidéotex 40 colonnes (couleurs, mosaïques), sans écho et sans clavier étendu, puis efface l'écran. Le programme écrit alors des codes Vidéotex, et revient en 80 colonnes avec `force_80()` (§ 5.13, 3615 BRIQUES). |
 | `minitel.sleep(secondes)` | Pause (par la commande `sleep` du système, avec repli sur une attente active). Les boucles principales utilisent typiquement `minitel.sleep(0.01)` à `0.05`. |
 | `minitel.play_sound(effet)` | Joue un effet sans bloquer : `"hit"`, `"win"`, `"pickup"`, `"lose"`, `"damage"`, en bips du Minitel et/ou en synthèse SoX selon le mode sonore (§ 2.5). |
 | `minitel.beep_pattern(instants)` | Joue un rythme de bips du Minitel, par exemple `{ 0, 0.4, 0.8 }` (instants en secondes). Les bips plus rapprochés que l'écart minimal `minitel.bip_gap` risquent de ne pas s'entendre (§ 2.5). |
@@ -1137,11 +1138,35 @@ scp *.jpg minitel@<adresse du Pi>:minitel_gc/photos/
 
 ImageMagick est installé par `install_minitel.sh` ; sur un système déjà installé, le script de mise à jour `maj/0003_imagemagick.sh` s'en charge (§ 3.5), ou bien `sudo apt install imagemagick`.
 
+### 5.12 3615 MONITEUR — supervision du Pi et de serveurs Linux (`moniteur.lua`)
+
+La charge de la machine en temps réel, façon `top` : charge totale du processeur et de chaque cœur (en mini-barres au-delà de quatre cœurs), historique de la charge en colonnes, mémoire, mémoire d'échange, disque, débit réseau, température (qui clignote au-delà de 75 °C), et les processus les plus gourmands. Seules les zones qui changent sont renvoyées au Minitel. L'actualisation se fait toutes les 2 secondes pour le Pi, toutes les 3 secondes pour un serveur distant ; `+` et `-` la règlent.
+
+| Touche | Fonction |
+| :----- | :------- |
+| `↑` `↓` | Choisir un processus. |
+| `K` | Arrêter le processus choisi, après confirmation (signal `TERM`, avec les droits du compte utilisé). |
+| `+` / `-` | Actualiser plus ou moins souvent. |
+| `S` | Liste des serveurs. |
+
+**Les serveurs distants.** N'importe quel serveur Linux peut être surveillé. La liste des serveurs (`A` pour en ajouter : nom, `utilisateur@adresse`, port) est gardée dans `utils/moniteur.cfg`, que les mises à jour conservent. La connexion passe par SSH, **avec la clé du Raspberry Pi uniquement, jamais avec un mot de passe** : `C`, dans la liste, affiche cette clé (et la crée au besoin) et explique comment l'installer sur un serveur. Le plus simple est de taper une fois, dans le TERMINAL BASH du portail, `ssh-copy-id utilisateur@serveur`. Le serveur n'a besoin de rien d'autre que SSH : les mesures sont lues dans `/proc` par des commandes standard, et la connexion reste ouverte deux minutes entre deux mesures pour aller vite.
+
+### 5.13 3615 VIDEOTEX — les serveurs Minitel d'aujourd'hui (`videotex.lua`)
+
+Des passionnés font encore vivre des serveurs Minitel, joignables par Internet. 3615 VIDEOTEX s'y connecte : le Minitel **quitte le mode 80 colonnes, repasse en Vidéotex 40 colonnes** et affiche lui-même les vraies pages, avec leurs couleurs (ou leurs niveaux de gris) et leurs caractères mosaïques. Le Raspberry Pi ne fait que relayer les octets dans les deux sens (`outils/videotex_pont.py`, WebSocket ou Telnet). Les touches du Minitel (`[ENVOI]`, `[SUITE]`, `[SOMMAIRE]`…) partent telles quelles vers le serveur.
+
+* **MINIPAVI** : le portail Minitel d'aujourd'hui, qui donne accès à des dizaines de services (jeux, actualités, annuaires, messageries…). Tapez le code d'un service puis `[ENVOI]`.
+* **3611 ANNUAIRE** : l'annuaire électronique, ressuscité.
+
+**`[Esc]`, frappée seule, raccroche** : le Minitel revient en 80 colonnes et dans la liste des services. `A` ajoute un service (adresse `ws://`, `wss://` ou `telnet://hôte:port`), `S` retire un service ajouté ; ces services sont gardés dans `utils/videotex.cfg`.
+
+Pour revenir au Vidéotex, le SDK envoie `CSI ? {`, coupe l'écho local et arrête le clavier étendu, pour que les touches envoient les codes Vidéotex habituels (`minitel.force_videotex()`, § 4.4). `minitel.force_80()` fait le chemin inverse.
+
 <div style="page-break-after: always;"></div>
 
 ## CHAPITRE 6 : LA SALLE D'ARCADE (`/jeux`)
 
-Quinze cartouches et le tableau des records, accessibles depuis **3615 JEUX**. La plupart ouvrent sur un écran-titre ou un briefing ; les touches sont toujours rappelées en bas de l'écran.
+Seize cartouches et le tableau des records, accessibles depuis **3615 JEUX**. La plupart ouvrent sur un écran-titre ou un briefing ; les touches sont toujours rappelées en bas de l'écran.
 
 ### 6.1 Action et course
 
@@ -1199,6 +1224,8 @@ Quinze cartouches et le tableau des records, accessibles depuis **3615 JEUX**. L
 **3615 DÉCRYPTAGE** (`decrypt.lua`) — Le jeu de lettres façon *Motus*, déguisé en piratage de serveur : trouvez le mot secret en six essais. Le dictionnaire est téléchargé une fois sur Internet, avec une liste de secours hors ligne.
 
 **3615 DÉFENSE** (`defense.lua`) — *Tower defense* au tour par tour : bâtissez des tourelles le long du chemin pour protéger votre base. Trois niveaux de difficulté.
+
+**3615 BRIQUES** (`briques.lua`) — *Casse-briques en Vidéotex couleur.* Le seul jeu qui quitte le mode 80 colonnes : le Minitel repasse en Vidéotex 40 colonnes pour ses couleurs et ses caractères mosaïques. Chaque case est découpée en 2 × 3 pixels et la balle se déplace pixel par pixel. Six rangées de briques de couleur, des murs troués en damier à partir du niveau 2, une balle de plus en plus rapide, neuf niveaux. L'angle du rebond dépend de l'endroit où la balle touche la raquette. Flèches ou `Q` / `D` pour la raquette, `[ENVOI]` pour lancer la balle, `[SOMMAIRE]` ou `[Esc]` pour quitter (le Minitel revient en 80 colonnes). Sur un écran monochrome, les couleurs deviennent des niveaux de gris.
 
 <table>
 <tr>

@@ -26,6 +26,7 @@ local GAMES = {
     { "GARAGE", "CAISSE DE L'ATELIER" },
     { "BATAILLE (VS IA)", "VICTOIRES" },
     { "BATAILLE (EN LIGNE)", "VICTOIRES" },
+    { "BRIQUES", "SCORE" },
 }
 
 local LIST_TOP, LIST_ROWS = 6, 15
