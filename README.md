@@ -50,7 +50,7 @@ Un second volume, le **[Manuel de programmation MICRO-BASIC](docs/MANUEL_BASIC.m
 | **2** | [Le matériel](#chapitre-2--le-matériel) | Liaison série, clavier, écran VT100, son et audio, fiche technique |
 | **3** | [L'architecture logicielle](#chapitre-3--larchitecture-logicielle) | Démarrage, arborescence, portail, lanceurs, mises à jour, interface web |
 | **4** | [Le moteur graphique et le SDK](#chapitre-4--le-moteur-graphique-et-le-sdk-minitellua) | Delta-drawing, framebuffer, référence de `minitel.lua` |
-| **5** | [Les logiciels du poste de travail](#chapitre-5--les-logiciels-du-poste-de-travail-utils) | Éditeur, tableur, télématique, santé, musique, réseau Wi-Fi, éphéméride, Wikipédia, photos, supervision, Vidéotex |
+| **5** | [Les logiciels du poste de travail](#chapitre-5--les-logiciels-du-poste-de-travail-utils) | Éditeur, tableur, télématique, santé, musique, réseau Wi-Fi, éphéméride, Wikipédia, photos, supervision, Vidéotex, web |
 | **6** | [La salle d'arcade](#chapitre-6--la-salle-darcade-jeux) | Les 18 cartouches de jeux et le tableau des records |
 | **7** | [Le langage MICRO-BASIC](#chapitre-7--le-langage-micro-basic) | Présentation et renvoi au second manuel |
 | **8** | [Guide du développeur](#chapitre-8--guide-du-développeur) | Écrire sa propre cartouche Lua |
@@ -779,6 +779,7 @@ docker compose up -d
 | 3615 CARBURANT | Prix des carburants, `data.economie.gouv.fr` (données publiques) |
 | 3615 TRAIN | Départs, dessertes et trajets, `transport.opendata.ch` |
 | 3615 ITINÉRAIRE | Géocodage `api-adresse.data.gouv.fr` et calcul d'itinéraire OSRM |
+| 3615 WEB | FrogFind (`frogfind.com`), ou DuckDuckGo et les sites eux-mêmes |
 | 3615 MÉTÉO | `wttr.in` |
 | 3615 MAGIS INFOS | Flux RSS de cinq journaux (Korben, Next, Numerama, franceinfo, Le Monde) |
 | 3615 QUIZZ (solo) | Questions générées par `quizzapi.jomoreschi.fr` |
@@ -1161,6 +1162,26 @@ Des passionnés font encore vivre des serveurs Minitel, joignables par Internet.
 **`[Connexion/Fin]`, ou `[Esc]` frappée seule, raccroche** : le Minitel revient en 80 colonnes et dans la liste des services. `A` ajoute un service (adresse `ws://`, `wss://` ou `telnet://hôte:port`), `S` retire un service ajouté ; ces services sont gardés dans `utils/videotex.cfg`.
 
 Pour revenir au Vidéotex, le SDK envoie `CSI ? {`, coupe l'écho local et garde le clavier étendu, sans lequel la touche Esc n'envoie rien (`minitel.force_videotex()`, § 4.4). Les flèches de ce clavier ne sont pas transmises aux serveurs, qui ne les connaissent pas. `minitel.force_80()` fait le chemin inverse.
+
+### 5.14 3615 WEB — le web par FrogFind (`web.lua`)
+
+Un client [FrogFind](http://frogfind.com) pour le Minitel. FrogFind, conçu pour les vieux ordinateurs, cherche sur le web et réduit chaque page à du HTML tout simple ; 3615 WEB le met en page sur 78 colonnes : titres en gras, paragraphes, listes à puces, fiches techniques (« Fabricant : Alcatel »), et des **liens numérotés**, affichés en vidéo inverse juste après leur texte. Les images sont remplacées par leur légende.
+
+**Si FrogFind ne répond pas**, le Raspberry Pi prend le relais tout seul et fait le même travail : recherche par DuckDuckGo (version HTML), puis téléchargement et nettoyage local des pages (contenu principal, menus et listes de langues retirés, écritures non latines effacées). La barre d'état indique `[FROGFIND]` ou `[LOCAL]`, et `M`, à l'accueil, change de moteur.
+
+| Touche | Fonction |
+| :----- | :------- |
+| `[ENVOI]` (accueil) | Chercher sur le web. |
+| `G` | Aller à une adresse (`https://` est ajouté si besoin). |
+| Numéro + `[ENVOI]` | Suivre le lien de ce numéro. `[CORRECTION]` efface un chiffre. |
+| `[SUITE]` / `[RETOUR]` | Page suivante / précédente. Sur la première page, `[RETOUR]` revient au site précédent, puis à l'accueil. |
+| `P` | Site précédent. |
+| `L` | Liste des liens de la page, avec leur adresse. |
+| `R` | Nouvelle recherche. |
+| `A` | Ajouter la page aux favoris. |
+| `[SOMMAIRE]` | Revenir à l'accueil. |
+
+L'accueil propose les favoris (`1` à `9` ; `S` en supprime un) et les neuf dernières pages lues (`A` à `I`). Les deux sont gardés dans `utils/web.cfg`, que les mises à jour conservent. Les favoris de départ sont des sites déjà prévus pour les vieux navigateurs : Wikipédia mobile, 68k.news, text.npr.org et lite.cnn.com.
 
 <div style="page-break-after: always;"></div>
 
