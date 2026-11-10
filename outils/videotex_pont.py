@@ -7,9 +7,11 @@ serveur Videotex en ligne, pour 3615 VIDEOTEX.
     python3 outils/videotex_pont.py telnet://hote:23
 
 Les octets passent tels quels dans les deux sens : c'est le Minitel lui-meme
-qui affiche les pages Videotex. La touche Esc du Minitel, frappee seule, met
-fin a la connexion (les reponses du Minitel aux commandes du serveur, qui
-commencent aussi par ESC, arrivent d'un bloc et ne sont pas confondues).
+qui affiche les pages Videotex. Deux touches mettent fin a la connexion :
+Connexion/Fin, et Esc frappee seule (les reponses du Minitel aux commandes du
+serveur, qui commencent aussi par ESC, arrivent d'un bloc et ne sont pas
+confondues). Les fleches du clavier etendu (ESC [ A..D), que les serveurs
+Videotex ne connaissent pas, ne leur sont pas transmises.
 Bibliotheque standard seulement. Code de sortie : 0 fin normale, 1 erreur
 (message sur la sortie d'erreur).
 """
@@ -167,6 +169,29 @@ class Telnet:
         return bytes(out)
 
 
+SEP, FIN = 0x13, 0x49  # touche Connexion/Fin : SEP I
+
+
+def filter_keys(data):
+    """Touches du Minitel -> octets pour le serveur. Rend (octets, ESC seul en
+    fin de bloc a confirmer, fin de connexion demandee)."""
+    out = bytearray()
+    i = 0
+    while i < len(data):
+        b = data[i] & 0x7F
+        if b == SEP and i + 1 < len(data) and data[i + 1] & 0x7F == FIN:
+            return bytes(out), False, True
+        if b == ESC:
+            if i + 1 >= len(data):
+                return bytes(out), True, False
+            if data[i + 1] & 0x7F == 0x5B and i + 2 < len(data):
+                i += 3  # fleche du clavier etendu : ignoree
+                continue
+        out.append(data[i])
+        i += 1
+    return bytes(out), False, False
+
+
 def main():
     if len(sys.argv) < 2:
         print(__doc__, file=sys.stderr)
@@ -199,10 +224,13 @@ def main():
                 if held is not None:
                     data = bytes([ESC]) + data
                     held = None
-                if data == bytes([ESC]):
+                out, lone_esc, hang_up = filter_keys(data)
+                if hang_up:
+                    break
+                if out:
+                    conn.send(out)
+                if lone_esc:
                     held = time.monotonic()
-                elif data:
-                    conn.send(data)
             elif held is not None and time.monotonic() >= held + ESC_ALONE:
                 break  # touche Esc seule : fin de la connexion
     except ConnectionError:

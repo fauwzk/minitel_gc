@@ -27,6 +27,7 @@ local GAMES = {
     { "BATAILLE (VS IA)", "VICTOIRES" },
     { "BATAILLE (EN LIGNE)", "VICTOIRES" },
     { "BRIQUES", "SCORE" },
+    { "DONJON", "ETAGE ATTEINT" },
 }
 
 local LIST_TOP, LIST_ROWS = 6, 15

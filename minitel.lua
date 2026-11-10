@@ -425,12 +425,12 @@ end
 -- Repasse le Minitel en Videotex (40 colonnes, couleurs, mosaiques) : sert
 -- aux serveurs Minitel en ligne (3615 VIDEOTEX) et aux programmes qui dessinent
 -- en Videotex. CSI ? { quitte la Teleinformatique (norme du Minitel 1B) ; une
--- fois en Videotex, l'echo local est coupe et le clavier etendu arrete, pour
--- que les touches envoient les codes Videotex habituels. On revient ensuite en
--- 80 colonnes avec M.force_80().
+-- fois en Videotex, l'echo local est coupe et le clavier etendu remis en
+-- marche : sans lui, la touche Esc et les fleches n'envoient rien. On revient
+-- ensuite en 80 colonnes avec M.force_80().
 local TO_VIDEOTEX = {
     "\x1b\x3b\x60\x58\x52", -- PRO3 AIGUILLAGE OFF ECRAN <- MODEM : pas d'echo
-    "\x1b\x3b\x6a\x59\x41", -- PRO3 STOP CLAVIER ETEN : clavier Videotex
+    "\x1b\x3b\x69\x59\x41", -- PRO3 START CLAVIER ETEN : Esc, Ctrl et fleches
 }
 
 function M.force_videotex()

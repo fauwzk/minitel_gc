@@ -332,12 +332,7 @@ end
 -- =====================================================================
 -- LANCEMENT : passage en Videotex, puis retour en 80 colonnes
 -- =====================================================================
-minitel.force_videotex()
--- clavier etendu : les fleches envoient ESC [ A..D
-io.write("\x1b\x3b\x69\x59\x41")
-io.flush()
-minitel.sleep(0.2)
-while io.read(1) do end
+minitel.force_videotex() -- clavier etendu compris : les fleches envoient ESC [ A..D
 
 while title_screen() do
     if not play() then break end

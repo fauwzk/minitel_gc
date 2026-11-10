@@ -51,7 +51,7 @@ Un second volume, le **[Manuel de programmation MICRO-BASIC](docs/MANUEL_BASIC.m
 | **3** | [L'architecture logicielle](#chapitre-3--larchitecture-logicielle) | Démarrage, arborescence, portail, lanceurs, mises à jour, interface web |
 | **4** | [Le moteur graphique et le SDK](#chapitre-4--le-moteur-graphique-et-le-sdk-minitellua) | Delta-drawing, framebuffer, référence de `minitel.lua` |
 | **5** | [Les logiciels du poste de travail](#chapitre-5--les-logiciels-du-poste-de-travail-utils) | Éditeur, tableur, télématique, santé, musique, réseau Wi-Fi, éphéméride, Wikipédia, photos, supervision, Vidéotex |
-| **6** | [La salle d'arcade](#chapitre-6--la-salle-darcade-jeux) | Les 16 cartouches de jeux et le tableau des records |
+| **6** | [La salle d'arcade](#chapitre-6--la-salle-darcade-jeux) | Les 18 cartouches de jeux et le tableau des records |
 | **7** | [Le langage MICRO-BASIC](#chapitre-7--le-langage-micro-basic) | Présentation et renvoi au second manuel |
 | **8** | [Guide du développeur](#chapitre-8--guide-du-développeur) | Écrire sa propre cartouche Lua |
 | **A** | [Mémento VT100](#annexe-a--mémento-des-séquences-vt100) | Les séquences d'échappement utilisées |
@@ -883,7 +883,7 @@ et se termine par `minitel.cleanup()`.
 | `minitel.init()` | Configure la liaison (`raw`, `-echo`, lecture non bloquante) et masque le curseur. |
 | `minitel.cleanup()` | Remet les marges de défilement à zéro, réaffiche le curseur, efface l'écran, rétablit le terminal (`stty sane`). |
 | `minitel.force_80()` | Met le Minitel en 80 colonnes, sans écho et avec le clavier étendu, puis efface l'écran (§ 1.4). Sans effet sur un Minitel déjà en 80 colonnes. |
-| `minitel.force_videotex()` | Repasse le Minitel en Vidéotex 40 colonnes (couleurs, mosaïques), sans écho et sans clavier étendu, puis efface l'écran. Le programme écrit alors des codes Vidéotex, et revient en 80 colonnes avec `force_80()` (§ 5.13, 3615 BRIQUES). |
+| `minitel.force_videotex()` | Repasse le Minitel en Vidéotex 40 colonnes (couleurs, mosaïques), sans écho et avec le clavier étendu (la touche Esc et les flèches en ont besoin), puis efface l'écran. Le programme écrit alors des codes Vidéotex, et revient en 80 colonnes avec `force_80()` (§ 5.13, § 6.8). |
 | `minitel.sleep(secondes)` | Pause (par la commande `sleep` du système, avec repli sur une attente active). Les boucles principales utilisent typiquement `minitel.sleep(0.01)` à `0.05`. |
 | `minitel.play_sound(effet)` | Joue un effet sans bloquer : `"hit"`, `"win"`, `"pickup"`, `"lose"`, `"damage"`, en bips du Minitel et/ou en synthèse SoX selon le mode sonore (§ 2.5). |
 | `minitel.beep_pattern(instants)` | Joue un rythme de bips du Minitel, par exemple `{ 0, 0.4, 0.8 }` (instants en secondes). Les bips plus rapprochés que l'écart minimal `minitel.bip_gap` risquent de ne pas s'entendre (§ 2.5). |
@@ -1158,15 +1158,15 @@ Des passionnés font encore vivre des serveurs Minitel, joignables par Internet.
 * **MINIPAVI** : le portail Minitel d'aujourd'hui, qui donne accès à des dizaines de services (jeux, actualités, annuaires, messageries…). Tapez le code d'un service puis `[ENVOI]`.
 * **3611 ANNUAIRE** : l'annuaire électronique, ressuscité.
 
-**`[Esc]`, frappée seule, raccroche** : le Minitel revient en 80 colonnes et dans la liste des services. `A` ajoute un service (adresse `ws://`, `wss://` ou `telnet://hôte:port`), `S` retire un service ajouté ; ces services sont gardés dans `utils/videotex.cfg`.
+**`[Connexion/Fin]`, ou `[Esc]` frappée seule, raccroche** : le Minitel revient en 80 colonnes et dans la liste des services. `A` ajoute un service (adresse `ws://`, `wss://` ou `telnet://hôte:port`), `S` retire un service ajouté ; ces services sont gardés dans `utils/videotex.cfg`.
 
-Pour revenir au Vidéotex, le SDK envoie `CSI ? {`, coupe l'écho local et arrête le clavier étendu, pour que les touches envoient les codes Vidéotex habituels (`minitel.force_videotex()`, § 4.4). `minitel.force_80()` fait le chemin inverse.
+Pour revenir au Vidéotex, le SDK envoie `CSI ? {`, coupe l'écho local et garde le clavier étendu, sans lequel la touche Esc n'envoie rien (`minitel.force_videotex()`, § 4.4). Les flèches de ce clavier ne sont pas transmises aux serveurs, qui ne les connaissent pas. `minitel.force_80()` fait le chemin inverse.
 
 <div style="page-break-after: always;"></div>
 
 ## CHAPITRE 6 : LA SALLE D'ARCADE (`/jeux`)
 
-Seize cartouches et le tableau des records, accessibles depuis **3615 JEUX**. La plupart ouvrent sur un écran-titre ou un briefing ; les touches sont toujours rappelées en bas de l'écran.
+Dix-huit cartouches et le tableau des records, accessibles depuis **3615 JEUX**. La plupart ouvrent sur un écran-titre ou un briefing ; les touches sont toujours rappelées en bas de l'écran.
 
 ### 6.1 Action et course
 
@@ -1225,7 +1225,6 @@ Seize cartouches et le tableau des records, accessibles depuis **3615 JEUX**. La
 
 **3615 DÉFENSE** (`defense.lua`) — *Tower defense* au tour par tour : bâtissez des tourelles le long du chemin pour protéger votre base. Trois niveaux de difficulté.
 
-**3615 BRIQUES** (`briques.lua`) — *Casse-briques en Vidéotex couleur.* Le seul jeu qui quitte le mode 80 colonnes : le Minitel repasse en Vidéotex 40 colonnes pour ses couleurs et ses caractères mosaïques. Chaque case est découpée en 2 × 3 pixels et la balle se déplace pixel par pixel. Six rangées de briques de couleur, des murs troués en damier à partir du niveau 2, une balle de plus en plus rapide, neuf niveaux. L'angle du rebond dépend de l'endroit où la balle touche la raquette. Flèches ou `Q` / `D` pour la raquette, `[ENVOI]` pour lancer la balle, `[SOMMAIRE]` ou `[Esc]` pour quitter (le Minitel revient en 80 colonnes). Sur un écran monochrome, les couleurs deviennent des niveaux de gris.
 
 <table>
 <tr>
@@ -1267,6 +1266,16 @@ Chaque jeu signale son résultat en fin de partie. Le système garde le meilleur
 | BATAILLE NAVALE | Le nombre de victoires, contre l'IA et en ligne. |
 
 Un nouveau record est annoncé à la fin de la partie (OUTRUN, WOLF-3D, DEMINEUR, DECRYPTAGE). `Z` et `S` font défiler le tableau, `X` efface les records, sauf ceux de NORDSCHLEIFE, qui ont leur propre fichier.
+
+### 6.8 Les jeux en Vidéotex couleur
+
+Ces trois cartouches quittent le mode 80 colonnes : le Minitel repasse en **Vidéotex 40 colonnes** le temps de la partie, pour ses couleurs et ses caractères mosaïques (chaque case découpée en 2 × 3 pixels), puis revient en 80 colonnes à la sortie (`minitel.force_videotex()`, § 4.4). Sur un écran monochrome, les couleurs deviennent des niveaux de gris. Partout, `[SOMMAIRE]` ou `[Esc]` quitte.
+
+**3615 BRIQUES** (`briques.lua`) — *Casse-briques.* La balle se déplace pixel par pixel. Six rangées de briques de couleur, des murs troués en damier à partir du niveau 2, une balle de plus en plus rapide, neuf niveaux. L'angle du rebond dépend de l'endroit où la balle touche la raquette. Flèches ou `Q` / `D` pour la raquette, `[ENVOI]` pour lancer la balle, `[SOMMAIRE]` ou `[Esc]` pour quitter.
+
+**3615 BLACKJACK en Vidéotex** (`blackjack_videotex.lua`) — La partie de `black.lua` sur un tapis vert, avec de vraies cartes blanches dont les enseignes sont dessinées en mosaïques : cœurs et carreaux en rouge, piques et trèfles en noir, dos de carte bleu. `+` / `-` (ou les flèches) règlent la mise, `[ENVOI]` distribue, `T` tire, `R` reste, `D` double. Les réglages et le record sont ceux de la version 80 colonnes, qui reste disponible.
+
+**3615 DONJON** (`donjon_videotex.lua`) — Le jeu de rôle de `rpg.lua` en couleurs, avec les mêmes règles : un donjon tiré au hasard à chaque étage, des monstres de plus en plus forts (rat géant, gobelin, squelette, orque, troll, dragon, chacun de sa couleur), des potions (`+`, en vert), des gemmes de force (`*`), l'escalier (`>`, qui clignote) et des combats au tour par tour (attaque, coup fort, potion, fuite). Les murs sont des mosaïques bleues et les jauges de vie et d'expérience des barres de couleur. Flèches ou `Z` `Q` `S` `D` pour se déplacer ; le record est l'étage atteint. Les réglages sont ceux de la version 80 colonnes (`jeux/minitel_rpg.cfg`), qui reste disponible.
 
 <div style="page-break-after: always;"></div>
 
